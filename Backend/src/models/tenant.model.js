@@ -39,7 +39,6 @@ const tenantSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-
     moveOutDate: {
       type: Date,
       default: null,

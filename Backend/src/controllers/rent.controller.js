@@ -264,6 +264,75 @@ export const getOneRent = async (req, res, next) => {
   }
 };
 
+export const updateRent = async (req, res, next) => {
+  try {
+    const { propertyId, rentId } = req.params;
+    const { dueDate } = req.body;
+
+    if (req.user.role !== "owner") {
+      return res.status(403).json({
+        message: "Only owner can update rent!",
+      });
+    }
+
+    if (!dueDate) {
+      return res.status(400).json({
+        message: "Due date is required!",
+      });
+    }
+
+    if (isNaN(new Date(dueDate).getTime())) {
+      return res.status(400).json({
+        message: "Invalid due date!",
+      });
+    }
+
+    const property = await Property.findById(propertyId);
+
+    if (!property) {
+      return res.status(404).json({
+        message: "Property not found!",
+      });
+    }
+
+    if (property.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        message: "You are not authorized for this property!",
+      });
+    }
+
+    const rent = await Rent.findOne({
+      _id: rentId,
+      property: propertyId,
+    });
+
+    if (!rent) {
+      return res.status(404).json({
+        message: "Rent not found!",
+      });
+    }
+
+    if (rent.status === "paid") {
+      return res.status(400).json({
+        message: "Paid rent cannot be updated!",
+      });
+    }
+
+    rent.dueDate = dueDate;
+
+    await rent.save();
+
+    return res.status(200).json({
+      message: "Rent updated successfully!",
+      data: rent,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 //tenant-side
 
 
@@ -356,71 +425,3 @@ export const getMyRent = async (req, res, next) => {
   }
 };
 
-export const updateRent = async (req, res, next) => {
-  try {
-    const { propertyId, rentId } = req.params;
-    const { dueDate } = req.body;
-
-    if (req.user.role !== "owner") {
-      return res.status(403).json({
-        message: "Only owner can update rent!",
-      });
-    }
-
-    if (!dueDate) {
-      return res.status(400).json({
-        message: "Due date is required!",
-      });
-    }
-
-    if (isNaN(new Date(dueDate).getTime())) {
-      return res.status(400).json({
-        message: "Invalid due date!",
-      });
-    }
-
-    const property = await Property.findById(propertyId);
-
-    if (!property) {
-      return res.status(404).json({
-        message: "Property not found!",
-      });
-    }
-
-    if (property.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        message: "You are not authorized for this property!",
-      });
-    }
-
-    const rent = await Rent.findOne({
-      _id: rentId,
-      property: propertyId,
-    });
-
-    if (!rent) {
-      return res.status(404).json({
-        message: "Rent not found!",
-      });
-    }
-
-    if (rent.status === "paid") {
-      return res.status(400).json({
-        message: "Paid rent cannot be updated!",
-      });
-    }
-
-    rent.dueDate = dueDate;
-
-    await rent.save();
-
-    return res.status(200).json({
-      message: "Rent updated successfully!",
-      data: rent,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: error.message,
-    });
-  }
-};

@@ -67,7 +67,7 @@ export const login = async (req, res, next) => {
         message: "Invalid Password",
       });
     }
-    const token = await genToken(user._id, user.username, user.email);
+    const token = await genToken(user._id, user.username, user.email, user.role);
     return res
       .status(200)
       .cookie("token", token, {
@@ -83,7 +83,6 @@ export const login = async (req, res, next) => {
           username: user.username,
           email: user.email,
           role: user.role,
-          token,
         },
       });
   } catch (error) {

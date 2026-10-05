@@ -12,16 +12,16 @@ import rentRouter from "./src/routes/rent.route.js";
 import paymentRouter from "./src/routes/payment.route.js";
 import { razorpayWebhook } from "./src/controllers/payment.controller.js";
 
-//web-hook
-app.post(
-  "/payment/webhook",express.raw({ type: "application/json" }),razorpayWebhook,
-);
 
-app.use(express.json());
 
 //config
 const app = express();
 dotenv.config();
+
+//web-hook
+app.post(
+  "/payment/webhook",express.raw({ type: "application/json" }),razorpayWebhook,
+);
 
 //middleware
 app.use(express.json());
