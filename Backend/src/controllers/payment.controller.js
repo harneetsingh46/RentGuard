@@ -1,9 +1,11 @@
 import { Payment } from "../models/payment.model.js";
 import { Rent } from "../models/rent.model.js";
 import { Tenant } from "../models/tenant.model.js";
+import { Property } from "../models/property.model.js";
 import razorpay from "../utils/razorpay.js";
 import crypto from "crypto";
 
+// CREATE RAZORPAY PAYMENT ORDER
 export const createPaymentOrder = async (req, res, next) => {
   try {
     const { rentId } = req.params;
@@ -53,7 +55,7 @@ export const createPaymentOrder = async (req, res, next) => {
     const existingPayment = await Payment.findOne({
       rent: rent._id,
       tenant: tenant._id,
-      status: { $in: ["created", "pending"] },
+      status: "created",
     });
 
     if (existingPayment) {
@@ -67,8 +69,10 @@ export const createPaymentOrder = async (req, res, next) => {
       });
     }
 
+    const amountInPaise = Math.round(remainingAmount * 100);
+
     const options = {
-      amount: Math.round(remainingAmount * 100),
+      amount: amountInPaise,
       currency: "INR",
       receipt: `rent_${rent._id}_${Date.now()}`,
     };
@@ -102,12 +106,20 @@ export const createPaymentOrder = async (req, res, next) => {
   }
 };
 
+// VERIFY PAYMENT FROM FRONTEND
 export const verifyPayment = async (req, res, next) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-      req.body;
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    if (
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature
+    ) {
       return res.status(400).json({
         message: "Payment verification details are required!",
       });
@@ -121,11 +133,12 @@ export const verifyPayment = async (req, res, next) => {
 
     const tenant = await Tenant.findOne({
       user: req.user._id,
+      isActive: true,
     });
 
     if (!tenant) {
       return res.status(404).json({
-        message: "Tenant profile not found!",
+        message: "Active tenant profile not found!",
       });
     }
 
@@ -141,22 +154,62 @@ export const verifyPayment = async (req, res, next) => {
     }
 
     if (payment.status === "paid") {
-      return res.status(400).json({
-        message: "Payment is already verified!",
+      return res.status(200).json({
+        message: "Payment already verified!",
       });
     }
 
+    // Verify Razorpay signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .update(
+        `${razorpay_order_id}|${razorpay_payment_id}`,
+      )
       .digest("hex");
 
-    if (generatedSignature !== razorpay_signature) {
+    const isSignatureValid = crypto.timingSafeEqual(
+      Buffer.from(generatedSignature),
+      Buffer.from(razorpay_signature),
+    );
+
+    if (!isSignatureValid) {
       payment.status = "failed";
       await payment.save();
 
       return res.status(400).json({
         message: "Invalid payment signature!",
+      });
+    }
+
+    // Fetch actual payment details from Razorpay
+    const razorpayPayment =
+      await razorpay.payments.fetch(razorpay_payment_id);
+
+    if (
+      razorpayPayment.order_id !== razorpay_order_id
+    ) {
+      return res.status(400).json({
+        message: "Payment does not belong to this order!",
+      });
+    }
+
+    if (razorpayPayment.currency !== "INR") {
+      return res.status(400).json({
+        message: "Invalid payment currency!",
+      });
+    }
+
+    const expectedAmount = Math.round(payment.amount * 100);
+
+    if (razorpayPayment.amount !== expectedAmount) {
+      return res.status(400).json({
+        message: "Payment amount does not match the rent amount!",
+      });
+    }
+
+    if (razorpayPayment.status !== "captured") {
+      return res.status(400).json({
+        message: "Payment has not been captured!",
       });
     }
 
@@ -168,18 +221,39 @@ export const verifyPayment = async (req, res, next) => {
       });
     }
 
-    if (rent.tenant.toString() !== tenant._id.toString()) {
+    if (
+      rent.tenant.toString() !== tenant._id.toString()
+    ) {
       return res.status(403).json({
         message: "You are not authorized for this rent!",
       });
     }
 
-    payment.razorpayPaymentId = razorpay_payment_id;
-    payment.razorpaySignature = razorpay_signature;
-    payment.status = "paid";
+    // Prevent duplicate processing
+    const updatedPayment = await Payment.findOneAndUpdate(
+      {
+        _id: payment._id,
+        status: "created",
+      },
+      {
+        $set: {
+          razorpayPaymentId: razorpay_payment_id,
+          razorpaySignature: razorpay_signature,
+          status: "paid",
+        },
+      },
+      {
+        new: true,
+      },
+    );
 
-    await payment.save();
+    if (!updatedPayment) {
+      return res.status(200).json({
+        message: "Payment already processed!",
+      });
+    }
 
+    // Update rent
     rent.paidAmount += payment.amount;
 
     if (rent.paidAmount >= rent.amount) {
@@ -194,7 +268,7 @@ export const verifyPayment = async (req, res, next) => {
     return res.status(200).json({
       message: "Payment verified successfully!",
       data: {
-        payment,
+        payment: updatedPayment,
         rent,
       },
     });
@@ -205,6 +279,7 @@ export const verifyPayment = async (req, res, next) => {
   }
 };
 
+// TENANT: GET MY PAYMENTS
 export const getMyPayments = async (req, res, next) => {
   try {
     if (req.user.role !== "tenant") {
@@ -227,7 +302,10 @@ export const getMyPayments = async (req, res, next) => {
     const payments = await Payment.find({
       tenant: tenant._id,
     })
-      .populate("rent", "amount paidAmount month year dueDate status")
+      .populate(
+        "rent",
+        "amount paidAmount month year dueDate status",
+      )
       .sort({ createdAt: -1 });
 
     if (payments.length === 0) {
@@ -246,6 +324,8 @@ export const getMyPayments = async (req, res, next) => {
     });
   }
 };
+
+// OWNER: GET PROPERTY PAYMENTS
 export const getPropertyPayments = async (req, res, next) => {
   try {
     const { propertyId } = req.params;
@@ -264,7 +344,10 @@ export const getPropertyPayments = async (req, res, next) => {
       });
     }
 
-    if (property.owner.toString() !== req.user._id.toString()) {
+    if (
+      property.owner.toString() !==
+      req.user._id.toString()
+    ) {
       return res.status(403).json({
         message: "You are not authorized for this property!",
       });
@@ -275,7 +358,10 @@ export const getPropertyPayments = async (req, res, next) => {
     })
       .populate("tenant", "fullName")
       .populate("unit", "unitName unitType")
-      .populate("rent", "amount paidAmount month year dueDate status")
+      .populate(
+        "rent",
+        "amount paidAmount month year dueDate status",
+      )
       .sort({ createdAt: -1 });
 
     if (payments.length === 0) {
@@ -295,9 +381,11 @@ export const getPropertyPayments = async (req, res, next) => {
   }
 };
 
+// RAZORPAY WEBHOOK
 export const razorpayWebhook = async (req, res, next) => {
   try {
-    const webhookSignature = req.headers["x-razorpay-signature"];
+    const webhookSignature =
+      req.headers["x-razorpay-signature"];
 
     if (!webhookSignature) {
       return res.status(400).json({
@@ -306,11 +394,19 @@ export const razorpayWebhook = async (req, res, next) => {
     }
 
     const generatedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET)
+      .createHmac(
+        "sha256",
+        process.env.RAZORPAY_WEBHOOK_SECRET,
+      )
       .update(req.body)
       .digest("hex");
 
-    if (generatedSignature !== webhookSignature) {
+    const isSignatureValid = crypto.timingSafeEqual(
+      Buffer.from(generatedSignature),
+      Buffer.from(webhookSignature),
+    );
+
+    if (!isSignatureValid) {
       return res.status(400).json({
         message: "Invalid webhook signature!",
       });
@@ -318,49 +414,89 @@ export const razorpayWebhook = async (req, res, next) => {
 
     const event = JSON.parse(req.body.toString());
 
-    if (event.event === "payment.captured") {
-      const razorpayPayment = event.payload.payment.entity;
-
-      const payment = await Payment.findOne({
-        razorpayOrderId: razorpayPayment.order_id,
+    // Only process successful captured payments
+    if (event.event !== "payment.captured") {
+      return res.status(200).json({
+        message: "Webhook received!",
       });
-
-      if (!payment) {
-        return res.status(404).json({
-          message: "Payment record not found!",
-        });
-      }
-
-      if (payment.status === "paid") {
-        return res.status(200).json({
-          message: "Payment already processed!",
-        });
-      }
-
-      const rent = await Rent.findById(payment.rent);
-
-      if (!rent) {
-        return res.status(404).json({
-          message: "Rent not found!",
-        });
-      }
-
-      payment.razorpayPaymentId = razorpayPayment.id;
-      payment.status = "paid";
-
-      await payment.save();
-
-      rent.paidAmount += payment.amount;
-
-      if (rent.paidAmount >= rent.amount) {
-        rent.paidAmount = rent.amount;
-        rent.status = "paid";
-      } else {
-        rent.status = "partial";
-      }
-
-      await rent.save();
     }
+
+    const razorpayPayment =
+      event.payload.payment.entity;
+
+    const payment = await Payment.findOne({
+      razorpayOrderId: razorpayPayment.order_id,
+    });
+
+    if (!payment) {
+      return res.status(200).json({
+        message: "Payment record not found!",
+      });
+    }
+
+    // Prevent duplicate webhook processing
+    if (payment.status === "paid") {
+      return res.status(200).json({
+        message: "Payment already processed!",
+      });
+    }
+
+    const expectedAmount = Math.round(payment.amount * 100);
+
+    if (razorpayPayment.amount !== expectedAmount) {
+      return res.status(400).json({
+        message: "Webhook payment amount does not match!",
+      });
+    }
+
+    if (razorpayPayment.currency !== "INR") {
+      return res.status(400).json({
+        message: "Invalid webhook payment currency!",
+      });
+    }
+
+    const rent = await Rent.findById(payment.rent);
+
+    if (!rent) {
+      return res.status(200).json({
+        message: "Rent not found!",
+      });
+    }
+
+    // Atomically mark payment as paid.
+    // This prevents the same payment from being processed twice.
+    const updatedPayment = await Payment.findOneAndUpdate(
+      {
+        _id: payment._id,
+        status: "created",
+      },
+      {
+        $set: {
+          razorpayPaymentId: razorpayPayment.id,
+          status: "paid",
+        },
+      },
+      {
+        new: true,
+      },
+    );
+
+    if (!updatedPayment) {
+      return res.status(200).json({
+        message: "Payment already processed!",
+      });
+    }
+
+    rent.paidAmount += payment.amount;
+
+    if (rent.paidAmount >= rent.amount) {
+      rent.paidAmount = rent.amount;
+      rent.status = "paid";
+    } else {
+      rent.status = "partial";
+    }
+
+    await rent.save();
 
     return res.status(200).json({
       message: "Webhook processed successfully!",
