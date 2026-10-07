@@ -8,9 +8,7 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       lowercase: true,
       trim: true,
-      required: function () {
-        return this.role === "owner";
-      },
+      required: true,
     },
 
     email: {
@@ -19,25 +17,17 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       lowercase: true,
       trim: true,
-      required: function () {
-        return this.role === "owner";
-      },
+      required: true,
     },
 
     password: {
       type: String,
-      required: function () {
-        return this.role === "owner";
-      },
+      required: true,
     },
 
     phone: {
       type: String,
-      unique: true,
       trim: true,
-      required: function () {
-        return this.role === "tenant";
-      },
     },
 
     role: {

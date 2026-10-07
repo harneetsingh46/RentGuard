@@ -1,26 +1,41 @@
+import bcrypt from "bcryptjs";
 import { Property } from "../models/property.model.js";
 import { Tenant } from "../models/tenant.model.js";
 import { Unit } from "../models/unit.model.js";
 import { User } from "../models/user.model.js";
+
+// REGISTER TENANT
+
 export const registerTenant = async (req, res, next) => {
   try {
     const { propertyId, unitId } = req.params;
 
-    const { fullName, address, aadhaarNumber, photo, phoneNumber } = req.body;
+    const { fullName, address, aadhaarNumber, username, email, password } =
+      req.body;
 
-    if (!fullName || !address || !aadhaarNumber || !photo || !phoneNumber) {
+    // Validate request body
+    if (
+      !fullName ||
+      !address ||
+      !aadhaarNumber ||
+      !username ||
+      !email ||
+      !password
+    ) {
       return res.status(400).json({
         message:
-          "Full Name, Address, Aadhaar Number, Photo, and Phone Number are required!",
+          "Full Name, Address, Aadhaar Number, Username, Email, and Password are required!",
       });
     }
 
+    // Only owner can create tenant
     if (req.user.role !== "owner") {
       return res.status(403).json({
         message: "Only owner can create a tenant!",
       });
     }
 
+    // Check property
     const property = await Property.findById(propertyId);
 
     if (!property) {
@@ -29,12 +44,14 @@ export const registerTenant = async (req, res, next) => {
       });
     }
 
+    // Check property ownership
     if (property.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         message: "You are not authorized for this property!",
       });
     }
 
+    // Check unit
     const unit = await Unit.findOne({
       _id: unitId,
       property: propertyId,
@@ -46,6 +63,7 @@ export const registerTenant = async (req, res, next) => {
       });
     }
 
+    // Unit must be available
     if (unit.status === "occupied") {
       return res.status(400).json({
         message: "Unit is already occupied!",
@@ -58,6 +76,7 @@ export const registerTenant = async (req, res, next) => {
       });
     }
 
+    // Check existing active tenant in unit
     const existingTenant = await Tenant.findOne({
       unit: unitId,
       property: propertyId,
@@ -70,6 +89,7 @@ export const registerTenant = async (req, res, next) => {
       });
     }
 
+    // Check Aadhaar
     const existingAadhaar = await Tenant.findOne({
       aadhaarNumber,
       isActive: true,
@@ -81,22 +101,30 @@ export const registerTenant = async (req, res, next) => {
       });
     }
 
+    // Check username/email
     const existingUser = await User.findOne({
-      phone: phoneNumber,
+      $or: [{ username }, { email }],
     });
 
     if (existingUser) {
       return res.status(400).json({
-        message: "Phone number is already registered!",
+        message: "Username or email is already registered!",
       });
     }
 
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create tenant login account
     const user = await User.create({
-      phone: phoneNumber,
+      username,
+      email,
+      password: hashedPassword,
       role: "tenant",
       isActive: true,
     });
 
+    // Create tenant profile
     const tenant = await Tenant.create({
       user: user._id,
       property: propertyId,
@@ -104,11 +132,11 @@ export const registerTenant = async (req, res, next) => {
       fullName,
       address,
       aadhaarNumber,
-      photo,
       isActive: true,
       moveOutDate: null,
     });
 
+    // Occupy unit
     unit.status = "occupied";
     await unit.save();
 
@@ -123,40 +151,46 @@ export const registerTenant = async (req, res, next) => {
   }
 };
 
+// GET ALL ACTIVE TENANTS OF PROPERTY
+
 export const getAllTenants = async (req, res, next) => {
   try {
     const { propertyId } = req.params;
+
+    // Only owner can access
     if (req.user.role !== "owner") {
       return res.status(403).json({
-        message: "You cannot access this !",
+        message: "Only owner can access tenants!",
       });
     }
+
+    // Check property
     const property = await Property.findById(propertyId);
+
     if (!property) {
-      return res.status(400).json({
-        message: "No Property Found !",
+      return res.status(404).json({
+        message: "Property not found!",
       });
     }
+
+    // Check ownership
     if (property.owner.toString() !== req.user._id.toString()) {
-      return res.status(400).json({
-        message: "You are not authorized for this property !",
+      return res.status(403).json({
+        message: "You are not authorized for this property!",
       });
     }
+
+    // Get active tenants
     const tenants = await Tenant.find({
       property: propertyId,
       isActive: true,
     })
-      .populate("user", "phone isActive")
+      .populate("user", "username email isActive")
       .populate("unit", "unitName unitType rent status")
       .sort({ createdAt: -1 });
 
-    if (!tenants) {
-      return res.status(400).json({
-        message: "No Active Tenants Found !",
-      });
-    }
     return res.status(200).json({
-      message: "Active Tenants Fetched Successfully !",
+      message: "Active tenants fetched successfully!",
       data: tenants,
     });
   } catch (error) {
@@ -166,118 +200,20 @@ export const getAllTenants = async (req, res, next) => {
   }
 };
 
+// GET ONE TENANT
+
 export const getOneTenant = async (req, res, next) => {
   try {
     const { tenantId, propertyId } = req.params;
+
+    // Only owner can access
     if (req.user.role !== "owner") {
       return res.status(403).json({
-        message: "You cannot access this !",
-      });
-    }
-    const property = await Property.findById(propertyId);
-    if (!property) {
-      return res.status(400).json({
-        message: "No Property Found !",
-      });
-    }
-    if (property.owner.toString() !== req.user._id.toString()) {
-      return res.status(400).json({
-        message: "You are not authorized for this property !",
-      });
-    }
-    const tenant = await Tenant.findOne({ _id: tenantId, property: propertyId })
-      .populate("user", "phone isActive")
-      .populate("unit", "unitName unitType rent status");
-    if (!tenant) {
-      return res.status(400).json({
-        message: "No Tenants Found !",
-      });
-    }
-    return res.status(200).json({
-      message: "Tenant Fetched Successfully !",
-      data: tenant,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: error.message,
-    });
-  }
-};
-
-export const updateTenant = async (req, res, next) => {
-  try {
-    const { tenantId, propertyId } = req.params;
-    const { fullName, address, aadhaarNumber, photo, phone } = req.body;
-    if (req.user.role !== "owner") {
-      return res.status(403).json({
-        message: "You cannot access this !",
-      });
-    }
-    const property = await Property.findById(propertyId);
-    if (!property) {
-      return res.status(400).json({
-        message: "No Property Found !",
-      });
-    }
-    if (property.owner.toString() !== req.user._id.toString()) {
-      return res.status(400).json({
-        message: "You are not authorized for this property !",
-      });
-    }
-    const tenant = await Tenant.findOne({
-      _id: tenantId,
-      property: propertyId,
-    });
-    if (!tenant) {
-      return res.status(400).json({
-        message: "No Tenants Found !",
-      });
-    }
-    if (fullName) {
-      tenant.fullName = fullName;
-    }
-    if (address) {
-      tenant.address = address;
-    }
-    if (aadhaarNumber) {
-      tenant.aadhaarNumber = aadhaarNumber;
-    }
-    if (phone !== undefined) {
-      const user = await User.findById(tenant.user._id);
-
-      if (!user) {
-        return res.status(404).json({
-          message: "User not found !",
-        });
-      }
-      user.phone = phone;
-      await user.save();
-    }
-    if (photo) {
-      tenant.photo = photo;
-    }
-    await tenant.save();
-    return res.status(200).json({
-      message: "Tenant Updated Successfully !",
-      data: tenant,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: error.message,
-    });
-  }
-};
-
-export const getTenantHistory = async (req, res, next) => {
-  try {
-    const { propertyId } = req.params;
-
-    if (req.user.role !== "owner") {
-      return res.status(403).json({
-        message: "Only owner can access tenant history!",
+        message: "Only owner can access tenant details!",
       });
     }
 
+    // Check property
     const property = await Property.findById(propertyId);
 
     if (!property) {
@@ -286,17 +222,155 @@ export const getTenantHistory = async (req, res, next) => {
       });
     }
 
+    // Check ownership
     if (property.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         message: "You are not authorized for this property!",
       });
     }
 
+    // Find tenant
+    const tenant = await Tenant.findOne({
+      _id: tenantId,
+      property: propertyId,
+    })
+      .populate("user", "username email isActive")
+      .populate("unit", "unitName unitType rent status");
+
+    if (!tenant) {
+      return res.status(404).json({
+        message: "Tenant not found!",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Tenant fetched successfully!",
+      data: tenant,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+// UPDATE TENANT
+
+export const updateTenant = async (req, res, next) => {
+  try {
+    const { tenantId, propertyId } = req.params;
+
+    const { fullName, address, aadhaarNumber } = req.body;
+
+    // Only owner can update
+    if (req.user.role !== "owner") {
+      return res.status(403).json({
+        message: "Only owner can update a tenant!",
+      });
+    }
+
+    // Check property
+    const property = await Property.findById(propertyId);
+
+    if (!property) {
+      return res.status(404).json({
+        message: "Property not found!",
+      });
+    }
+
+    // Check ownership
+    if (property.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        message: "You are not authorized for this property!",
+      });
+    }
+
+    // Find tenant
+    const tenant = await Tenant.findOne({
+      _id: tenantId,
+      property: propertyId,
+    });
+
+    if (!tenant) {
+      return res.status(404).json({
+        message: "Tenant not found!",
+      });
+    }
+
+    // Update tenant fields
+    if (fullName !== undefined) {
+      tenant.fullName = fullName;
+    }
+
+    if (address !== undefined) {
+      tenant.address = address;
+    }
+
+    if (aadhaarNumber !== undefined) {
+      // Check whether Aadhaar belongs to another active tenant
+      const existingAadhaar = await Tenant.findOne({
+        aadhaarNumber,
+        isActive: true,
+        _id: { $ne: tenantId },
+      });
+
+      if (existingAadhaar) {
+        return res.status(400).json({
+          message: "An active tenant with this Aadhaar already exists!",
+        });
+      }
+
+      tenant.aadhaarNumber = aadhaarNumber;
+    }
+
+    await tenant.save();
+
+    return res.status(200).json({
+      message: "Tenant updated successfully!",
+      data: tenant,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
+// GET TENANT HISTORY
+
+export const getTenantHistory = async (req, res, next) => {
+  try {
+    const { propertyId } = req.params;
+
+    // Only owner can access history
+    if (req.user.role !== "owner") {
+      return res.status(403).json({
+        message: "Only owner can access tenant history!",
+      });
+    }
+
+    // Check property
+    const property = await Property.findById(propertyId);
+
+    if (!property) {
+      return res.status(404).json({
+        message: "Property not found!",
+      });
+    }
+
+    // Check ownership
+    if (property.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        message: "You are not authorized for this property!",
+      });
+    }
+
+    // Get inactive tenants
     const tenants = await Tenant.find({
       property: propertyId,
       isActive: false,
     })
-      .populate("user", "phone isActive")
+      .populate("user", "username email isActive")
       .populate("unit", "unitName unitType rent status")
       .sort({ moveOutDate: -1 });
 
@@ -317,8 +391,18 @@ export const getTenantHistory = async (req, res, next) => {
   }
 };
 
+// GET MY PROFILE
+
 export const getMyProfile = async (req, res, next) => {
   try {
+    // Only tenant can access
+    if (req.user.role !== "tenant") {
+      return res.status(403).json({
+        message: "Only tenants can access this profile!",
+      });
+    }
+
+    // Find tenant using logged-in user
     const tenant = await Tenant.findOne({
       user: req.user._id,
     })
@@ -328,12 +412,6 @@ export const getMyProfile = async (req, res, next) => {
     if (!tenant) {
       return res.status(404).json({
         message: "Tenant profile not found!",
-      });
-    }
-
-    if (req.user.role !== "tenant") {
-      return res.status(403).json({
-        message: "Only tenants can access this profile!",
       });
     }
 
@@ -348,10 +426,19 @@ export const getMyProfile = async (req, res, next) => {
   }
 };
 
+// TENANT LOGOUT
+
 export const tenantLogout = async (req, res, next) => {
   try {
+    // Only tenant can use this endpoint
+    if (req.user.role !== "tenant") {
+      return res.status(403).json({
+        message: "Only tenants can logout from this endpoint!",
+      });
+    }
+
     return res.clearCookie("token").status(200).json({
-      message: "Tenant Logout Succesfull !",
+      message: "Tenant logout successful!",
     });
   } catch (error) {
     return res.status(500).json({
@@ -360,11 +447,13 @@ export const tenantLogout = async (req, res, next) => {
   }
 };
 
+// MOVE OUT TENANT
+
 export const moveOutTenant = async (req, res, next) => {
   try {
     const { propertyId, tenantId } = req.params;
 
-    // Only owner can move out a tenant
+    // Only owner can move out tenant
     if (req.user.role !== "owner") {
       return res.status(403).json({
         message: "Only owner can move out a tenant!",
@@ -387,7 +476,7 @@ export const moveOutTenant = async (req, res, next) => {
       });
     }
 
-    // Find tenant
+    // Find active tenant
     const tenant = await Tenant.findOne({
       _id: tenantId,
       property: propertyId,
@@ -412,16 +501,25 @@ export const moveOutTenant = async (req, res, next) => {
       });
     }
 
-    // Soft delete / move out
+    // Find tenant user account
+    const user = await User.findById(tenant.user);
+
+    // Mark tenant inactive
     tenant.isActive = false;
     tenant.moveOutDate = new Date();
 
     await tenant.save();
 
-    // Make unit available again
+    // Make unit available
     unit.status = "available";
 
     await unit.save();
+
+    // Disable tenant login account
+    if (user) {
+      user.isActive = false;
+      await user.save();
+    }
 
     return res.status(200).json({
       message: "Tenant moved out successfully!",

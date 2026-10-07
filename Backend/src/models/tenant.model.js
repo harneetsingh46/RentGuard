@@ -31,10 +31,6 @@ const tenantSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    photo: {
-      type: String,
-      required: true,
-    },
     isActive: {
       type: Boolean,
       default: true,

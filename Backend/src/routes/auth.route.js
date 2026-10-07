@@ -1,11 +1,22 @@
 import express from "express";
 
-import { generateOtp, verifyOTP } from "../controllers/otp.controller.js";
+import {
+  register,
+  login,
+  getUser,
+  logout,
+} from "../controllers/user.controller.js";
+
+import { protect } from "../utils/protect.js";
 
 const router = express.Router();
 
-router.post("/tenant/send-otp", generateOtp);
+// Public routes
+router.post("/register", register);
+router.post("/login", login);
 
-router.post("/tenant/verify-otp", verifyOTP);
+// Protected routes
+router.get("/me", protect, getUser);
+router.post("/logout", protect, logout);
 
 export default router;

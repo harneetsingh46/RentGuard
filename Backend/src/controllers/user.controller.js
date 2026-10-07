@@ -2,82 +2,121 @@ import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import genToken from "../utils/genToken.js";
 
-export const register = async (req, res, next) => {
+// REGISTER OWNER
+
+export const register = async (req, res) => {
   try {
-    const { username, email, password, phone, role, isActive } = req.body;
-    if (!username || !email || !password || !phone || !role || !isActive) {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
       return res.status(400).json({
-        message: "All feilds are required !",
+        message: "Username, email, and password are required",
       });
     }
+
+    const existingUser = await User.findOne({
+      $or: [{ username }, { email }],
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        message: "Username or email already exists",
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const isUserExists = await User.findOne({ email });
-    if (isUserExists) {
-      return res.status(400).json({
-        message: "User Already Exists !",
-      });
-    }
+
     const user = await User.create({
       username,
       email,
       password: hashedPassword,
-      phone,
-      role,
-      isActive,
+      role: "owner",
+      isActive: true,
     });
-    return res.status(200).json({
-      message: "User Register Succesfully!",
-      data: {
-        _id: user._id,
+
+    return res.status(201).json({
+      message: "Owner registered successfully",
+      user: {
+        id: user._id,
         username: user.username,
         email: user.email,
         role: user.role,
-        isActive,
       },
     });
   } catch (error) {
     return res.status(500).json({
-      message: error.message,
+      message: "Server error",
+      error: error.message,
     });
   }
 };
 
+// LOGIN OWNER OR TENANT
+
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
+    const { username, email, password } = req.body;
+
+    // User can login using either username OR email
+    const loginValue = username || email;
+
+    if (!loginValue || !password) {
       return res.status(400).json({
-        message: "All feilds are required",
+        message: "Username/email and password are required",
       });
     }
-    const user = await User.findOne({ email });
+
+    const user = await User.findOne({
+      $or: [
+        { username: loginValue.toLowerCase() },
+        { email: loginValue.toLowerCase() },
+      ],
+    });
+
     if (!user) {
-      return res.status(400).json({
-        message: "User not found",
+      return res.status(401).json({
+        message: "Invalid username/email or password",
       });
     }
+
+    // Check account status
     if (!user.isActive) {
       return res.status(403).json({
         message: "Your account is inactive",
       });
     }
-    const isPassword = await bcrypt.compare(password, user.password);
-    if (!isPassword) {
-      return res.status(400).json({
-        message: "Invalid Password",
+
+    // Check password
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      user.password,
+    );
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json({
+        message: "Invalid username/email or password",
       });
     }
-    const token = await genToken(user._id, user.username, user.email, user.role);
+
+    // Generate JWT
+    const token = genToken(
+      user._id,
+      user.username,
+      user.email,
+      user.role,
+    );
+
+    // Store JWT in HTTP-only cookie
     return res
       .status(200)
       .cookie("token", token, {
         httpOnly: true,
         secure: false,
         sameSite: "strict",
-        maxAge: 24 * 60 * 60 * 100,
+        maxAge: 24 * 60 * 60 * 1000,
       })
       .json({
-        message: "User login Successfull!",
+        message: "Login successful",
         data: {
           _id: user._id,
           username: user.username,
@@ -92,21 +131,26 @@ export const login = async (req, res, next) => {
   }
 };
 
+// GET CURRENT USER
+
 export const getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user._id)
+    const user = await User.findById(req.user._id).select("-password");
+
     if (!user) {
-      return res.status(400).json({
-        message: "Something went wrong while fetching !",
+      return res.status(404).json({
+        message: "User not found",
       });
     }
+
     return res.status(200).json({
-      message: "User Details",
+      message: "User details fetched successfully",
       data: {
         _id: user._id,
         username: user.username,
         email: user.email,
         role: user.role,
+        isActive: user.isActive,
       },
     });
   } catch (error) {
@@ -116,15 +160,19 @@ export const getUser = async (req, res, next) => {
   }
 };
 
-export const logout = async (req,res,next)=>{
+// LOGOUT
+
+export const logout = async (req, res, next) => {
   try {
-    res.clearCookie("token");
-    return res.status(200).json({
-      message: "User logout successfully!"
-    })
+    return res
+      .clearCookie("token")
+      .status(200)
+      .json({
+        message: "Logout successful",
+      });
   } catch (error) {
     return res.status(500).json({
       message: error.message,
     });
   }
-}
+};
