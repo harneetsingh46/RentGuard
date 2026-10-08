@@ -6,11 +6,11 @@ import genToken from "../utils/genToken.js";
 
 export const register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, phone } = req.body;
 
-    if (!username || !email || !password) {
+    if (!username || !email || !password || !phone) {
       return res.status(400).json({
-        message: "Username, email, and password are required",
+        message: "Username, email, phone and password are required",
       });
     }
 
@@ -31,6 +31,7 @@ export const register = async (req, res) => {
       email,
       password: hashedPassword,
       role: "owner",
+      phone,
       isActive: true,
     });
 
@@ -41,6 +42,7 @@ export const register = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        phone:user.phone
       },
     });
   } catch (error) {
@@ -150,6 +152,7 @@ export const getUser = async (req, res, next) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        phone:user.phone,
         isActive: user.isActive,
       },
     });

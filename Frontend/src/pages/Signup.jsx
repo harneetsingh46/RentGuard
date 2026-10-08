@@ -1,20 +1,19 @@
-
-import React from "react"
+import {Link} from "react-router-dom"
 
 const Signup = () => {
     return (
-        <div className="min-h-screen bg-slate-100 px-4 flex items-center justify-center">
+        <div className="min-h-screen bg-[#b6b09576] py-5 flex items-center justify-center dark:text-white dark:bg-[#101010]">
 
-            <form className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
+            <form className="w-full max-w-md rounded-xs bg-white p-8 shadow-lg dark:bg-[#1B1B1B] dark:border-[#373737]">
 
                 {/* Heading */}
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold text-slate-900">
-                        Create an account
+                    <h1 className="text-3xl text-black dark:text-[#F1F0ED]">
+                        OWNER REGISTRATION 
                     </h1>
 
-                    <p className="mt-2 text-sm text-slate-500">
-                        Sign up to get started with RentGuard
+                    <p className="mt-2 text-sm text-[#b5ac85] dark:text-[#A6A39E]">
+                        Set up your owner account.
                     </p>
                 </div>
 
@@ -25,7 +24,7 @@ const Signup = () => {
                     <div>
                         <label
                             htmlFor="name"
-                            className="mb-2 block text-sm font-medium text-slate-700"
+                            className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]"
                         >
                             Username
                         </label>
@@ -35,8 +34,8 @@ const Signup = () => {
                             type="text"
                             name="name"
                             required
-                            placeholder="Enter your username"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20"
+                            placeholder="Enter your Username"
+                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
                         />
                     </div>
 
@@ -44,9 +43,9 @@ const Signup = () => {
                     <div>
                         <label
                             htmlFor="email"
-                            className="mb-2 block text-sm font-medium text-slate-700"
+                            className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]"
                         >
-                            Email
+                            Email address
                         </label>
 
                         <input
@@ -55,7 +54,7 @@ const Signup = () => {
                             name="email"
                             required
                             placeholder="Enter your email"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20"
+                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
                         />
                     </div>
 
@@ -63,7 +62,7 @@ const Signup = () => {
                     <div>
                         <label
                             htmlFor="password"
-                            className="mb-2 block text-sm font-medium text-slate-700"
+                            className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]"
                         >
                             Password
                         </label>
@@ -74,7 +73,7 @@ const Signup = () => {
                             name="password"
                             required
                             placeholder="Enter your password"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20"
+                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
                         />
                     </div>
 
@@ -82,7 +81,7 @@ const Signup = () => {
                     <div>
                         <label
                             htmlFor="phone"
-                            className="mb-2 block text-sm font-medium text-slate-700"
+                            className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]"
                         >
                             Phone
                         </label>
@@ -93,29 +92,23 @@ const Signup = () => {
                             name="phone"
                             required
                             placeholder="Enter your phone number"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20"
+                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
                         />
                     </div>
 
                     {/* Submit */}
                     <button
                         type="submit"
-                        className="w-full rounded-lg bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+                        className="w-full rounded-lg bg-yellow-300 px-4 py-3 font-semibold text-black transition hover:bg-yellow-200 focus:outline-none focus:ring-2  focus:ring-offset-2 dark:bg-[#F7C744]"
                     >
-                        Create account
+                        Create owner account
                     </button>
 
                 </div>
 
                 {/* Login link */}
-                <p className="mt-6 text-center text-sm text-slate-500">
-                    Already have an account?{" "}
-                    <a
-                        href="#"
-                        className="font-semibold text-slate-900 hover:underline"
-                    >
-                        Sign in
-                    </a>
+                <p className="mt-6 text-center text-sm text-black dark:text-[#F1F0ED]">
+                    Already have an account? <Link to="/login">Login</Link>
                 </p>
 
             </form>
