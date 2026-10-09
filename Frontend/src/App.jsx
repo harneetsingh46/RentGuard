@@ -3,6 +3,8 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom"
 import { Login } from './pages/Login'
 import Layout from './common/Layout'
 import Signup from './pages/Signup'
+import OwnerDashboard from './pages/OwnerDashboard'
+import TenantDashboard from './pages/TenantDashboard'
 
 const App = () => {
   const router = createBrowserRouter([{
@@ -17,6 +19,14 @@ const App = () => {
         path: "/signup",
         element: <Signup />
       },
+      {
+        path: "/owner/dashboard",
+        element: <OwnerDashboard/>
+      },
+      {
+        path: "/tenant/dashboard",
+        element: <TenantDashboard/>
+      }
     ]
   }])
   return (

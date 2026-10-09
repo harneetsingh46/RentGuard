@@ -57,27 +57,21 @@ export const register = async (req, res) => {
 
 export const login = async (req, res, next) => {
   try {
-    const { username, email, password } = req.body;
+    const { email, password } = req.body;
 
-    // User can login using either username OR email
-    const loginValue = username || email;
-
-    if (!loginValue || !password) {
+    if (!email || !password) {
       return res.status(400).json({
-        message: "Username/email and password are required",
+        message: "email and password are required",
       });
     }
 
     const user = await User.findOne({
-      $or: [
-        { username: loginValue.toLowerCase() },
-        { email: loginValue.toLowerCase() },
-      ],
+        email: email.toLowerCase().trim()  
     });
 
     if (!user) {
       return res.status(401).json({
-        message: "Invalid username/email or password",
+        message: "Invalid email or password",
       });
     }
 
@@ -96,7 +90,7 @@ export const login = async (req, res, next) => {
 
     if (!isPasswordCorrect) {
       return res.status(401).json({
-        message: "Invalid username/email or password",
+        message: "Invalid email or password",
       });
     }
 

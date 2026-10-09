@@ -1,6 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
+import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./src/utils/swagger.js";
 import userRouter from "./src/routes/user.route.js";
@@ -12,20 +13,26 @@ import rentRouter from "./src/routes/rent.route.js";
 import paymentRouter from "./src/routes/payment.route.js";
 import { razorpayWebhook } from "./src/controllers/payment.controller.js";
 
-
-
 //config
 const app = express();
 dotenv.config();
 
 //web-hook
 app.post(
-  "/payment/webhook",express.raw({ type: "application/json" }),razorpayWebhook,
+  "/payment/webhook",
+  express.raw({ type: "application/json" }),
+  razorpayWebhook,
 );
 
 //middleware
 app.use(express.json());
 app.use(cookieParser());
+app.use(
+  cors({
+    origin:"http://localhost:5173",
+    credentials: true,
+  }),
+);
 
 //routes
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));

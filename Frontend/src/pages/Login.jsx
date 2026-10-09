@@ -1,44 +1,88 @@
-import ThemeToggle from "../components/ThemeToggle";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import apiClient from "../ApiClient/interceptor";
 
 export const Login = () => {
-  return (
-    <div className="min-h-screen bg-slate-100 px-4 flex items-center justify-center">
+    const navigate = useNavigate();
+    const [loading, setLoading] = useState(false)
+    const [errorMessage, setErrorMessage] = useState("")
+    const [loginData, setLoginData] = useState({
+        email: "",
+        password: ""
+    })
+    const handleChange = (e) => {
+        setLoginData({
+            ...loginData,
+            [e.target.name]: e.target.value
+        })
+    }
+    const login = async (data) => {
+        try {
+            setLoading(true)
+            setErrorMessage("")
+            const response = await apiClient.post("/auth/login", data)
+            console.log(response.data.data)
+            setLoginData({
+                email: "",
+                password: ""
+            })
+            const role = response.data.data.role;
+            if (role === "owner") {
+                navigate("/owner/dashboard");
+            } else if (role === "tenant") {
+                navigate("/tenant/dashboard");
+            } else {
+                setErrorMessage("Invalid user role.");
+            }
+        } catch (error) {
+            setErrorMessage(
+                error.response?.data?.message || "Something went wrong. Please try again."
+            )
+        } finally {
+            setLoading(false)
+        }
+    }
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        await login(loginData)
+    }
+    return (
+        <div className="min-h-screen bg-[#b6b09576] py-5 flex items-center justify-center dark:text-white dark:bg-[#101010]">
 
-            <form className="w-full max-w-md rounded-2xl bg-white p-10 shadow-lg">
+            <form onSubmit={handleSubmit} className="w-full max-w-md rounded-xs bg-white p-8 shadow-lg dark:bg-[#1B1B1B] dark:border-[#373737]">
 
                 {/* Heading */}
                 <div className="mb-8 text-center">
-                    <h1 className="text-3xl font-bold text-slate-900">
+                    <h1 className="text-3xl text-black dark:text-[#F1F0ED]">
                         Welcome Back !
                     </h1>
 
-                    <p className="mt-2 text-sm text-slate-500">
-                        Login to your RentGuard account
+                    <p className="mt-2 text-sm text-[#b5ac85] dark:text-[#A6A39E]">
+                        Login to your owner/tenant account.
                     </p>
                 </div>
 
                 {/* Form fields */}
                 <div className="space-y-5">
 
-                    
-
                     {/* Email */}
                     <div>
                         <label
                             htmlFor="email"
-                            className="mb-2 block text-sm font-medium text-slate-700"
+                            className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]"
                         >
-                            Email
+                            Email address
                         </label>
 
                         <input
                             id="email"
                             type="email"
                             name="email"
+                            onChange={handleChange}
+                            value={loginData.email}
                             required
                             placeholder="Enter your email"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20"
+                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
                         />
                     </div>
 
@@ -46,7 +90,7 @@ export const Login = () => {
                     <div>
                         <label
                             htmlFor="password"
-                            className="mb-2 block text-sm font-medium text-slate-700"
+                            className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]"
                         >
                             Password
                         </label>
@@ -55,32 +99,37 @@ export const Login = () => {
                             id="password"
                             type="password"
                             name="password"
+                            onChange={handleChange}
+                            value={loginData.password}
                             required
                             placeholder="Enter your password"
-                            className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/20"
+                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
                         />
                     </div>
 
-                    
+                    {errorMessage && (
+                        <p className="text-sm text-red-600 dark:text-[#FF8F86]">
+                            {errorMessage}
+                        </p>
+                    )}
+
                     {/* Submit */}
                     <button
                         type="submit"
-                        className="w-full rounded-lg bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+                        className="w-full rounded-lg bg-yellow-300 px-4 py-3 font-semibold text-black transition hover:bg-yellow-200 focus:outline-none focus:ring-2  focus:ring-offset-2 dark:bg-[#F7C744]"
+                        disabled={loading}
                     >
-                        Create account
+                        {loading ? "Logging in..." : "Login"}
                     </button>
 
                 </div>
 
                 {/* Login link */}
-                <p className="mt-6 text-center text-sm text-slate-500">
-                    Doesn't have an account?{" "}
-                    <Link to="/signup">
-                      Signup
-                    </Link>
+                <p className="mt-6 text-center text-sm text-black dark:text-[#F1F0ED]">
+                    Doesn't have an account? <Link to="/signup">Signup</Link>
                 </p>
 
             </form>
         </div>
-  );
+    );
 };
