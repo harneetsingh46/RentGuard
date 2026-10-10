@@ -54,7 +54,7 @@ const Signup = () => {
                         OWNER REGISTRATION
                     </h1>
 
-                    <p className="mt-2 text-sm text-[#b5ac85] dark:text-[#A6A39E]">
+                    <p className="mt-2 text-sm text-[#9b9164] dark:text-[#A6A39E]">
                         Set up your owner account.
                     </p>
                 </div>

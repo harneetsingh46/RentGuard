@@ -5,6 +5,9 @@ import Layout from './common/Layout'
 import Signup from './pages/Signup'
 import OwnerDashboard from './pages/OwnerDashboard'
 import TenantDashboard from './pages/TenantDashboard'
+import ProtectedRoutes from './utils/ProtectedRoutes'
+import SignOut from './pages/SignOut'
+import PublicRoutes from './utils/PublicRoutes'
 
 const App = () => {
   const router = createBrowserRouter([{
@@ -12,21 +15,45 @@ const App = () => {
     element: <Layout />,
     children: [
       {
-        path: "/login",
-        element: <Login />
+        element: <PublicRoutes />,
+        children: [
+          {
+            path: "/login",
+            element: <Login />
+          },
+          {
+            path: "/signup",
+            element: <Signup />
+          },
+        ]
       },
       {
-        path: "/signup",
-        element: <Signup />
+        element: <ProtectedRoutes requiredRole={"owner"} />,
+        children: [
+          {
+            path: "/owner/dashboard",
+            element: <OwnerDashboard />
+          }
+        ]
       },
       {
-        path: "/owner/dashboard",
-        element: <OwnerDashboard/>
+        element: <ProtectedRoutes requiredRole={"tenant"} />,
+        children: [
+          {
+            path: "/tenant/dashboard",
+            element: <TenantDashboard />
+          }
+        ]
       },
       {
-        path: "/tenant/dashboard",
-        element: <TenantDashboard/>
-      }
+        element: <ProtectedRoutes />,
+        children: [
+          {
+            path: "/sign-out",
+            element: <SignOut />
+          }
+        ]
+      },
     ]
   }])
   return (

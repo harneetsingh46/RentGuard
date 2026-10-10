@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import apiClient from "../ApiClient/interceptor";
+import { useAuth } from "../context/AuthContext";
 
 export const Login = () => {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [loading, setLoading] = useState(false)
     const [errorMessage, setErrorMessage] = useState("")
     const [loginData, setLoginData] = useState({
@@ -16,17 +18,18 @@ export const Login = () => {
             [e.target.name]: e.target.value
         })
     }
-    const login = async (data) => {
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
         try {
-            setLoading(true)
             setErrorMessage("")
-            const response = await apiClient.post("/auth/login", data)
-            console.log(response.data.data)
+            setLoading(true)
+            const user = await login(loginData)
             setLoginData({
                 email: "",
                 password: ""
             })
-            const role = response.data.data.role;
+            const role = user.role;
             if (role === "owner") {
                 navigate("/owner/dashboard");
             } else if (role === "tenant") {
@@ -34,17 +37,15 @@ export const Login = () => {
             } else {
                 setErrorMessage("Invalid user role.");
             }
-        } catch (error) {
+        } catch (err) {
             setErrorMessage(
-                error.response?.data?.message || "Something went wrong. Please try again."
-            )
+                err?.response?.data?.message ||
+                err.message ||
+                "Failed to sign in. Check your credentials."
+            );
         } finally {
-            setLoading(false)
+            setLoading(false);
         }
-    }
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        await login(loginData)
     }
     return (
         <div className="min-h-screen bg-[#b6b09576] py-5 flex items-center justify-center dark:text-white dark:bg-[#101010]">
@@ -57,7 +58,7 @@ export const Login = () => {
                         Welcome Back !
                     </h1>
 
-                    <p className="mt-2 text-sm text-[#b5ac85] dark:text-[#A6A39E]">
+                    <p className="mt-2 text-sm text-[#9b9164] dark:text-[#A6A39E]">
                         Login to your owner/tenant account.
                     </p>
                 </div>
