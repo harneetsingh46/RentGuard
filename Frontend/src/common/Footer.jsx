@@ -1,18 +1,46 @@
+import { Link } from "react-router-dom";
 const Footer = () => {
   return (
-    <footer className="border-t border-slate-200 bg-white text-slate-600 dark:border-neutral-700 dark:bg-neutral-950 dark:text-stone-300">
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-3 sm:flex-row md:px-10">
+    <footer className="border-t border-black/10 px-6 py-8 sm:px-10 lg:px-16 dark:text-white dark:border-white/10 dark:border-neutral-900 dark:bg-neutral-950 md:px-10 dark:shadow-2xl">
+      <div className="mx-auto flex max-w-7xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-normal text-slate-900 dark:text-white">
-            Rent Guard
-          </h2>
-          <p className="mt-1 text-sm">
-            Simple property management for owners and tenants.
-          </p>
+          <Link to="/" className="mb-10 text-2xl dark:text-white font-semibold">
+            <span className="mr-2 rounded-lg bg-yellow-300 px-2 py-1 text-black">
+              R
+            </span>
+            RentGuard
+          </Link>
         </div>
 
-        <div className="text-sm">
-          © 2026 Rent Guard. All rights reserved.
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          A clearer way to manage rental information.
+        </p>
+
+        <div className="flex flex-wrap gap-5 text-sm">
+          <a
+            href="#features"
+            className="transition hover:text-yellow-700 dark:hover:text-yellow-300"
+          >
+            Features
+          </a>
+          <a
+            href="#how-it-works"
+            className="transition hover:text-yellow-700 dark:hover:text-yellow-300"
+          >
+            How it works
+          </a>
+          <Link
+            to="/login"
+            className="transition hover:text-yellow-700 dark:hover:text-yellow-300"
+          >
+            Login
+          </Link>
+          <Link
+            to="/signup"
+            className="transition hover:text-yellow-700 dark:hover:text-yellow-300"
+          >
+            Sign up
+          </Link>
         </div>
       </div>
     </footer>

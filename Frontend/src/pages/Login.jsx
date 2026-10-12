@@ -48,9 +48,9 @@ export const Login = () => {
         }
     }
     return (
-        <div className="min-h-screen bg-[#b6b09576] py-5 flex items-center justify-center dark:text-white dark:bg-[#101010]">
+        <div className="max-h-screen  bg-[url(/login.jpg)] bg-cover bg-center py-10 flex items-center justify-center dark:text-white dark:bg-[#101010]">
 
-            <form onSubmit={handleSubmit} className="w-full max-w-md rounded-xs bg-white p-8 shadow-lg dark:bg-[#1B1B1B] dark:border-[#373737]">
+            <form onSubmit={handleSubmit} className="w-full max-w-md rounded-2xs bg-white p-8 shadow-lg dark:bg-[#1B1B1B] dark:border-[#373737]">
 
                 {/* Heading */}
                 <div className="mb-8 text-center">
@@ -58,7 +58,7 @@ export const Login = () => {
                         Welcome Back !
                     </h1>
 
-                    <p className="mt-2 text-sm text-[#9b9164] dark:text-[#A6A39E]">
+                    <p className="mt-2 text-sm text-yellow-500 dark:text-yellow-300">
                         Login to your owner/tenant account.
                     </p>
                 </div>
@@ -83,7 +83,7 @@ export const Login = () => {
                             value={loginData.email}
                             required
                             placeholder="Enter your email"
-                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
+                            className="w-full rounded-lg border  bg-white border-[#5a574c76] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
                         />
                     </div>
 
@@ -104,7 +104,7 @@ export const Login = () => {
                             value={loginData.password}
                             required
                             placeholder="Enter your password"
-                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
+                            className="w-full rounded-lg border bg-white border-[#5a574c76] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
                         />
                     </div>
 

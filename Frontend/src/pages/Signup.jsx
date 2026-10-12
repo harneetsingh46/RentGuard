@@ -44,9 +44,9 @@ const Signup = () => {
         await signup(formData)
     }
     return (
-        <div className="min-h-screen bg-[#b6b09576] py-5 flex items-center justify-center dark:text-white dark:bg-[#101010]">
+        <div className=" bg-[#f3f3f3] py-10 flex items-center justify-center bg-[url(/signup.jpg)] bg-cover bg-top   dark:text-white dark:bg-[#101010]">
 
-            <form onSubmit={handleSubmit} className="w-full max-w-md rounded-xs bg-white p-8 shadow-lg dark:bg-[#1B1B1B] dark:border-[#373737]">
+            <form onSubmit={handleSubmit} className="w-full shadow-2xl max-w-md rounded-2xs bg-white p-8 shadow-lg dark:bg-[#1B1B1B] dark:border-[#373737] ">
 
                 {/* Heading */}
                 <div className="mb-8 text-center">
@@ -54,13 +54,13 @@ const Signup = () => {
                         OWNER REGISTRATION
                     </h1>
 
-                    <p className="mt-2 text-sm text-[#9b9164] dark:text-[#A6A39E]">
+                    <p className="mt-2 text-sm text-yellow-500 dark:text-yellow-300">
                         Set up your owner account.
                     </p>
                 </div>
 
                 {/* Form fields */}
-                <div className="space-y-5">
+                <div className="space-y-5 grid grid-cols-2">
 
                     {/* Username */}
                     <div>
@@ -79,7 +79,7 @@ const Signup = () => {
                             onChange={handleChange}
                             required
                             placeholder="Enter your Username"
-                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
+                            className="w-full  rounded border bg-white border-[#5a574c76] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D] "
                         />
                     </div>
 
@@ -87,7 +87,7 @@ const Signup = () => {
                     <div>
                         <label
                             htmlFor="email"
-                            className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]"
+                            className="mb-2 mx-2 block text-sm font-normal text-black dark:text-[#F1F0ED]"
                         >
                             Email address
                         </label>
@@ -98,9 +98,9 @@ const Signup = () => {
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                            required
+                            required 
                             placeholder="Enter your email"
-                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
+                            className="w-full mx-2 rounded border  bg-white border-[#5a574c76] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 p-1 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D] "
                         />
                     </div>
 
@@ -121,7 +121,7 @@ const Signup = () => {
                             onChange={handleChange}
                             required
                             placeholder="Enter your password"
-                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
+                            className="w-full  rounded border bg-white border-[#5a574c76] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D] "
                         />
                     </div>
 
@@ -129,7 +129,7 @@ const Signup = () => {
                     <div>
                         <label
                             htmlFor="phone"
-                            className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]"
+                            className="mb-2 mx-2 block text-sm font-normal text-black dark:text-[#F1F0ED]"
                         >
                             Phone
                         </label>
@@ -141,8 +141,8 @@ const Signup = () => {
                             value={formData.phone}
                             onChange={handleChange}
                             required
-                            placeholder="Enter your phone number"
-                            className="w-full rounded-lg border bg-[#b6b09576] border-[#b6b09576] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D]"
+                            placeholder="Enter phone number"
+                            className="w-full mx-2 rounded border bg-white border-[#5a574c76] px-4 py-3 text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D] "
                         />
                     </div>
                     
@@ -151,8 +151,8 @@ const Signup = () => {
                             {errorMessage}
                         </p>
                     )}
-
-                    {/* Submit */}
+                </div>
+                {/* Submit */}
                     <button
                         type="submit"
                         className="w-full rounded-lg bg-yellow-300 px-4 py-3 font-semibold text-black transition hover:bg-yellow-200 focus:outline-none focus:ring-2  focus:ring-offset-2 dark:bg-[#F7C744]"
@@ -160,8 +160,6 @@ const Signup = () => {
                     >
                         {loading ? "Creating account...." : "Create owner account"}
                     </button>
-
-                </div>
 
                 {/* Login link */}
                 <p className="mt-6 text-center text-sm text-black dark:text-[#F1F0ED]">

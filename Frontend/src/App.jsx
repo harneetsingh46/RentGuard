@@ -8,15 +8,20 @@ import TenantDashboard from './pages/TenantDashboard'
 import ProtectedRoutes from './utils/ProtectedRoutes'
 import SignOut from './pages/SignOut'
 import PublicRoutes from './utils/PublicRoutes'
+import OwnerLayout from "./common/OwnerLayout";
+import Hero from './pages/Hero'
 
 const App = () => {
   const router = createBrowserRouter([{
-    path: "/",
     element: <Layout />,
     children: [
       {
         element: <PublicRoutes />,
         children: [
+          {
+            path:"/",
+            element:<Hero/>
+          },
           {
             path: "/login",
             element: <Login />
@@ -31,8 +36,29 @@ const App = () => {
         element: <ProtectedRoutes requiredRole={"owner"} />,
         children: [
           {
-            path: "/owner/dashboard",
-            element: <OwnerDashboard />
+            element: <OwnerLayout />,
+            children: [
+              {
+                path: "/owner/dashboard",
+                element: <OwnerDashboard />
+              },
+              {
+                path: "/owner/properties",
+                element: <div>Properties page coming soon</div>
+              },
+              {
+                path: "/owner/tenants",
+                element: <div>Tenants & Rent page coming soon</div>
+              },
+              {
+                path: "/owner/transactions",
+                element: <div>Transactions page coming soon</div>
+              },
+              {
+                path: "/owner/documents",
+                element: <div>Documents page coming soon</div>
+              }
+            ]
           }
         ]
       },
