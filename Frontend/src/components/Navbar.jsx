@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import ThemeToggle from "../components/ThemeToggle";
+import ThemeToggle from "./ThemeToggle";
 import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {

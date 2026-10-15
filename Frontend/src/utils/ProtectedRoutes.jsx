@@ -5,7 +5,7 @@ const ProtectedRoutes = ({ requiredRole }) => {
     const { isAuthenticated, loading, user } = useAuth();
 
     if (loading) {
-        return <p className="items-center font-normal">Loading...</p>;
+        return <p className="items-center m-9 p-9 rounded font-medium">Loading...</p>;
     }
 
     if (!isAuthenticated || !user) {
