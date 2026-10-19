@@ -30,14 +30,14 @@ const Navbar = () => {
             <>
               <Link
                 to="/login"
-                className="text-sm font-normal text-black transition hover:text-slate-950 dark:text-stone-300 dark:hover:text-white"
+                className="text-sm font-semibold text-black transition hover:text-slate-950 dark:text-stone-300 dark:hover:text-white"
               >
                 Login
               </Link>
 
               <Link
                 to="/signup"
-                className="text-sm font-normal text-black transition hover:text-slate-950 dark:text-stone-300 dark:hover:text-white"
+                className="text-sm font-semibold text-black transition hover:text-slate-950 dark:text-stone-300 dark:hover:text-white"
               >
                 Signup
               </Link>

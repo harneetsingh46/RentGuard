@@ -6,7 +6,7 @@ const OwnerLayout = () => {
 
   const navItems = [
     { label: "Overview", path: "/owner/dashboard" },
-    { label: "Properties", path: "/owner/properties" },
+    { label: "Properties & Units", path: "/owner/properties" },
     { label: "Tenants", path: "/owner/tenants" },
     { label: "Rent & Transactions", path: "/owner/rent" },
     { label: "Documents", path: "/owner/documents" },

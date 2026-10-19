@@ -11,6 +11,7 @@ import PublicRoutes from "./utils/PublicRoutes";
 import OwnerLayout from "./common/OwnerLayout";
 import Hero from "./pages/Hero";
 import Property from "./pages/Property";
+import Tenant from "./pages/Tenant";
 
 const router = createBrowserRouter([
   // Public pages: Navbar + page + Footer
@@ -54,7 +55,7 @@ const router = createBrowserRouter([
           },
           {
             path: "/owner/tenants",
-            element: <div>Tenants & Rent page coming soon</div>,
+            element: <Tenant/>,
           },
           {
             path: "/owner/rent",
