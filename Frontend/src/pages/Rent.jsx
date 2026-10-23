@@ -44,6 +44,8 @@ const Rent = () => {
 
   const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
 
+  const [downloadingReceiptId, setDownloadingReceiptId] = useState("");
+
   // Fetch properties
   const fetchProperties = async () => {
     try {
@@ -246,6 +248,54 @@ const Rent = () => {
       }
     } finally {
       setLoadingPayments(false);
+    }
+  };
+
+  // Download receipt for a successful payment
+  const handleDownloadReceipt = async (payment) => {
+    if (payment.status !== "paid") {
+      setPaymentError("Receipts are available only for successful payments.");
+      return;
+    }
+
+    try {
+      setDownloadingReceiptId(payment._id);
+      setPaymentError("");
+
+      const response = await apiClient.get(
+        `/payment/property/${selectedProperty}/${payment._id}/receipt`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      // Create a temporary URL for the PDF
+      const pdfBlob = new Blob([response.data], {
+        type: "application/pdf",
+      });
+
+      const downloadUrl = window.URL.createObjectURL(pdfBlob);
+
+      // Create a temporary download link
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `RentGuard-Receipt-${payment._id}.pdf`;
+
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      link.remove();
+      // Let the browser begin the download before releasing the temporary URL.
+      window.setTimeout(() => {
+        window.URL.revokeObjectURL(downloadUrl);
+      }, 1000);
+    } catch (err) {
+      setPaymentError(
+        "Failed to download receipt. Please try again."
+      );
+    } finally {
+      setDownloadingReceiptId("");
     }
   };
 
@@ -536,10 +586,9 @@ const Rent = () => {
 
                         <td className="px-5 py-4">
                           <span
-                            className={`inline-flex rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${
-                              statusClasses[rent.status] ||
+                            className={`inline-flex rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${statusClasses[rent.status] ||
                               statusClasses.pending
-                            }`}
+                              }`}
                           >
                             {rent.status || "pending"}
                           </span>
@@ -660,9 +709,8 @@ const Rent = () => {
                     <span>{MONTHS[month - 1]}</span>
 
                     <svg
-                      className={`h-4 w-4 transition-transform ${
-                        monthDropdownOpen ? "rotate-180" : ""
-                      }`}
+                      className={`h-4 w-4 transition-transform ${monthDropdownOpen ? "rotate-180" : ""
+                        }`}
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -697,11 +745,10 @@ const Rent = () => {
                                 setMonth(monthNumber);
                                 setMonthDropdownOpen(false);
                               }}
-                              className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition ${
-                                isSelected
-                                  ? "bg-yellow-400 font-medium text-stone-900"
-                                  : "text-stone-800 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-neutral-800"
-                              }`}
+                              className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition ${isSelected
+                                ? "bg-yellow-400 font-medium text-stone-900"
+                                : "text-stone-800 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-neutral-800"
+                                }`}
                             >
                               <span>{monthName}</span>
 
@@ -860,7 +907,7 @@ const Rent = () => {
                   {formatCurrency(
                     Math.max(
                       (Number(selectedRent.amount) || 0) -
-                        (Number(selectedRent.paidAmount) || 0),
+                      (Number(selectedRent.paidAmount) || 0),
                       0,
                     ),
                   )}
@@ -881,7 +928,7 @@ const Rent = () => {
               <div className="p-8 text-center text-sm text-stone-500 dark:text-stone-400">
                 Loading payment history...
               </div>
-            ) : paymentError ? null : rentPayments.length === 0 ? (
+            ) : paymentError && rentPayments.length === 0 ? null : rentPayments.length === 0 ? (
               <div className="rounded-xs border border-stone-200 p-8 text-center dark:border-neutral-800">
                 <p className="font-medium">No payments recorded</p>
                 <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
@@ -891,13 +938,14 @@ const Rent = () => {
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xs border border-stone-200 dark:border-neutral-800">
-                <table className="w-full min-w-[700px] text-left text-sm">
+                <table className="w-full min-w-[850px] text-left text-sm">
                   <thead className="bg-stone-50 text-xs uppercase text-stone-500 dark:bg-neutral-800 dark:text-stone-400">
                     <tr>
                       <th className="px-4 py-3 font-medium">Payment Date</th>
                       <th className="px-4 py-3 font-medium">Amount</th>
                       <th className="px-4 py-3 font-medium">Transaction ID</th>
                       <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Receipt</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-200 dark:divide-neutral-800">
@@ -916,16 +964,33 @@ const Rent = () => {
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className={`inline-flex rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${
-                              payment.status === "paid"
-                                ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
-                                : payment.status === "failed"
-                                  ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
-                                  : "bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-stone-300"
-                            }`}
+                            className={`inline-flex rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${payment.status === "paid"
+                              ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
+                              : payment.status === "failed"
+                                ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+                                : "bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-stone-300"
+                              }`}
                           >
                             {payment.status || "created"}
                           </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {payment.status === "paid" ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadReceipt(payment)}
+                              disabled={downloadingReceiptId === payment._id}
+                              className="rounded-xs bg-yellow-400 px-3 py-2 text-xs font-medium text-stone-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {downloadingReceiptId === payment._id
+                                ? "Downloading..."
+                                : "Download Receipt"}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-stone-400 dark:text-stone-500">
+                              Not available
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

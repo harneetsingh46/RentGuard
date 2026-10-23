@@ -46,7 +46,7 @@ const OwnerDashboard = () => {
 
         setError(
           error.response?.data?.message ||
-            "Unable to load dashboard data. Please try again."
+          "Unable to load dashboard data. Please try again."
         );
       } finally {
         setLoading(false);
@@ -82,8 +82,8 @@ const OwnerDashboard = () => {
       <div className="flex items-start bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
         <main className="min-w-0 flex-1">
           <section className="min-h-[80vh] p-8">
-            <h1 className="text-3xl font-normal tracking-tight sm:text-4xl">
-              A clearer view of your portfolio.
+            <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+              Dashboard
             </h1>
 
             <p className="mt-3 text-gray-500 dark:text-[#A5A5A5]">
@@ -159,13 +159,9 @@ const OwnerDashboard = () => {
         <section className="min-h-[80vh] p-8">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
-              <h1 className="text-3xl font-normal tracking-tight sm:text-4xl">
-                A clearer view of your portfolio.
+              <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+                Dashboard
               </h1>
-
-              <p className="mt-3 text-gray-500 dark:text-[#A5A5A5]">
-                Here's where things stand with your properties.
-              </p>
             </div>
 
             {/* Month and year selector */}
