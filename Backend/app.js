@@ -11,6 +11,7 @@ import tenantRouter from "./src/routes/tenant.route.js";
 import authRouter from "./src/routes/auth.route.js";
 import rentRouter from "./src/routes/rent.route.js";
 import paymentRouter from "./src/routes/payment.route.js";
+import dashboardRouter from "./src/routes/dashboard.route.js"
 import { razorpayWebhook } from "./src/controllers/payment.controller.js";
 
 //config
@@ -44,5 +45,6 @@ app.use("/tenant/", tenantRouter);
 app.use("/auth/", authRouter);
 app.use("/rent/", rentRouter);
 app.use("/payment/", paymentRouter);
+app.use("/dashboard/",dashboardRouter);
 
 export default app;
