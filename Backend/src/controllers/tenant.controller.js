@@ -3,6 +3,8 @@ import { Property } from "../models/property.model.js";
 import { Tenant } from "../models/tenant.model.js";
 import { Unit } from "../models/unit.model.js";
 import { User } from "../models/user.model.js";
+import uploadToCloudinary from "../utils/uploadToCloudinary.js";
+import cloudinary from "../config/cloudinary.js";
 
 // REGISTER TENANT
 
@@ -531,6 +533,74 @@ export const moveOutTenant = async (req, res, next) => {
   } catch (error) {
     return res.status(500).json({
       message: error.message,
+    });
+  }
+};
+// UPLOAD TENANT PROFILE PICTURE
+
+export const uploadProfilePicture = async (req, res) => {
+  try {
+    // Only tenants can upload their profile picture
+    if (req.user.role !== "tenant") {
+      return res.status(403).json({
+        message: "Only tenants can upload a profile picture!",
+      });
+    }
+
+    // Check whether an image was uploaded
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Please select an image to upload!",
+      });
+    }
+
+    // Find the logged-in tenant
+    const tenant = await Tenant.findOne({
+      user: req.user._id,
+      isActive: true,
+    });
+
+    if (!tenant) {
+      return res.status(404).json({
+        message: "Active tenant profile not found!",
+      });
+    }
+
+    // Upload the new image to Cloudinary
+    const result = await uploadToCloudinary(req.file.buffer, {
+      folder: "rentguard/tenant-profiles",
+      resourceType: "image",
+    });
+
+    // Delete the previous image, if one exists
+    if (tenant.profilePicturePublicId) {
+      try {
+        await cloudinary.uploader.destroy(tenant.profilePicturePublicId, {
+          resource_type: "image",
+        });
+      } catch (error) {
+        console.error("Could not delete previous profile picture:", error);
+      }
+    }
+
+    // Save the new image details
+    tenant.profilePicture = result.secure_url;
+    tenant.profilePicturePublicId = result.public_id;
+
+    await tenant.save();
+
+    return res.status(200).json({
+      message: "Profile picture uploaded successfully!",
+      data: {
+        profilePicture: tenant.profilePicture,
+        profilePicturePublicId: tenant.profilePicturePublicId,
+      },
+    });
+  } catch (error) {
+    console.error("Profile picture upload error:", error);
+
+    return res.status(500).json({
+      message: "Failed to upload profile picture!",
     });
   }
 };

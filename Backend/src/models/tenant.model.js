@@ -39,6 +39,14 @@ const tenantSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    profilePicture: {
+      type: String,
+      default: "",
+    },
+    profilePicturePublicId: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true },
 );
