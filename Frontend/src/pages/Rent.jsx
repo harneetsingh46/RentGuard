@@ -27,6 +27,10 @@ const Rent = () => {
   const [loadingRents, setLoadingRents] = useState(false);
   const [loadingTenants, setLoadingTenants] = useState(false);
   const [creatingRent, setCreatingRent] = useState(false);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [selectedRent, setSelectedRent] = useState(null);
+  const [rentPayments, setRentPayments] = useState([]);
+  const [paymentError, setPaymentError] = useState("");
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -54,7 +58,7 @@ const Rent = () => {
       if (propertyList.length > 0) {
         setSelectedProperty((current) => {
           const propertyStillExists = propertyList.some(
-            (property) => property._id === current
+            (property) => property._id === current,
           );
 
           return propertyStillExists ? current : propertyList[0]._id;
@@ -64,9 +68,7 @@ const Rent = () => {
         setRents([]);
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to load properties."
-      );
+      setError(err.response?.data?.message || "Failed to load properties.");
     } finally {
       setLoadingProperties(false);
     }
@@ -91,9 +93,7 @@ const Rent = () => {
         setRents([]);
       } else {
         setRents([]);
-        setError(
-          err.response?.data?.message || "Failed to load rent records."
-        );
+        setError(err.response?.data?.message || "Failed to load rent records.");
       }
     } finally {
       setLoadingRents(false);
@@ -111,9 +111,7 @@ const Rent = () => {
       setLoadingTenants(true);
       setError("");
 
-      const response = await apiClient.get(
-        `/property/${propertyId}/tenants`
-      );
+      const response = await apiClient.get(`/property/${propertyId}/tenants`);
 
       setTenants(response.data.data || []);
     } catch (err) {
@@ -121,9 +119,7 @@ const Rent = () => {
         setTenants([]);
       } else {
         setTenants([]);
-        setError(
-          err.response?.data?.message || "Failed to load tenants."
-        );
+        setError(err.response?.data?.message || "Failed to load tenants.");
       }
     } finally {
       setLoadingTenants(false);
@@ -173,7 +169,7 @@ const Rent = () => {
         collected: 0,
         pending: 0,
         overdue: 0,
-      }
+      },
     );
   }, [rents]);
 
@@ -189,7 +185,7 @@ const Rent = () => {
 
     return new Date(
       Number(billingYear),
-      Number(billingMonth) - 1
+      Number(billingMonth) - 1,
     ).toLocaleDateString("en-IN", {
       month: "long",
       year: "numeric",
@@ -216,8 +212,48 @@ const Rent = () => {
       "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300",
     pending:
       "bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-stone-300",
-    overdue:
-      "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+    overdue: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+  };
+
+  // Fetch payment history for the selected rent record
+  const openPaymentHistory = async (rent) => {
+    setSelectedRent(rent);
+    setRentPayments([]);
+    setPaymentError("");
+    setLoadingPayments(true);
+
+    try {
+      const response = await apiClient.get(
+        `/payment/property/${selectedProperty}`,
+      );
+      const propertyPayments = response.data.data || [];
+
+      const paymentsForRent = propertyPayments.filter((payment) => {
+        const paymentRentId =
+          typeof payment.rent === "object" ? payment.rent?._id : payment.rent;
+
+        return String(paymentRentId) === String(rent._id);
+      });
+
+      setRentPayments(paymentsForRent);
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setRentPayments([]);
+      } else {
+        setPaymentError(
+          err.response?.data?.message || "Failed to load payment history.",
+        );
+      }
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
+  const closePaymentHistory = () => {
+    if (loadingPayments) return;
+    setSelectedRent(null);
+    setRentPayments([]);
+    setPaymentError("");
   };
 
   // Open the Create Rent modal
@@ -239,22 +275,12 @@ const Rent = () => {
   const handleCreateRent = async (e) => {
     e.preventDefault();
 
-    if (
-      !selectedProperty ||
-      !selectedTenant ||
-      !month ||
-      !year ||
-      !dueDate
-    ) {
+    if (!selectedProperty || !selectedTenant || !month || !year || !dueDate) {
       setError("Please fill in all required fields.");
       return;
     }
 
-    if (
-      Number(month) < 1 ||
-      Number(month) > 12 ||
-      Number(year) < 2000
-    ) {
+    if (Number(month) < 1 || Number(month) > 12 || Number(year) < 2000) {
       setError("Please enter a valid billing month and year.");
       return;
     }
@@ -270,7 +296,7 @@ const Rent = () => {
           month: Number(month),
           year: Number(year),
           dueDate,
-        }
+        },
       );
 
       setShowCreateModal(false);
@@ -281,9 +307,7 @@ const Rent = () => {
 
       await fetchRents(selectedProperty);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to create rent record."
-      );
+      setError(err.response?.data?.message || "Failed to create rent record.");
     } finally {
       setCreatingRent(false);
     }
@@ -313,9 +337,7 @@ const Rent = () => {
             <select
               id="rent-property"
               value={selectedProperty}
-              onChange={(e) =>
-                setSelectedProperty(e.target.value)
-              }
+              onChange={(e) => setSelectedProperty(e.target.value)}
               disabled={loadingProperties || properties.length === 0}
               className="w-full rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-yellow-500 dark:border-neutral-700 dark:bg-neutral-900"
             >
@@ -458,7 +480,7 @@ const Rent = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1050px] text-left text-sm">
+              <table className="w-full min-w-[1150px] text-left text-sm">
                 <thead className="bg-stone-50 text-xs uppercase text-stone-500 dark:bg-neutral-800 dark:text-stone-400">
                   <tr>
                     <th className="px-5 py-4 font-medium">Tenant</th>
@@ -469,6 +491,7 @@ const Rent = () => {
                     <th className="px-5 py-4 font-medium">Remaining</th>
                     <th className="px-5 py-4 font-medium">Due Date</th>
                     <th className="px-5 py-4 font-medium">Status</th>
+                    <th className="px-5 py-4 font-medium">Payments</th>
                   </tr>
                 </thead>
 
@@ -497,9 +520,7 @@ const Rent = () => {
                           {formatMonth(rent.month, rent.year)}
                         </td>
 
-                        <td className="px-5 py-4">
-                          {formatCurrency(amount)}
-                        </td>
+                        <td className="px-5 py-4">{formatCurrency(amount)}</td>
 
                         <td className="px-5 py-4 text-green-700 dark:text-green-400">
                           {formatCurrency(paid)}
@@ -523,6 +544,16 @@ const Rent = () => {
                             {rent.status || "pending"}
                           </span>
                         </td>
+
+                        <td className="px-5 py-4">
+                          <button
+                            type="button"
+                            onClick={() => openPaymentHistory(rent)}
+                            className="rounded-xs border border-stone-300 px-3 py-1.5 text-xs font-medium transition hover:bg-stone-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                          >
+                            View Payments
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -538,10 +569,7 @@ const Rent = () => {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onMouseDown={(e) => {
-            if (
-              e.target === e.currentTarget &&
-              !creatingRent
-            ) {
+            if (e.target === e.currentTarget && !creatingRent) {
               setShowCreateModal(false);
               setMonthDropdownOpen(false);
             }
@@ -555,10 +583,7 @@ const Rent = () => {
           >
             <div className="mb-6 flex items-center justify-between">
               <div>
-                <h2
-                  id="create-rent-title"
-                  className="text-xl font-semibold"
-                >
+                <h2 id="create-rent-title" className="text-xl font-semibold">
                   Create Rent
                 </h2>
 
@@ -594,17 +619,13 @@ const Rent = () => {
                 <select
                   id="rent-tenant"
                   value={selectedTenant}
-                  onChange={(e) =>
-                    setSelectedTenant(e.target.value)
-                  }
+                  onChange={(e) => setSelectedTenant(e.target.value)}
                   required
                   disabled={loadingTenants || tenants.length === 0}
                   className="w-full rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-yellow-500 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
                 >
                   <option value="">
-                    {loadingTenants
-                      ? "Loading tenants..."
-                      : "Select tenant"}
+                    {loadingTenants ? "Loading tenants..." : "Select tenant"}
                   </option>
 
                   {tenants.map((tenant) => (
@@ -630,9 +651,7 @@ const Rent = () => {
                 <div className="relative">
                   <button
                     type="button"
-                    onClick={() =>
-                      setMonthDropdownOpen((open) => !open)
-                    }
+                    onClick={() => setMonthDropdownOpen((open) => !open)}
                     disabled={creatingRent}
                     aria-expanded={monthDropdownOpen}
                     aria-haspopup="listbox"
@@ -766,9 +785,7 @@ const Rent = () => {
                 <button
                   type="submit"
                   disabled={
-                    creatingRent ||
-                    loadingTenants ||
-                    tenants.length === 0
+                    creatingRent || loadingTenants || tenants.length === 0
                   }
                   className="rounded-xs bg-yellow-400 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -776,6 +793,157 @@ const Rent = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Payment History Modal */}
+      {selectedRent && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) closePaymentHistory();
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="payment-history-title"
+            className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xs border border-stone-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900"
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2
+                  id="payment-history-title"
+                  className="text-xl font-semibold"
+                >
+                  Payment History
+                </h2>
+                <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                  {selectedRent.tenant?.fullName || "Unknown tenant"} ·{" "}
+                  {formatMonth(selectedRent.month, selectedRent.year)}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closePaymentHistory}
+                disabled={loadingPayments}
+                className="text-2xl text-stone-500 hover:text-stone-900 disabled:opacity-50 dark:hover:text-white"
+                aria-label="Close payment history"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
+                <p className="text-sm text-stone-500 dark:text-stone-400">
+                  Rent Amount
+                </p>
+                <p className="mt-1 text-lg font-semibold">
+                  {formatCurrency(Number(selectedRent.amount) || 0)}
+                </p>
+              </div>
+              <div className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
+                <p className="text-sm text-stone-500 dark:text-stone-400">
+                  Total Paid
+                </p>
+                <p className="mt-1 text-lg font-semibold text-green-700 dark:text-green-400">
+                  {formatCurrency(Number(selectedRent.paidAmount) || 0)}
+                </p>
+              </div>
+              <div className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
+                <p className="text-sm text-stone-500 dark:text-stone-400">
+                  Remaining
+                </p>
+                <p className="mt-1 text-lg font-semibold">
+                  {formatCurrency(
+                    Math.max(
+                      (Number(selectedRent.amount) || 0) -
+                        (Number(selectedRent.paidAmount) || 0),
+                      0,
+                    ),
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {paymentError && (
+              <div
+                role="alert"
+                className="mb-4 rounded-xs border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+              >
+                {paymentError}
+              </div>
+            )}
+
+            {loadingPayments ? (
+              <div className="p-8 text-center text-sm text-stone-500 dark:text-stone-400">
+                Loading payment history...
+              </div>
+            ) : paymentError ? null : rentPayments.length === 0 ? (
+              <div className="rounded-xs border border-stone-200 p-8 text-center dark:border-neutral-800">
+                <p className="font-medium">No payments recorded</p>
+                <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
+                  Transactions for this rent record will appear here after a
+                  payment is recorded.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xs border border-stone-200 dark:border-neutral-800">
+                <table className="w-full min-w-[700px] text-left text-sm">
+                  <thead className="bg-stone-50 text-xs uppercase text-stone-500 dark:bg-neutral-800 dark:text-stone-400">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Payment Date</th>
+                      <th className="px-4 py-3 font-medium">Amount</th>
+                      <th className="px-4 py-3 font-medium">Transaction ID</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-200 dark:divide-neutral-800">
+                    {rentPayments.map((payment) => (
+                      <tr key={payment._id}>
+                        <td className="px-4 py-3">
+                          {formatDate(payment.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 font-medium">
+                          {formatCurrency(Number(payment.amount) || 0)}
+                        </td>
+                        <td className="break-all px-4 py-3 text-xs">
+                          {payment.razorpayPaymentId ||
+                            payment.razorpayOrderId ||
+                            "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${
+                              payment.status === "paid"
+                                ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
+                                : payment.status === "failed"
+                                  ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+                                  : "bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-stone-300"
+                            }`}
+                          >
+                            {payment.status || "created"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={closePaymentHistory}
+                disabled={loadingPayments}
+                className="rounded-xs bg-yellow-400 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
