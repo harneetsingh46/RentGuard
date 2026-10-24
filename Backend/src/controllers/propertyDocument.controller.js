@@ -1,10 +1,13 @@
+import mongoose from "mongoose";
 import { Property } from "../models/property.model.js";
 import { PropertyDocument } from "../models/propertyDocument.model.js";
 import uploadToCloudinary from "../utils/uploadToCloudinary.js";
 import cloudinary from "../config/cloudinary.js";
 
-// UPLOAD PROPERTY DOCUMENT
+// Validate MongoDB ObjectId
+const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
+// UPLOAD PROPERTY DOCUMENT
 export const uploadPropertyDocument = async (req, res) => {
   let cloudinaryPublicId = "";
   let resourceType = "";
@@ -18,6 +21,13 @@ export const uploadPropertyDocument = async (req, res) => {
 
     const { propertyId } = req.params;
     const { documentName, documentType } = req.body;
+
+    // Validate property ID before querying MongoDB
+    if (!isValidObjectId(propertyId)) {
+      return res.status(400).json({
+        message: "Invalid property ID!",
+      });
+    }
 
     if (!documentName || !documentName.trim()) {
       return res.status(400).json({
@@ -42,7 +52,13 @@ export const uploadPropertyDocument = async (req, res) => {
       });
     }
 
-    const allowedDocumentTypes = ["agreement", "ownership", "tax", "other"];
+    const allowedDocumentTypes = [
+      "agreement",
+      "ownership",
+      "tax",
+      "other",
+    ];
+
     const selectedType = documentType || "other";
 
     if (!allowedDocumentTypes.includes(selectedType)) {
@@ -112,7 +128,6 @@ export const uploadPropertyDocument = async (req, res) => {
 };
 
 // GET PROPERTY DOCUMENTS
-
 export const getPropertyDocuments = async (req, res) => {
   try {
     if (req.user.role !== "owner") {
@@ -122,6 +137,13 @@ export const getPropertyDocuments = async (req, res) => {
     }
 
     const { propertyId } = req.params;
+
+    // Validate property ID before querying MongoDB
+    if (!isValidObjectId(propertyId)) {
+      return res.status(400).json({
+        message: "Invalid property ID!",
+      });
+    }
 
     const property = await Property.findOne({
       _id: propertyId,
@@ -135,7 +157,7 @@ export const getPropertyDocuments = async (req, res) => {
     }
 
     const documents = await PropertyDocument.find({
-      property: propertyId,
+      property: property._id,
       uploadedBy: req.user._id,
     })
       .select("-fileUrl")
@@ -155,7 +177,6 @@ export const getPropertyDocuments = async (req, res) => {
 };
 
 // DELETE PROPERTY DOCUMENT
-
 export const deletePropertyDocument = async (req, res) => {
   try {
     if (req.user.role !== "owner") {
@@ -165,6 +186,16 @@ export const deletePropertyDocument = async (req, res) => {
     }
 
     const { propertyId, documentId } = req.params;
+
+    // Validate both IDs before querying MongoDB
+    if (
+      !isValidObjectId(propertyId) ||
+      !isValidObjectId(documentId)
+    ) {
+      return res.status(400).json({
+        message: "Invalid property ID or document ID!",
+      });
+    }
 
     const property = await Property.findOne({
       _id: propertyId,
@@ -179,7 +210,7 @@ export const deletePropertyDocument = async (req, res) => {
 
     const document = await PropertyDocument.findOne({
       _id: documentId,
-      property: propertyId,
+      property: property._id,
       uploadedBy: req.user._id,
     });
 
@@ -189,7 +220,8 @@ export const deletePropertyDocument = async (req, res) => {
       });
     }
 
-    const resourceType = document.fileFormat === "pdf" ? "raw" : "image";
+    const resourceType =
+      document.fileFormat === "pdf" ? "raw" : "image";
 
     const result = await cloudinary.uploader.destroy(
       document.cloudinaryPublicId,
@@ -200,9 +232,13 @@ export const deletePropertyDocument = async (req, res) => {
       },
     );
 
-    if (result.result !== "ok" && result.result !== "not found") {
+    if (
+      result.result !== "ok" &&
+      result.result !== "not found"
+    ) {
       return res.status(502).json({
-        message: "Could not delete the file from Cloudinary. Please try again.",
+        message:
+          "Could not delete the file from Cloudinary. Please try again.",
       });
     }
 
@@ -221,7 +257,6 @@ export const deletePropertyDocument = async (req, res) => {
 };
 
 // GET SECURE PROPERTY DOCUMENT DOWNLOAD URL
-
 export const getPropertyDocumentDownloadUrl = async (req, res) => {
   try {
     if (req.user.role !== "owner") {
@@ -231,6 +266,16 @@ export const getPropertyDocumentDownloadUrl = async (req, res) => {
     }
 
     const { propertyId, documentId } = req.params;
+
+    // Validate both IDs before querying MongoDB
+    if (
+      !isValidObjectId(propertyId) ||
+      !isValidObjectId(documentId)
+    ) {
+      return res.status(400).json({
+        message: "Invalid property ID or document ID!",
+      });
+    }
 
     const property = await Property.findOne({
       _id: propertyId,
@@ -245,7 +290,7 @@ export const getPropertyDocumentDownloadUrl = async (req, res) => {
 
     const document = await PropertyDocument.findOne({
       _id: documentId,
-      property: propertyId,
+      property: property._id,
       uploadedBy: req.user._id,
     });
 
@@ -255,7 +300,9 @@ export const getPropertyDocumentDownloadUrl = async (req, res) => {
       });
     }
 
-    const resourceType = document.fileFormat === "pdf" ? "raw" : "image";
+    const resourceType =
+      document.fileFormat === "pdf" ? "raw" : "image";
+
     const expiresAt = Math.floor(Date.now() / 1000) + 300;
 
     const downloadUrl = cloudinary.utils.private_download_url(
@@ -278,7 +325,10 @@ export const getPropertyDocumentDownloadUrl = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Generate document download URL error:", error);
+    console.error(
+      "Generate document download URL error:",
+      error,
+    );
 
     return res.status(500).json({
       message: "Failed to generate document download URL!",
