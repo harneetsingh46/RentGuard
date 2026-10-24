@@ -83,7 +83,7 @@ const OwnerDashboard = () => {
         <main className="min-w-0 flex-1">
           <section className="min-h-[80vh] p-8">
             <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
-              Dashboard
+              Owner Overview
             </h1>
 
             <p className="mt-3 text-gray-500 dark:text-[#A5A5A5]">
@@ -142,10 +142,6 @@ const OwnerDashboard = () => {
       value: overview?.availableUnits,
     },
     {
-      title: "Maintenance Units",
-      value: overview?.maintenanceUnits,
-    },
-    {
       title: "Active Tenants",
       value: overview?.activeTenants,
     },
@@ -160,7 +156,7 @@ const OwnerDashboard = () => {
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
               <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
-                Dashboard
+                Owner Overview
               </h1>
             </div>
 
@@ -267,7 +263,7 @@ const OwnerDashboard = () => {
                   Property Overview
                 </h2>
 
-                <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
                   {propertyCards.map((card) => (
                     <div
                       key={card.title}

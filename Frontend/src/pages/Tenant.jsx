@@ -1,8 +1,14 @@
 
 import React, { useEffect, useState } from 'react'
-import apiClient from '../ApiClient/interceptor'
+import apiClient from '../ApiClient/interceptor.js'
+import { useToast } from "../common/ToastProvider"
+import ConfirmModal from "../common/ConfirmModal"
+import { Pencil, LogOut } from "lucide-react"
 
 const Tenant = () => {
+  const { showToast } = useToast()
+  const [confirmTenant, setConfirmTenant] = useState(null)
+  const [confirmLoading, setConfirmLoading] = useState(false)
   const [tenants, setTenants] = useState([])
   const [history, setHistory] = useState([])
   const [activeSection, setActiveSection] = useState('active')
@@ -132,8 +138,10 @@ const Tenant = () => {
       setEditModalOpen(false)
       setSelectedTenant(null)
       setSuccess('Tenant updated successfully.')
+      showToast('Tenant updated successfully.', 'success')
       await getTenants()
     } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to update tenant.', 'error')
       setError(
         err.response?.data?.message || 'Failed to update tenant.'
       )
@@ -142,28 +150,24 @@ const Tenant = () => {
     }
   }
 
-  // Move tenant out
-  const handleMoveOut = async (tenant) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to move out ${tenant.fullName}?`
-    )
+  // Open the custom move-out confirmation modal
+  const handleMoveOut = (tenant) => setConfirmTenant(tenant)
 
-    if (!confirmed) return
-
+  const confirmMoveOut = async () => {
+    if (!confirmTenant) return
+    const tenantToMove = confirmTenant
     try {
-      setError('')
-      setSuccess('')
-
+      setConfirmLoading(true)
       await apiClient.patch(
-        `/property/${tenant.property}/tenants/${tenant._id}/move-out`
+        `/property/${tenantToMove.property}/tenants/${tenantToMove._id}/move-out`
       )
-
-      setSuccess(`${tenant.fullName} has been moved out successfully.`)
+      setConfirmTenant(null)
+      showToast(`${tenantToMove.fullName} has been moved out successfully.`, 'success')
       await getTenants()
     } catch (err) {
-      setError(
-        err.response?.data?.message || 'Failed to move out tenant.'
-      )
+      showToast(err.response?.data?.message || 'Failed to move out tenant.', 'error')
+    } finally {
+      setConfirmLoading(false)
     }
   }
 
@@ -171,8 +175,8 @@ const Tenant = () => {
     activeSection === 'active' ? tenants : history
 
   return (
-    <div className="p-4">
-      <h1 className="mb-6 text-2xl font-semibold text-gray-900 dark:text-white">
+    <div className="mx-auto w-full min-w-0 p-3 sm:p-4 lg:p-6">
+      <h1 className="mb-4 break-words text-xl font-semibold text-gray-900 dark:text-white sm:mb-6 sm:text-2xl">
         Tenant Management
       </h1>
 
@@ -187,7 +191,7 @@ const Tenant = () => {
       )}
 
       {/* Active tenants and history sections */}
-      <div className="mb-5 flex flex-wrap gap-3 border-b border-gray-200 dark:border-stone-800">
+      <div className="mb-4 flex flex-wrap gap-x-2 gap-y-1 border-b border-gray-200 dark:border-stone-800 sm:mb-5 sm:gap-3">
         <button
           type="button"
           onClick={() => {
@@ -195,9 +199,9 @@ const Tenant = () => {
             setError('')
             setSuccess('')
           }}
-          className={`border-b-2 px-4 py-3 font-medium ${activeSection === 'active'
-              ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400'
-              : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${activeSection === 'active'
+            ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400'
+            : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
             }`}
         >
           Active Tenants ({tenants.length})
@@ -210,9 +214,9 @@ const Tenant = () => {
             setError('')
             setSuccess('')
           }}
-          className={`border-b-2 px-4 py-3 font-medium ${activeSection === 'history'
-              ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400'
-              : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${activeSection === 'history'
+            ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400'
+            : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
             }`}
         >
           Tenant History ({history.length})
@@ -230,8 +234,89 @@ const Tenant = () => {
             : 'No previous tenants found across your properties.'}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xs border border-gray-200 dark:border-stone-800">
-          <table className="w-full min-w-[850px] text-left text-sm">
+        <>
+        {/* Mobile tenant cards */}
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:hidden">
+          {displayedTenants.map((tenant) => (
+            <article
+              key={tenant._id}
+              className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-4"
+            >
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h2 className="break-words text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
+                    {tenant.fullName}
+                  </h2>
+                  <p className="mt-1 break-words text-sm text-gray-600 dark:text-gray-400">
+                    {tenant.propertyName || 'Property unavailable'}
+                  </p>
+                </div>
+                <span
+                  className={`shrink-0 rounded-xs px-2 py-1 text-xs font-medium ${tenant.isActive
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-200 text-gray-700 dark:bg-stone-700 dark:text-gray-300'
+                  }`}
+                >
+                  {tenant.isActive ? 'Active' : 'Moved Out'}
+                </span>
+              </div>
+
+              <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 border-t border-gray-100 pt-3 text-sm dark:border-stone-800 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Unit</dt>
+                  <dd className="mt-1 break-words text-gray-800 dark:text-gray-200">{tenant.unit?.unitName || 'Unit unavailable'}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Monthly Rent</dt>
+                  <dd className="mt-1 break-words text-gray-800 dark:text-gray-200">
+                    {tenant.unit?.rent != null ? `₹${tenant.unit.rent}` : 'N/A'}
+                  </dd>
+                </div>
+                <div className="min-w-0 sm:col-span-2">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Address</dt>
+                  <dd className="mt-1 break-words text-gray-800 dark:text-gray-200">{tenant.address || 'N/A'}</dd>
+                </div>
+                {activeSection === 'history' && (
+                  <div className="min-w-0">
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Move-out Date</dt>
+                    <dd className="mt-1 text-gray-800 dark:text-gray-200">
+                      {tenant.moveOutDate ? new Date(tenant.moveOutDate).toLocaleDateString() : 'N/A'}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+
+              {activeSection === 'active' && (
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3 dark:border-stone-800">
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(tenant)}
+                    aria-label={`Edit ${tenant.fullName}`}
+                    title="Edit tenant"
+                    className="inline-flex min-h-10 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-400 dark:text-gray-900"
+                  >
+                    <Pencil size={17} />
+                    <span className="ml-2 text-sm">Edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMoveOut(tenant)}
+                    aria-label={`Move out ${tenant.fullName}`}
+                    title="Move tenant out"
+                    className="inline-flex min-h-10 items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                  >
+                    <LogOut size={17} />
+                    <span className="ml-2 text-sm">Move Out</span>
+                  </button>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+
+        {/* Full table for larger screens */}
+        <div className="hidden overflow-x-auto rounded-xs border border-gray-200 dark:border-stone-800 lg:block">
+          <table className="w-full text-left text-sm">
             <thead className="bg-gray-100 text-gray-700 dark:bg-stone-900 dark:text-gray-300">
               <tr>
                 <th className="px-4 py-3 font-semibold">Tenant Name</th>
@@ -286,8 +371,8 @@ const Tenant = () => {
                   <td className="whitespace-nowrap px-4 py-3">
                     <span
                       className={`rounded-xs px-2 py-1 text-xs font-medium ${tenant.isActive
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-200 text-gray-700 dark:bg-stone-700 dark:text-gray-300'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-200 text-gray-700 dark:bg-stone-700 dark:text-gray-300'
                         }`}
                     >
                       {tenant.isActive ? 'Active' : 'Moved Out'}
@@ -300,17 +385,21 @@ const Tenant = () => {
                         <button
                           type="button"
                           onClick={() => openEditModal(tenant)}
-                          className="rounded-xs bg-yellow-400 px-3 py-2 font-medium text-black hover:bg-yellow-500"
+                          aria-label={`Edit ${tenant.fullName}`}
+                          title="Edit tenant"
+                          className="mx-0 my-1 inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400"
                         >
-                          Edit
+                          <Pencil size={17} />
                         </button>
 
                         <button
                           type="button"
                           onClick={() => handleMoveOut(tenant)}
-                          className="rounded-xs bg-red-600 px-3 py-2 font-medium text-white hover:bg-red-700"
+                          aria-label={`Move out ${tenant.fullName}`}
+                          title="Move tenant out"
+                          className="mx-1 my-1 inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                         >
-                          Move Out
+                          <LogOut size={17} />
                         </button>
                       </div>
                     </td>
@@ -320,6 +409,7 @@ const Tenant = () => {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {/* Edit tenant modal */}
@@ -338,7 +428,7 @@ const Tenant = () => {
             <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-stone-800 sm:p-6">
               <h2
                 id="edit-tenant-title"
-                className="text-2xl font-semibold text-gray-900 dark:text-white"
+                className="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl"
               >
                 Edit Tenant
               </h2>
@@ -406,12 +496,12 @@ const Tenant = () => {
                 />
               </div>
 
-              <div className="flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-stone-800">
+              <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 dark:border-stone-800 sm:flex-row sm:justify-end sm:gap-3">
                 <button
                   type="button"
                   onClick={closeEditModal}
                   disabled={saving}
-                  className="rounded-xs border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-stone-700 dark:text-gray-300 dark:hover:bg-stone-800"
+                  className="w-full rounded-xs border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-stone-700 dark:text-gray-300 dark:hover:bg-stone-800 sm:w-auto"
                 >
                   Cancel
                 </button>
@@ -419,7 +509,7 @@ const Tenant = () => {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-xs bg-yellow-400 px-4 py-2 font-medium text-black hover:bg-yellow-500 disabled:opacity-50"
+                  className="w-full rounded-xs bg-yellow-400 px-4 py-2 font-medium text-black hover:bg-yellow-500 disabled:opacity-50 sm:w-auto"
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
                 </button>
@@ -428,6 +518,16 @@ const Tenant = () => {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={Boolean(confirmTenant)}
+        title="Move tenant out?"
+        message={confirmTenant ? `Are you sure you want to move out ${confirmTenant.fullName}? This will move the tenant to history.` : ''}
+        confirmText="Move Out"
+        loading={confirmLoading}
+        onCancel={() => { if (!confirmLoading) setConfirmTenant(null) }}
+        onConfirm={confirmMoveOut}
+      />
     </div>
   )
 }

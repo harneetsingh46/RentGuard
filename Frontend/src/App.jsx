@@ -13,6 +13,7 @@ import Hero from "./pages/Hero";
 import Property from "./pages/Property";
 import Tenant from "./pages/Tenant";
 import Rent from "./pages/Rent";
+import Documents from "./pages/Documents";
 
 const router = createBrowserRouter([
   // Public pages: Navbar + page + Footer
@@ -60,11 +61,11 @@ const router = createBrowserRouter([
           },
           {
             path: "/owner/rent",
-            element: <Rent/>
+            element: <Rent/>,
           },
           {
-            path: "/owner/documents",
-            element: <div>Documents page coming soon</div>,
+            path: "/owner/documents/:propertyId",
+            element: <Documents/>
           },
         ],
       },

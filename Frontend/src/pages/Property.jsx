@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import apiClient from "../ApiClient/interceptor";
+import { Pencil, Trash2, X, AlertTriangle } from "lucide-react";
 
 const emptyProperty = {
     propertyName: "",
@@ -59,6 +60,8 @@ const Property = () => {
     const [unitError, setUnitError] = useState("");
     const [tenantError, setTenantError] = useState("");
     const [success, setSuccess] = useState("");
+    const [confirmModal, setConfirmModal] = useState({ open: false, type: "", id: null, title: "", message: "" });
+    const [deleting, setDeleting] = useState(false);
 
     // Fetch all properties
     const getProperties = async () => {
@@ -221,30 +224,74 @@ const Property = () => {
         }
     };
 
-    // Delete property
-    const handleDelete = async (propertyId) => {
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this property?"
-        );
+    // Open a custom confirmation modal before deleting a property
+    const handleDelete = (propertyId) => {
+        const item = properties.find((propertyItem) => propertyItem._id === propertyId);
+        setConfirmModal({
+            open: true,
+            type: "property",
+            id: propertyId,
+            title: "Delete property?",
+            message: `Are you sure you want to delete "${item?.propertyName || "this property"}"? This action cannot be undone.`,
+        });
+    };
 
-        if (!confirmed) return;
+    // Open a custom confirmation modal before deleting a unit
+    const handleDeleteUnit = (unitId) => {
+        if (!selectedProperty?._id) return;
+        const item = units.find((unitItem) => unitItem._id === unitId);
+        setConfirmModal({
+            open: true,
+            type: "unit",
+            id: unitId,
+            title: "Delete unit?",
+            message: `Are you sure you want to delete "${item?.unitName || "this unit"}"? This action cannot be undone.`,
+        });
+    };
+
+    const closeConfirmModal = () => {
+        if (deleting) return;
+        setConfirmModal({ open: false, type: "", id: null, title: "", message: "" });
+    };
+
+    const confirmDelete = async () => {
+        if (!confirmModal.id || !confirmModal.type) return;
 
         try {
+            setDeleting(true);
             setError("");
+            setUnitError("");
+            setSuccess("");
 
-            await apiClient.delete(`/property/${propertyId}`);
+            if (confirmModal.type === "property") {
+                await apiClient.delete(`/property/${confirmModal.id}`);
 
-            if (selectedProperty?._id === propertyId) {
-                setSelectedProperty(null);
-                setUnits([]);
+                if (selectedProperty?._id === confirmModal.id) {
+                    setSelectedProperty(null);
+                    setUnits([]);
+                }
+
+                setConfirmModal({ open: false, type: "", id: null, title: "", message: "" });
+                await getProperties();
+            } else if (confirmModal.type === "unit") {
+                await apiClient.delete(
+                    `/property/${selectedProperty._id}/units/${confirmModal.id}`
+                );
+
+                setConfirmModal({ open: false, type: "", id: null, title: "", message: "" });
+                setSuccess("Unit deleted successfully!");
+                await getUnits(selectedProperty._id);
             }
-
-            await getProperties();
         } catch (err) {
-            setError(
-                err.response?.data?.message ||
-                "Failed to delete property."
-            );
+            const message = err.response?.data?.message ||
+                (confirmModal.type === "property"
+                    ? "Failed to delete property."
+                    : "Failed to delete unit.");
+
+            if (confirmModal.type === "property") setError(message);
+            else setUnitError(message);
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -367,33 +414,7 @@ const Property = () => {
         }
     };
 
-    // Delete unit
-    const handleDeleteUnit = async (unitId) => {
-        if (!selectedProperty?._id) return;
 
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this unit?"
-        );
-
-        if (!confirmed) return;
-
-        try {
-            setUnitError("");
-            setSuccess("");
-
-            await apiClient.delete(
-                `/property/${selectedProperty._id}/units/${unitId}`
-            );
-
-            setSuccess("Unit deleted successfully!");
-            await getUnits(selectedProperty._id);
-        } catch (err) {
-            setUnitError(
-                err.response?.data?.message ||
-                "Failed to delete unit."
-            );
-        }
-    };
 
     // Tenant form input
     const handleTenantChange = (e) => {
@@ -528,9 +549,9 @@ const Property = () => {
 
 
     return (
-        <div className="min-h-full w-full bg-[#faf9f6] p-4 transition-colors duration-300 dark:bg-[#111111] md:p-8">
+        <div className="min-h-full w-full bg-[#faf9f6] p-4 transition-colors duration-300 dark:bg-[#111111] md:p-8" >
             {/* Page Header */}
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center" onClick={deselectProperty}>
                 <div className="m-2">
                     <h1 className="my-4 text-3xl font-semibold text-gray-900 dark:text-white md:text-4xl">
                         Good homes. Better managed.
@@ -638,9 +659,11 @@ const Property = () => {
                                                 e.stopPropagation();
                                                 openEditForm(item);
                                             }}
-                                            className="mx-0 my-1 rounded-xs bg-yellow-300 px-3 py-2 text-sm font-medium text-black shadow hover:bg-yellow-400"
+                                            aria-label={`Edit ${item.propertyName}`}
+                                            title="Edit property"
+                                            className="mx-0 my-1 inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400"
                                         >
-                                            Edit
+                                            <Pencil size={17} />
                                         </button>
 
                                         <button
@@ -649,9 +672,11 @@ const Property = () => {
                                                 e.stopPropagation();
                                                 handleDelete(item._id);
                                             }}
-                                            className="mx-1 my-1 rounded-xs bg-yellow-300 px-3 py-2 text-sm font-medium text-black shadow hover:bg-yellow-400"
+                                            aria-label={`Delete ${item.propertyName}`}
+                                            title="Delete property"
+                                            className="mx-1 my-1 inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                                         >
-                                            Delete
+                                            <Trash2 size={17} />
                                         </button>
                                     </div>
                                 </div>
@@ -787,7 +812,7 @@ const Property = () => {
                                             </div>
 
                                             {/* Actions */}
-                                            <div className="flex flex-wrap justify-end gap-2">
+                                            <div className="flex flex-wrap justify-end gap-1">
                                                 {item.status === "available" && (
                                                     <button
                                                         type="button"
@@ -801,26 +826,32 @@ const Property = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => openTenantDetails(item)}
-                                                        className="rounded-xs border border-yellow-400 px-3 py-1 text-sm font-medium text-gray-800 hover:bg-yellow-100 dark:text-gray-100 dark:hover:bg-stone-800"
+                                                        className="rounded-xs border border-black bg-yellow-200 px-3 py-1 text-sm font-medium text-gray-800 hover:bg-yellow-300 dark:text-gray-900 dark:hover:bg-yellow-400"
                                                     >
                                                         View Tenant
                                                     </button>
                                                 )}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openEditUnitForm(item)}
-                                                    className="rounded-xs bg-yellow-300 px-3 py-1 text-sm font-medium text-black hover:bg-yellow-400"
-                                                >
-                                                    Edit
-                                                </button>
+                                                <div className="p-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openEditUnitForm(item)}
+                                                        aria-label={`Edit ${item.unitName}`}
+                                                        title="Edit unit"
+                                                        className="inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400"
+                                                    >
+                                                        <Pencil size={16} />
+                                                    </button>
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteUnit(item._id)}
-                                                    className="rounded-xs border border-gray-300 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
-                                                >
-                                                    Delete
-                                                </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteUnit(item._id)}
+                                                        aria-label={`Delete ${item.unitName}`}
+                                                        title="Delete unit"
+                                                        className="inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -1290,10 +1321,10 @@ const Property = () => {
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="tenant-details-title"
-                        className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b] sm:max-h-[calc(100dvh-2rem)] sm:p-7"
+                        className="my-auto w-full max-w-3xl rounded-xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-7"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="mb-5 flex items-start justify-between gap-3">
+                        <div className="mb-4 flex items-start justify-between gap-3">
                             <div>
                                 <h2 id="tenant-details-title" className="text-2xl font-semibold text-gray-900 dark:text-white">
                                     Tenant Details
@@ -1319,7 +1350,7 @@ const Property = () => {
                                 {tenantDetailsError}
                             </p>
                         ) : tenantDetails ? (
-                            <div className="space-y-4">
+                            <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
                                 {[
                                     ["Full Name", tenantDetails.fullName],
                                     ["Username", tenantDetails.user?.username || tenantDetails.username],
@@ -1329,7 +1360,7 @@ const Property = () => {
                                     ["Unit", tenantDetails.unit?.unitName],
                                     ["Monthly Rent", tenantDetails.unit?.rent != null ? `₹${Number(tenantDetails.unit.rent).toLocaleString("en-IN")}` : "—"],
                                 ].filter(([, value]) => value !== undefined && value !== null && value !== "").map(([label, value]) => (
-                                    <div key={label} className="border-b border-gray-100 pb-3 dark:border-stone-800">
+                                    <div key={label} className="min-w-0 border-b border-gray-100 pb-3 dark:border-stone-800">
                                         <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
                                         <p className="mt-1 break-words text-sm text-gray-900 dark:text-white">{value}</p>
                                     </div>
@@ -1337,13 +1368,72 @@ const Property = () => {
                             </div>
                         ) : null}
 
-                        <div className="mt-6 flex justify-end">
+                        <div className="mt-5 flex justify-end">
                             <button
                                 type="button"
                                 onClick={closeTenantDetails}
                                 className="rounded-xs bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400"
                             >
                                 Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom delete confirmation modal */}
+            {confirmModal.open && (
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+                    onClick={closeConfirmModal}
+                >
+                    <div
+                        role="alertdialog"
+                        aria-modal="true"
+                        aria-labelledby="confirm-delete-title"
+                        aria-describedby="confirm-delete-message"
+                        className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-stone-700 dark:bg-[#1b1b1b]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="mb-4 flex items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400">
+                                <AlertTriangle size={22} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h2 id="confirm-delete-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {confirmModal.title}
+                                </h2>
+                                <p id="confirm-delete-message" className="mt-2 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                                    {confirmModal.message}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeConfirmModal}
+                                disabled={deleting}
+                                aria-label="Close confirmation"
+                                className="rounded-lg p-1 text-gray-500 transition hover:bg-gray-100 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-stone-800"
+                            >
+                                <X size={19} />
+                            </button>
+                        </div>
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={closeConfirmModal}
+                                disabled={deleting}
+                                className="rounded-xs border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 disabled:opacity-50 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmDelete}
+                                disabled={deleting}
+                                className="inline-flex items-center gap-2 rounded-xs bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <Trash2 size={16} />
+                                {deleting ? "Deleting..." : "Delete"}
                             </button>
                         </div>
                     </div>

@@ -1,0 +1,53 @@
+/* RentGuard custom scrollbar — import this file in src/index.css or src/main.jsx */
+
+/* Firefox and modern browsers */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #262626;
+}
+
+/* Chrome, Edge, and Safari */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+/* Match the track to the dark page so no white strip appears. */
+::-webkit-scrollbar-track {
+  background: #262626;
+}
+
+/* Neutral gray thumb to match the dark dashboard. */
+::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border: 2px solid #262626;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+/* Light mode */
+html:not(.dark) {
+  scrollbar-color: #9ca3af #f3f4f6;
+}
+
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-color: #f3f4f6;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::-webkit-scrollbar-thumb {
+    transition: none;
+  }
+}
