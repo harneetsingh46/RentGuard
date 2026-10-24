@@ -1,14 +1,15 @@
 import { Property } from "../models/property.model.js";
 import { PropertyDocument } from "../models/propertyDocument.model.js";
 import uploadToCloudinary from "../utils/uploadToCloudinary.js";
+import cloudinary from "../config/cloudinary.js";
 
 // UPLOAD PROPERTY DOCUMENT
 
 export const uploadPropertyDocument = async (req, res) => {
-  let cloudinaryPublicId;
+  let cloudinaryPublicId = "";
+  let resourceType = "";
 
   try {
-    // Only owners can upload property documents
     if (req.user.role !== "owner") {
       return res.status(403).json({
         message: "Only property owners can upload documents!",
@@ -18,7 +19,6 @@ export const uploadPropertyDocument = async (req, res) => {
     const { propertyId } = req.params;
     const { documentName, documentType } = req.body;
 
-    // Validate required fields
     if (!documentName || !documentName.trim()) {
       return res.status(400).json({
         message: "Document name is required!",
@@ -31,7 +31,6 @@ export const uploadPropertyDocument = async (req, res) => {
       });
     }
 
-    // Verify that the property exists and belongs to this owner
     const property = await Property.findOne({
       _id: propertyId,
       owner: req.user._id,
@@ -43,9 +42,7 @@ export const uploadPropertyDocument = async (req, res) => {
       });
     }
 
-    // Validate document type
     const allowedDocumentTypes = ["agreement", "ownership", "tax", "other"];
-
     const selectedType = documentType || "other";
 
     if (!allowedDocumentTypes.includes(selectedType)) {
@@ -54,7 +51,6 @@ export const uploadPropertyDocument = async (req, res) => {
       });
     }
 
-    // Determine file format
     const mimeToFormat = {
       "application/pdf": "pdf",
       "image/jpeg": "jpg",
@@ -70,16 +66,16 @@ export const uploadPropertyDocument = async (req, res) => {
       });
     }
 
-    // Upload file to Cloudinary
+    resourceType = fileFormat === "pdf" ? "raw" : "image";
+
     const result = await uploadToCloudinary(req.file.buffer, {
       folder: "rentguard/property-documents",
-      resourceType: fileFormat === "pdf" ? "raw" : "image",
+      resourceType,
       type: "authenticated",
     });
 
     cloudinaryPublicId = result.public_id;
 
-    // Save document details in MongoDB
     const document = await PropertyDocument.create({
       property: property._id,
       uploadedBy: req.user._id,
@@ -96,17 +92,11 @@ export const uploadPropertyDocument = async (req, res) => {
       data: document,
     });
   } catch (error) {
-    // If the upload worked but saving to MongoDB failed,
-    // remove the orphaned file from Cloudinary.
     if (cloudinaryPublicId) {
       try {
-        const { default: cloudinary } = await import("../config/cloudinary.js");
-
-        const fileFormat =
-          req.file?.mimetype === "application/pdf" ? "raw" : "image";
-
         await cloudinary.uploader.destroy(cloudinaryPublicId, {
-          resource_type: fileFormat,
+          resource_type: resourceType,
+          type: "authenticated",
         });
       } catch (cleanupError) {
         console.error("Cloudinary cleanup failed:", cleanupError);
@@ -147,7 +137,9 @@ export const getPropertyDocuments = async (req, res) => {
     const documents = await PropertyDocument.find({
       property: propertyId,
       uploadedBy: req.user._id,
-    }).sort({ createdAt: -1 });
+    })
+      .select("-fileUrl")
+      .sort({ createdAt: -1 });
 
     return res.status(200).json({
       message: "Property documents fetched successfully!",
@@ -197,14 +189,15 @@ export const deletePropertyDocument = async (req, res) => {
       });
     }
 
-    // Delete the file from Cloudinary
-    const cloudinary = (await import("../config/cloudinary.js")).default;
-
     const resourceType = document.fileFormat === "pdf" ? "raw" : "image";
 
     const result = await cloudinary.uploader.destroy(
       document.cloudinaryPublicId,
-      { resource_type: resourceType },
+      {
+        resource_type: resourceType,
+        type: "authenticated",
+        invalidate: true,
+      },
     );
 
     if (result.result !== "ok" && result.result !== "not found") {
@@ -223,6 +216,72 @@ export const deletePropertyDocument = async (req, res) => {
 
     return res.status(500).json({
       message: "Failed to delete property document!",
+    });
+  }
+};
+
+// GET SECURE PROPERTY DOCUMENT DOWNLOAD URL
+
+export const getPropertyDocumentDownloadUrl = async (req, res) => {
+  try {
+    if (req.user.role !== "owner") {
+      return res.status(403).json({
+        message: "Only property owners can download documents!",
+      });
+    }
+
+    const { propertyId, documentId } = req.params;
+
+    const property = await Property.findOne({
+      _id: propertyId,
+      owner: req.user._id,
+    });
+
+    if (!property) {
+      return res.status(404).json({
+        message: "Property not found or you are not authorized!",
+      });
+    }
+
+    const document = await PropertyDocument.findOne({
+      _id: documentId,
+      property: propertyId,
+      uploadedBy: req.user._id,
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        message: "Document not found!",
+      });
+    }
+
+    const resourceType = document.fileFormat === "pdf" ? "raw" : "image";
+    const expiresAt = Math.floor(Date.now() / 1000) + 300;
+
+    const downloadUrl = cloudinary.utils.private_download_url(
+      document.cloudinaryPublicId,
+      document.fileFormat,
+      {
+        resource_type: resourceType,
+        type: "authenticated",
+        expires_at: expiresAt,
+        attachment: true,
+      },
+    );
+
+    return res.status(200).json({
+      message: "Secure download URL generated successfully!",
+      data: {
+        documentName: document.documentName,
+        downloadUrl,
+        expiresAt,
+      },
+    });
+  } catch (error) {
+    console.error("Generate document download URL error:", error);
+
+    return res.status(500).json({
+      message: "Failed to generate document download URL!",
     });
   }
 };
