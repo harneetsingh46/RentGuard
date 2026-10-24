@@ -12,6 +12,7 @@ import authRouter from "./src/routes/auth.route.js";
 import rentRouter from "./src/routes/rent.route.js";
 import paymentRouter from "./src/routes/payment.route.js";
 import dashboardRouter from "./src/routes/dashboard.route.js"
+import documentRouter from "./src/routes/propertyDocument.routes.js"
 import { razorpayWebhook } from "./src/controllers/payment.controller.js";
 
 //config
@@ -46,5 +47,6 @@ app.use("/auth/", authRouter);
 app.use("/rent/", rentRouter);
 app.use("/payment/", paymentRouter);
 app.use("/dashboard/",dashboardRouter);
+app.use("/document/",documentRouter)
 
 export default app;

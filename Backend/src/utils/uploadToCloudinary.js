@@ -5,6 +5,7 @@ const uploadToCloudinary = (fileBuffer, options = {}) => {
     const uploadOptions = {
       folder: options.folder || "rentguard",
       resource_type: options.resourceType || "auto",
+      type: options.type || "upload",
     };
 
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -15,7 +16,7 @@ const uploadToCloudinary = (fileBuffer, options = {}) => {
         }
 
         resolve(result);
-      }
+      },
     );
 
     uploadStream.end(fileBuffer);
