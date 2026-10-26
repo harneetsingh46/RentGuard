@@ -1,19 +1,23 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import { Login } from "./pages/Login";
+import { Login } from "../src/pages/auth/Login";
 import Layout from "./common/Layout";
-import Signup from "./pages/Signup";
-import OwnerDashboard from "./pages/OwnerDashboard";
-import TenantDashboard from "./pages/TenantDashboard";
+import Signup from "../src/pages/auth/Signup";
+import OwnerDashboard from "../src/pages/Owner/OwnerDashboard";
+import TenantDashboard from "../src/pages/Tenant/TenantDashboard";
 import ProtectedRoutes from "./utils/ProtectedRoutes";
-import SignOut from "./pages/SignOut";
+import SignOut from "../src/pages/auth/SignOut";
 import PublicRoutes from "./utils/PublicRoutes";
 import OwnerLayout from "./common/OwnerLayout";
-import Hero from "./pages/Hero";
-import Property from "./pages/Property";
-import Tenant from "./pages/Tenant";
-import Rent from "./pages/Rent";
-import Documents from "./pages/Documents";
+import Hero from "../src/pages/Hero";
+import Property from "../src/pages/Owner/Property";
+import Tenant from "../src/pages/Owner/Tenant";
+import Rent from "../src/pages/Owner/Rent";
+import TenantRent from "./pages/Tenant/TenantRent";
+import Documents from "../src/pages/Owner/Documents";
+import TenantDocument from "./pages/Tenant/TenantDocument";
+import TenantLayout from "./common/TenantLayout";
+import TenantProfile from "./pages/Tenant/TenantProfile";
 
 const router = createBrowserRouter([
   // Public pages: Navbar + page + Footer
@@ -57,15 +61,15 @@ const router = createBrowserRouter([
           },
           {
             path: "/owner/tenants",
-            element: <Tenant/>,
+            element: <Tenant />,
           },
           {
             path: "/owner/rent",
-            element: <Rent/>,
+            element: <Rent />,
           },
           {
             path: "/owner/documents/:propertyId",
-            element: <Documents/>
+            element: <Documents />
           },
         ],
       },
@@ -77,9 +81,26 @@ const router = createBrowserRouter([
     element: <ProtectedRoutes requiredRole="tenant" />,
     children: [
       {
-        path: "/tenant/dashboard",
-        element: <TenantDashboard />,
-      },
+        element: <TenantLayout />,
+        children: [
+          {
+            path: "/tenant/dashboard",
+            element: <TenantDashboard />,
+          },
+          {
+            path: "/tenant/rent",
+            element: <TenantRent />,
+          },
+          {
+            path: "/tenant/documents/:propertyId",
+            element: <TenantDocument />
+          },
+          {
+            path: "/tenant/profile",
+            element: <TenantProfile/>
+          }
+        ],
+      }
     ],
   },
 
@@ -89,8 +110,8 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/sign-out",
-        element: <SignOut />,
-      },
+        element: <SignOut />
+      }
     ],
   },
 ]);

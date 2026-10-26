@@ -1,8 +1,8 @@
 
 import React, { useEffect, useState } from 'react'
-import apiClient from '../ApiClient/interceptor.js'
-import { useToast } from "../common/ToastProvider"
-import ConfirmModal from "../common/ConfirmModal"
+import apiClient from '../../ApiClient/interceptor.js'
+import { useToast } from "../../common/ToastProvider"
+import ConfirmModal from "../../common/ConfirmModal"
 import { Pencil, LogOut } from "lucide-react"
 
 const Tenant = () => {

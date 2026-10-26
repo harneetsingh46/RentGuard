@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import apiClient from "../ApiClient/interceptor";
+import apiClient from "../../ApiClient/interceptor.js"
 import { Pencil, Trash2, X, AlertTriangle } from "lucide-react";
 
 const emptyProperty = {

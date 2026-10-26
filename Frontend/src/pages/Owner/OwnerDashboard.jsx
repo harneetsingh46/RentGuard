@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import apiClient from "../ApiClient/interceptor";
+import apiClient from "../../ApiClient/interceptor";
 
 const OwnerDashboard = () => {
   const currentDate = new Date();

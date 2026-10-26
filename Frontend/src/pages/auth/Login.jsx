@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 const validateLogin = (values) => {
     const errors = {};
@@ -14,8 +14,6 @@ const validateLogin = (values) => {
 
     if (!values.password) {
         errors.password = "Password is required.";
-    } else if (values.password.length < 6) {
-        errors.password = "Password must be at least 6 characters.";
     } else if (values.password.length > 128) {
         errors.password = "Password cannot exceed 128 characters.";
     }
@@ -89,7 +87,7 @@ export const Login = () => {
         }`;
 
     return (
-        <main className="flex min-h-[calc(100dvh-145px)] w-full items-center justify-center bg-white bg-[url(/login.jpg)] bg-cover bg-center px-4 py-6 dark:bg-[#101010] sm:px-6 lg:px-8">
+        <main className="flex min-h-[calc(100dvh-145px)] w-full items-center justify-center bg-white bg-[url(/login.jpg)]  bg-cover bg-center px-4 py-6 dark:bg-[#101010] sm:px-6 lg:px-8">
             <form
                 onSubmit={handleSubmit}
                 noValidate

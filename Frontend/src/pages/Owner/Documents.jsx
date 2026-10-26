@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import apiClient from "../ApiClient/interceptor";
+import apiClient from "../../ApiClient/interceptor";
 
 const isValidMongoId = (value) =>
   typeof value === "string" && /^[a-fA-F0-9]{24}$/.test(value);
