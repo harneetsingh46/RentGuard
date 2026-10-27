@@ -52,9 +52,9 @@ const OwnerLayout = () => {
   };
 
   return (
-    <div className="h-dvh overflow-hidden bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
-      {/* Responsive Top Navbar */}
-      <header className="fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between gap-2 border-b border-black/10 bg-white px-3 dark:border-[#373737] dark:bg-[#1B1B1B] sm:h-20 sm:px-5 md:px-8 lg:px-10">
+    <div className="flex h-screen h-dvh w-full flex-col overflow-hidden bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
+      {/* Responsive Top Navbar - z-30 so overlays/modals (z-[60]+) properly dim and cover it */}
+      <header className="z-30 flex h-16 sm:h-20 shrink-0 items-center justify-between gap-2 border-b border-black/10 bg-white px-3 dark:border-[#373737] dark:bg-[#1B1B1B] sm:px-5 md:px-8 lg:px-10">
         {/* Menu Button + Logo */}
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
@@ -131,68 +131,64 @@ const OwnerLayout = () => {
         </div>
       </header>
 
-      {/* Mobile Overlay */}
-      {isMenuOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation menu"
-          onClick={closeMenu}
-          className="fixed inset-x-0 bottom-0 top-16 z-30 bg-black/40 sm:top-20 md:hidden"
-        />
-      )}
+      {/* Main Area: Sidebar + Scrollable View */}
+      <div className="relative flex flex-1 min-h-0 w-full overflow-hidden">
+        {/* Mobile Backdrop Overlay */}
+        {isMenuOpen && (
+          <button
+            type="button"
+            aria-label="Close navigation menu"
+            onClick={closeMenu}
+            className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          />
+        )}
 
-      {/* Responsive Sidebar */}
-      <aside
-        id="owner-sidebar"
-        className={`fixed bottom-0 left-0 top-16 z-40 flex w-[min(18rem,85vw)] flex-col overflow-y-auto border-r border-[#E7E3DA] bg-white p-4 transition-transform duration-300 dark:border-[#373737] dark:bg-[#1B1B1B] sm:top-20 sm:p-6 md:top-20 md:w-64 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
-          } md:translate-x-0`}
-      >
-        <nav className="space-y-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
+        {/* Responsive Sidebar */}
+        <aside
+          id="owner-sidebar"
+          className={`fixed inset-y-0 left-0 z-40 flex w-[min(18rem,85vw)] flex-col overflow-y-auto border-r border-[#E7E3DA] bg-white p-4 transition-transform duration-300 dark:border-[#373737] dark:bg-[#1B1B1B] sm:p-6 md:static md:z-auto md:w-64 md:translate-x-0 ${
+            isMenuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <nav className="space-y-2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
 
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.path === "/owner/dashboard"}
-                onClick={closeMenu}
-                className={({ isActive }) => {
-                  const isCurrent =
-                    isActive ||
-                    (item.path === "/owner/documents" &&
-                      location.pathname.startsWith("/owner/documents"));
-                  return `group flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition-all duration-200 sm:px-4 sm:text-base ${
-                    isCurrent
-                      ? "bg-yellow-300 font-medium text-black shadow-sm"
-                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#292929]"
-                  }`;
-                }}
-              >
-                <Icon size={20} strokeWidth={1.8} className="shrink-0" />
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === "/owner/dashboard"}
+                  onClick={closeMenu}
+                  className={({ isActive }) => {
+                    const isCurrent =
+                      isActive ||
+                      (item.path === "/owner/documents" &&
+                        location.pathname.startsWith("/owner/documents"));
+                    return `group flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition-all duration-200 sm:px-4 sm:text-base ${
+                      isCurrent
+                        ? "bg-yellow-300 font-medium text-black shadow-sm"
+                        : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#292929]"
+                    }`;
+                  }}
+                >
+                  <Icon size={20} strokeWidth={1.8} className="shrink-0" />
 
-                <span className="min-w-0 break-words">{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
-        <div className="mt-auto border-t border-[#E7E3DA] pt-4 text-sm text-gray-500 dark:border-[#373737] dark:text-yellow-300">
-          Owner Workspace
-        </div>
-      </aside>
+                  <span className="min-w-0 break-words">{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+          <div className="mt-auto border-t border-[#E7E3DA] pt-4 text-sm text-gray-500 dark:border-[#373737] dark:text-yellow-300">
+            Owner Workspace
+          </div>
+        </aside>
 
-      {/* Page Content */}
-      <main
-        className="
-    fixed inset-x-0 bottom-0 top-16
-    min-w-0 overflow-x-hidden overflow-y-auto
-    overscroll-y-contain scroll-smooth
-    bg-[#f2f2f1] dark:bg-[#101010]
-    sm:top-20 md:left-64
-  "
-      >
-        <Outlet />
-      </main>
+        {/* The SINGLE vertical scrollbar region for the page */}
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-[#f2f2f1] dark:bg-[#101010]">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };

@@ -627,9 +627,10 @@ const Rent = () => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-rent-title"
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xs border border-stone-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900"
+            className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
           >
-            <div className="mb-6 flex items-center justify-between">
+            <div className="shrink-0 border-b border-stone-200 p-6 dark:border-neutral-800">
+            <div className="flex items-center justify-between">
               <div>
                 <h2 id="create-rent-title" className="text-xl font-semibold">
                   Create Rent
@@ -653,7 +654,8 @@ const Rent = () => {
                 &times;
               </button>
             </div>
-
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
             <form onSubmit={handleCreateRent} className="space-y-4">
               {/* Tenant */}
               <div>
@@ -839,6 +841,7 @@ const Rent = () => {
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
@@ -855,9 +858,10 @@ const Rent = () => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="payment-history-title"
-            className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xs border border-stone-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-900"
+            className="flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
           >
-            <div className="mb-5 flex items-start justify-between gap-4">
+            <div className="shrink-0 border-b border-stone-200 p-6 dark:border-neutral-800">
+            <div className="flex items-start justify-between gap-4">
               <div>
                 <h2
                   id="payment-history-title"
@@ -880,7 +884,8 @@ const Rent = () => {
                 &times;
               </button>
             </div>
-
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
             <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
                 <p className="text-sm text-stone-500 dark:text-stone-400">
@@ -1007,6 +1012,7 @@ const Rent = () => {
               >
                 Close
               </button>
+            </div>
             </div>
           </div>
         </div>

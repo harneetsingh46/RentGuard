@@ -595,7 +595,7 @@ const Property = () => {
     };
 
     return (
-        <div className="min-h-full w-full bg-[#faf9f6] p-4 transition-colors duration-300 dark:bg-[#111111] md:p-8" >
+        <div className="w-full bg-[#f2f2f1] p-4 dark:bg-[#101010] md:p-8 pb-12" >
             {/* Page Header */}
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center" onClick={deselectProperty}>
                 <div className="m-2">
@@ -1142,21 +1142,21 @@ const Property = () => {
             {/* tenant modal */}
             {tenantModalOpen && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-3 backdrop-blur-sm sm:p-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4"
                     onClick={closeTenantForm}
                 >
                     <div
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="tenant-form-title"
-                        className="my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b] sm:max-h-[calc(100dvh-2rem)]"
+                        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-xs border border-gray-200 bg-white shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b]"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex shrink-0 items-center justify-between border-b border-gray-200 p-4 dark:border-stone-800 sm:p-6">
                             <div className="min-w-0">
                                 <h2
                                     id="tenant-form-title"
-                                    className="text-2xl p-2 font-semibold w-full text-gray-900 dark:text-white"
+                                    className="text-2xl px-0 py-2 font-semibold w-full text-gray-900 dark:text-white"
                                 >
                                     Add Tenant
                                 </h2>
@@ -1386,17 +1386,17 @@ const Property = () => {
             {/* View Tenant Details Modal */}
             {tenantDetailsOpen && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-3 backdrop-blur-sm sm:p-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4"
                     onClick={closeTenantDetails}
                 >
                     <div
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="tenant-details-title"
-                        className="my-auto w-full max-w-3xl rounded-xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-7"
+                        className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b]"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="mb-4 flex items-start justify-between gap-3">
+                        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-gray-100 p-5 dark:border-stone-800 sm:p-7">
                             <div>
                                 <h2 id="tenant-details-title" className="text-2xl font-semibold text-gray-900 dark:text-white">
                                     Tenant Details
@@ -1414,7 +1414,7 @@ const Property = () => {
                                 &times;
                             </button>
                         </div>
-
+                        <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-7">
                         {tenantDetailsLoading ? (
                             <p className="py-8 text-center text-gray-500 dark:text-gray-400">Loading tenant details...</p>
                         ) : tenantDetailsError ? (
@@ -1448,6 +1448,7 @@ const Property = () => {
                             >
                                 Close
                             </button>
+                        </div>
                         </div>
                     </div>
                 </div>
