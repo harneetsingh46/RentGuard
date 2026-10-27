@@ -1015,7 +1015,7 @@ const Property = () => {
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="unit-form-title"
-                        className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b] md:p-8"
+                        className="w-full max-w-lg rounded-xs border border-gray-200 bg-white p-6 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b] md:p-8"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="mb-6 flex items-center justify-between">
