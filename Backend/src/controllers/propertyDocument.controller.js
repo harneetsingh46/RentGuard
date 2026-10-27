@@ -534,3 +534,191 @@ export const getMyTenantDocumentDownloadUrl = async (req, res) => {
     return sendError(res, error, "Failed to generate document download URL.");
   }
 };
+
+/**
+ * OWNER ACCESS GATE (used by the owner-to-tenant document handlers below).
+ * Returns the tenant only if it belongs to a property owned by this user.
+ * Anything else is a 404 so tenant IDs cannot be probed.
+ */
+const getOwnerTenant = async (ownerId, tenantId) => {
+  if (!isValidObjectId(tenantId)) {
+    throw createHttpError(400, "Invalid tenant ID.");
+  }
+
+  const tenant = await Tenant.findById(tenantId);
+
+  const property = tenant
+    ? await Property.findOne({ _id: tenant.property, owner: ownerId }).select(
+        "_id",
+      )
+    : null;
+
+  if (!tenant || !property) {
+    throw createHttpError(404, "Tenant not found or you are not authorized.");
+  }
+
+  return tenant;
+};
+
+/**
+ * OWNER: upload a document for a selected tenant.
+ * POST /document/owner/tenants/:tenantId
+ */
+export const uploadDocumentForTenant = async (req, res) => {
+  try {
+    if (req.user.role !== "owner") {
+      return res.status(403).json({
+        message: "Only property owners can upload documents for tenants.",
+      });
+    }
+
+    const tenant = await getOwnerTenant(req.user._id, req.params.tenantId);
+
+    // property and tenant always come from the verified tenant record
+    const document = await uploadDocumentFile(req, {
+      propertyId: tenant.property,
+      tenantId: tenant._id,
+    });
+
+    return res.status(201).json({
+      message: "Document uploaded successfully.",
+      data: document,
+    });
+  } catch (error) {
+    return sendError(res, error, "Failed to upload document.");
+  }
+};
+
+/**
+ * OWNER: list all documents of a selected tenant (owner and tenant uploads).
+ * GET /document/owner/tenants/:tenantId
+ */
+export const getTenantDocumentsForOwner = async (req, res) => {
+  try {
+    if (req.user.role !== "owner") {
+      return res.status(403).json({
+        message: "Only property owners can view tenant documents.",
+      });
+    }
+
+    const tenant = await getOwnerTenant(req.user._id, req.params.tenantId);
+
+    const documents = await PropertyDocument.find({ tenant: tenant._id })
+      .populate("uploadedBy", "username email role")
+      .select("-fileUrl -cloudinaryPublicId")
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      message: "Documents fetched successfully.",
+      data: documents,
+      tenant: {
+        _id: tenant._id,
+        fullName: tenant.fullName,
+        isActive: tenant.isActive,
+      },
+    });
+  } catch (error) {
+    return sendError(res, error, "Failed to fetch documents.");
+  }
+};
+
+/**
+ * OWNER: signed download/view URL for a tenant's document.
+ * GET /document/owner/tenants/:tenantId/:documentId/download?mode=view
+ */
+export const getDocumentDownloadUrlForOwner = async (req, res) => {
+  try {
+    if (req.user.role !== "owner") {
+      return res.status(403).json({
+        message: "Only property owners can access this resource.",
+      });
+    }
+
+    const { tenantId, documentId } = req.params;
+    const tenant = await getOwnerTenant(req.user._id, tenantId);
+
+    if (!isValidObjectId(documentId)) {
+      return res.status(400).json({ message: "Invalid document ID." });
+    }
+
+    const document = await PropertyDocument.findOne({
+      _id: documentId,
+      tenant: tenant._id,
+    });
+
+    if (!document) {
+      return res.status(404).json({ message: "Document not found." });
+    }
+
+    const { downloadUrl, expiresAt } = makeDownloadUrl(document, {
+      attachment: req.query.mode !== "view",
+    });
+
+    return res.status(200).json({
+      message: "Secure download URL generated successfully.",
+      data: {
+        documentName: document.documentName,
+        downloadUrl,
+        expiresAt,
+      },
+    });
+  } catch (error) {
+    return sendError(res, error, "Failed to generate document download URL.");
+  }
+};
+
+/**
+ * OWNER ONLY: delete a tenant's document (file + record).
+ * DELETE /document/owner/tenants/:tenantId/:documentId
+ */
+export const deleteTenantDocument = async (req, res) => {
+  try {
+    if (req.user.role !== "owner") {
+      return res.status(403).json({
+        message: "Only property owners can delete documents.",
+      });
+    }
+
+    const { tenantId, documentId } = req.params;
+    const tenant = await getOwnerTenant(req.user._id, tenantId);
+
+    if (!isValidObjectId(documentId)) {
+      return res.status(400).json({ message: "Invalid document ID." });
+    }
+
+    const document = await PropertyDocument.findOne({
+      _id: documentId,
+      tenant: tenant._id,
+    });
+
+    if (!document) {
+      return res.status(404).json({ message: "Document not found." });
+    }
+
+    const resourceType = document.fileFormat === "pdf" ? "raw" : "image";
+
+    const cloudinaryResult = await cloudinary.uploader.destroy(
+      document.cloudinaryPublicId,
+      {
+        resource_type: resourceType,
+        type: "authenticated",
+        invalidate: true,
+      },
+    );
+
+    if (
+      cloudinaryResult.result !== "ok" &&
+      cloudinaryResult.result !== "not found"
+    ) {
+      return res.status(502).json({
+        message: "Could not delete the file from Cloudinary. Please try again.",
+      });
+    }
+
+    await document.deleteOne();
+
+    return res.status(200).json({ message: "Document deleted successfully." });
+  } catch (error) {
+    return sendError(res, error, "Failed to delete document.");
+  }
+};

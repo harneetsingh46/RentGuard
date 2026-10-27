@@ -13,6 +13,7 @@ import {
   LoaderCircle,
   File,
   RefreshCw,
+  Search,
 } from "lucide-react";
 
 const isValidMongoId = (value) =>
@@ -49,11 +50,12 @@ const isPdfDocument = (document) =>
   getDocumentFormat(document) === "pdf";
 
 const Documents = () => {
-  const { propertyId: routePropertyId } = useParams();
-  const [properties, setProperties] = useState([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState("");
+  const [tenants, setTenants] = useState([]);
+  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [tenantSearch, setTenantSearch] = useState("");
+  const [showTenantSuggestions, setShowTenantSuggestions] = useState(false);
 
-  const [loadingProperties, setLoadingProperties] = useState(true);
+  const [loadingTenants, setLoadingTenants] = useState(true);
   const [documents, setDocuments] = useState([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
 
@@ -69,40 +71,55 @@ const Documents = () => {
   const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Delete confirmation modal state
-  const [showConfirmationModal, setShowConfirmationModal] =
-    useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState(null);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const fetchProperties = useCallback(async () => {
+  // Load active tenants across the owner's properties, then select a tenant.
+  const fetchTenants = useCallback(async () => {
     try {
-      setLoadingProperties(true);
+      setLoadingTenants(true);
       setError("");
 
-      const response = await apiClient.get("/property/");
-      const propertyList = response.data?.data || [];
+      const propertyResponse = await apiClient.get("/property/");
+      const propertyList = propertyResponse.data?.data || [];
 
-      setProperties(propertyList);
+      const tenantGroups = await Promise.all(
+        propertyList.map(async (property) => {
+          try {
+            const response = await apiClient.get(
+              `/property/${property._id}/tenants`
+            );
+            return (response.data?.data || []).map((tenant) => ({
+              ...tenant,
+              propertyName: property.propertyName || property.name || "Property",
+              propertyAddress: property.address || "",
+            }));
+          } catch (err) {
+            if (err.response?.status === 404) return [];
+            throw err;
+          }
+        })
+      );
 
-      setSelectedPropertyId((currentId) =>
-        propertyList.some((property) => property._id === currentId)
-          ? currentId
-          : ""
+      const tenantList = tenantGroups.flat();
+      setTenants(tenantList);
+      setSelectedTenantId((currentId) =>
+        tenantList.some((tenant) => tenant._id === currentId) ? currentId : ""
       );
     } catch (err) {
-      setProperties([]);
-      setError(
-        err.response?.data?.message || "Failed to load your properties."
-      );
+      setTenants([]);
+      setError(err.response?.data?.message || "Failed to load your tenants.");
+      toast.error(err.response?.data?.message || "Failed to load your tenants.");
     } finally {
-      setLoadingProperties(false);
+      setLoadingTenants(false);
     }
   }, []);
 
-  const fetchDocuments = useCallback(async (propertyId) => {
-    if (!isValidMongoId(propertyId)) {
+  const fetchDocuments = useCallback(async (tenantId) => {
+    if (!isValidMongoId(tenantId)) {
       setDocuments([]);
       return;
     }
@@ -111,32 +128,34 @@ const Documents = () => {
       setLoadingDocuments(true);
       setError("");
 
-      const response = await apiClient.get(`/document/${propertyId}`);
+      const response = await apiClient.get(
+        `/document/tenants/${tenantId}`
+      );
       setDocuments(response.data?.data || []);
     } catch (err) {
       setDocuments([]);
-      setError(
-        err.response?.data?.message || "Failed to load property documents."
-      );
+      const message = err.response?.data?.message || "Failed to load tenant documents.";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoadingDocuments(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchProperties();
-  }, [fetchProperties]);
+    fetchTenants();
+  }, [fetchTenants]);
 
   useEffect(() => {
     setDocuments([]);
     setSuccess("");
 
-    if (isValidMongoId(selectedPropertyId)) {
-      fetchDocuments(selectedPropertyId);
+    if (isValidMongoId(selectedTenantId)) {
+      fetchDocuments(selectedTenantId);
     } else {
       setLoadingDocuments(false);
     }
-  }, [selectedPropertyId, fetchDocuments]);
+  }, [selectedTenantId, fetchDocuments]);
 
   const closePreview = useCallback(() => {
     setPreviewDocument(null);
@@ -160,17 +179,24 @@ const Documents = () => {
     };
   }, [previewDocument, closePreview]);
 
-  // Upload a property document
+  // Upload a document for the selected tenant
   const handleUpload = async (event) => {
     event.preventDefault();
 
-    if (!isValidMongoId(selectedPropertyId)) {
-      setError("Please select a property first.");
+    if (!isValidMongoId(selectedTenantId)) {
+      setError("Please select a tenant first.");
       return;
     }
 
     if (!documentName.trim()) {
       setError("Please enter a document name.");
+      toast.error("Please enter a document name.");
+      return;
+    }
+
+    if (documentName.trim().length > 100) {
+      setError("Document name cannot exceed 100 characters.");
+      toast.error("Document name cannot exceed 100 characters.");
       return;
     }
 
@@ -206,21 +232,21 @@ const Documents = () => {
       setError("");
       setSuccess("");
 
-      await apiClient.post(`/document/${selectedPropertyId}`, formData);
+      await apiClient.post(`/document/tenants/${selectedTenantId}`, formData);
 
       setDocumentName("");
       setDocumentType("agreement");
       setFile(null);
 
       const fileInput = window.document.getElementById(
-        "property-document-file"
+        "tenant-document-file"
       );
 
       if (fileInput) fileInput.value = "";
 
       setSuccess("Document uploaded successfully."); toast.success("Document uploaded successfully.");
 
-      await fetchDocuments(selectedPropertyId);
+      await fetchDocuments(selectedTenantId);
     } catch (err) {
       setError(
         err.response?.data?.message || "Failed to upload the document."
@@ -233,7 +259,7 @@ const Documents = () => {
   // Get a secure URL for viewing or downloading a document
   const getDocumentUrl = async (document, mode = "view") => {
     const response = await apiClient.get(
-      `/document/${selectedPropertyId}/${document._id}/download`,
+      `/document/tenants/${selectedTenantId}/${document._id}/download`,
       {
         params: mode === "view" ? { mode: "view" } : undefined,
       }
@@ -316,7 +342,7 @@ const Documents = () => {
       setShowConfirmationModal(false);
 
       await apiClient.delete(
-        `/document/${selectedPropertyId}/${document._id}`
+        `/document/tenants/${selectedTenantId}/${document._id}`
       );
 
       setDocuments((previous) =>
@@ -327,7 +353,8 @@ const Documents = () => {
         closePreview();
       }
 
-      setSuccess("Document deleted successfully."); toast.success("Document deleted successfully.");
+      setSuccess("Document deleted successfully.");     
+      toast.success("Document deleted successfully.");
     } catch (err) {
       setError(
         err.response?.data?.message || "Failed to delete the document."
@@ -346,9 +373,29 @@ const Documents = () => {
     setDocumentToDelete(null);
   };
 
-  const selectedProperty = properties.find(
-    (property) => property._id === selectedPropertyId
+  const selectedTenant = tenants.find(
+    (tenant) => tenant._id === selectedTenantId
   );
+
+  const filteredTenants = tenants.filter((tenant) => {
+    const search = tenantSearch.trim().toLowerCase();
+    if (!search) return true;
+
+    const searchableText = [
+      tenant.fullName,
+      tenant.user?.username,
+      tenant.user?.email,
+      tenant.email,
+      tenant.propertyName,
+      tenant.propertyAddress,
+      tenant.unit?.unitName,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return searchableText.includes(search);
+  });
 
   const inputClass =
     "w-full min-w-0 rounded-xs border border-stone-300 bg-white px-3 py-2.5 text-sm text-stone-900 outline-none placeholder:text-stone-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-stone-100 dark:placeholder:text-stone-500";
@@ -465,97 +512,131 @@ const Documents = () => {
           </div>
         )}
 
-        {/* Property selector */}
+        {/* Tenant selector */}
         <section className="mb-5 rounded-xs border border-stone-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
           <div className="mb-4">
-            <h2 className="font-semibold">Select property</h2>
-
+            <h2 className="font-semibold">Select tenant</h2>
             <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-              Choose the property whose documents you want to manage.
+              Choose a tenant to upload and manage their tenancy documents.
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <select
-              id="documents-property-select"
-              value={selectedPropertyId}
-              onChange={(event) =>
-                setSelectedPropertyId(event.target.value)
-              }
-              disabled={loadingProperties || properties.length === 0}
-              className={`${inputClass} sm:max-w-xl`}
-            >
-              <option value="">
-                {loadingProperties
-                  ? "Loading properties..."
-                  : properties.length === 0
-                    ? "No properties available"
-                    : "Select a property"}
-              </option>
-
-              {properties.map((property) => (
-                <option key={property._id} value={property._id}>
-                  {property.propertyName || property.name || "Unnamed property"}
-                  {property.address ? ` — ${property.address}` : ""}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+            <div className="w-full space-y-2 sm:max-w-xl">
+              <label htmlFor="documents-tenant-search" className="sr-only">
+                Search tenants
+              </label>
+              <div className="relative">
+                <Search
+                  size={17}
+                  className="pointer-events-none absolute left-3 top-3 text-stone-400"
+                />
+                <input
+                  id="documents-tenant-search"
+                  type="search"
+                  value={tenantSearch}
+                  onFocus={() => setShowTenantSuggestions(true)}
+                  onChange={(event) => {
+                    setTenantSearch(event.target.value);
+                    setShowTenantSuggestions(true);
+                    setSelectedTenantId("");
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") setShowTenantSuggestions(false);
+                    if (event.key === "Enter" && filteredTenants.length > 0) {
+                      event.preventDefault();
+                      const tenant = filteredTenants[0];
+                      setSelectedTenantId(tenant._id);
+                      setTenantSearch(tenant.fullName || tenant.user?.username || "Unnamed tenant");
+                      setShowTenantSuggestions(false);
+                    }
+                  }}
+                  placeholder={loadingTenants ? "Loading tenants..." : "Search tenant by name, email, property, or unit..."}
+                  disabled={loadingTenants || tenants.length === 0}
+                  autoComplete="off"
+                  className={`${inputClass} pl-9`}
+                  aria-autocomplete="list"
+                  aria-expanded={showTenantSuggestions && Boolean(tenantSearch.trim())}
+                  aria-controls="documents-tenant-suggestions"
+                />
+                {showTenantSuggestions && tenantSearch.trim() && (
+                  <div
+                    id="documents-tenant-suggestions"
+                    role="listbox"
+                    className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xs border border-stone-200 bg-white py-1 shadow-lg dark:border-neutral-700 dark:bg-neutral-900"
+                  >
+                    {filteredTenants.length > 0 ? (
+                      filteredTenants.slice(0, 10).map((tenant) => (
+                        <button
+                          key={tenant._id}
+                          type="button"
+                          role="option"
+                          aria-selected={selectedTenantId === tenant._id}
+                          onMouseDown={(event) => event.preventDefault()}
+                          onClick={() => {
+                            setSelectedTenantId(tenant._id);
+                            setTenantSearch(tenant.fullName || tenant.user?.username || "Unnamed tenant");
+                            setShowTenantSuggestions(false);
+                          }}
+                          className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left text-sm hover:bg-yellow-50 focus:bg-yellow-50 focus:outline-none dark:hover:bg-neutral-800 dark:focus:bg-neutral-800"
+                        >
+                          <span className="font-medium text-stone-900 dark:text-stone-100">
+                            {tenant.fullName || tenant.user?.username || "Unnamed tenant"}
+                          </span>
+                          <span className="text-xs text-stone-500 dark:text-stone-400">
+                            {[tenant.user?.email || tenant.email, tenant.propertyName, tenant.unit?.unitName].filter(Boolean).join(" · ")}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="px-3 py-3 text-sm text-stone-500 dark:text-stone-400">No tenants match your search.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              {!loadingTenants && tenantSearch.trim() && (
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  {filteredTenants.length} of {tenants.length} tenants found
+                </p>
+              )}
+            </div>
 
             <button
               type="button"
-              onClick={() => fetchDocuments(selectedPropertyId)}
-              disabled={
-                loadingDocuments || !isValidMongoId(selectedPropertyId)
-              }
+              onClick={() => fetchDocuments(selectedTenantId)}
+              disabled={loadingDocuments || !isValidMongoId(selectedTenantId)}
               className={`${buttonClass} border border-stone-300 bg-white text-stone-800 hover:bg-stone-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-stone-200 dark:hover:bg-neutral-800`}
             >
-              <RefreshCw
-                size={15}
-                className={loadingDocuments ? "animate-spin" : ""}
-              />
+              <RefreshCw size={15} className={loadingDocuments ? "animate-spin" : ""} />
               Refresh
             </button>
           </div>
 
-          {selectedProperty && (
+          {selectedTenant && (
             <p className="mt-3 break-words text-sm text-stone-500 dark:text-stone-400">
               Selected:{" "}
               <span className="font-medium text-stone-800 dark:text-stone-200">
-                {selectedProperty.propertyName || selectedProperty.name}
+                {selectedTenant.fullName || selectedTenant.user?.username || "Tenant"}
               </span>
-
-              {selectedProperty.address
-                ? ` · ${selectedProperty.address}`
-                : ""}
+              {selectedTenant.propertyName ? ` · ${selectedTenant.propertyName}` : ""}
             </p>
           )}
         </section>
 
-        {!loadingProperties && properties.length === 0 ? (
+        {!loadingTenants && tenants.length === 0 ? (
           <section className="rounded-xs border border-stone-200 bg-white p-10 text-center dark:border-neutral-800 dark:bg-neutral-900">
-            <FileText
-              size={30}
-              className="mx-auto mb-3 text-stone-400 dark:text-stone-500"
-            />
-
-            <h2 className="text-lg font-semibold">No properties yet</h2>
-
+            <FileText size={30} className="mx-auto mb-3 text-stone-400 dark:text-stone-500" />
+            <h2 className="text-lg font-semibold">No active tenants found</h2>
             <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
-              Add a property in Properties &amp; Units before uploading
-              documents.
+              Add a tenant to one of your properties before uploading documents.
             </p>
           </section>
-        ) : !isValidMongoId(selectedPropertyId) ? (
+        ) : !isValidMongoId(selectedTenantId) ? (
           <section className="rounded-xs border border-stone-200 bg-white p-10 text-center dark:border-neutral-800 dark:bg-neutral-900">
-            <FileText
-              size={30}
-              className="mx-auto mb-3 text-stone-400 dark:text-stone-500"
-            />
-
-            <h2 className="text-lg font-semibold">Select a property</h2>
-
+            <FileText size={30} className="mx-auto mb-3 text-stone-400 dark:text-stone-500" />
+            <h2 className="text-lg font-semibold">Select a tenant</h2>
             <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
-              Choose a property above to upload and manage its documents.
+              Choose a tenant above to upload and manage their documents.
             </p>
           </section>
         ) : (
@@ -580,14 +661,14 @@ const Documents = () => {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                   <div className="min-w-0">
                     <label
-                      htmlFor="property-document-name"
+                      htmlFor="tenant-document-name"
                       className="mb-1.5 block text-sm font-medium"
                     >
                       Document name
                     </label>
 
                     <input
-                      id="property-document-name"
+                      id="tenant-document-name"
                       type="text"
                       value={documentName}
                       onChange={(event) =>
@@ -601,14 +682,14 @@ const Documents = () => {
 
                   <div className="min-w-0">
                     <label
-                      htmlFor="property-document-type"
+                      htmlFor="tenant-document-type"
                       className="mb-1.5 block text-sm font-medium"
                     >
                       Document type
                     </label>
 
                     <select
-                      id="property-document-type"
+                      id="tenant-document-type"
                       value={documentType}
                       onChange={(event) =>
                         setDocumentType(event.target.value)
@@ -624,14 +705,14 @@ const Documents = () => {
 
                   <div className="min-w-0">
                     <label
-                      htmlFor="property-document-file"
+                      htmlFor="tenant-document-file"
                       className="mb-1.5 block text-sm font-medium"
                     >
                       Select file
                     </label>
 
                     <input
-                      id="property-document-file"
+                      id="tenant-document-file"
                       type="file"
                       accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
                       onChange={(event) =>
@@ -670,7 +751,7 @@ const Documents = () => {
                         setFile(null);
 
                         const input = window.document.getElementById(
-                          "property-document-file"
+                          "tenant-document-file"
                         );
 
                         if (input) input.value = "";
@@ -1060,7 +1141,7 @@ const Documents = () => {
                 type="button"
                 onClick={cancelDelete}
                 disabled={Boolean(deletingDocumentId)}
-                className="rounded-lg border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:text-stone-200 dark:hover:bg-neutral-800"
+                className="rounded-xs border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:text-stone-200 dark:hover:bg-neutral-800"
               >
                 Cancel
               </button>

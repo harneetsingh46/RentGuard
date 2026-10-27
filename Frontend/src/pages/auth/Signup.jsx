@@ -116,7 +116,7 @@ const Signup = () => {
 
     return (
         <div className="min-h-[calc(100dvh-145px)] w-full overflow-hidden bg-[#f3f3f3] px-4 py-3 flex items-center justify-center bg-[url(/signup.jpg)]  bg-cover bg-center dark:text-white dark:bg-[#101010]">
-            <form onSubmit={handleSubmit} noValidate className="w-full max-w-2xl rounded-2xs bg-white p-5 shadow-2xl dark:bg-[#1B1B1B] dark:border-[#373737] sm:p-6">
+            <form onSubmit={handleSubmit} noValidate className="w-full max-w-2xl rounded-2xs bg-white backdrop-blur-xs  border-white/20 shadow-lg  p-5 shadow-2xl dark:bg-[#1B1B1B] dark:border-[#373737] sm:p-6">
                 <div className="mb-5 text-center">
                     <h1 className="text-3xl text-black dark:text-[#F1F0ED]">OWNER REGISTRATION</h1>
                     <p className="mt-2 text-sm text-gray-900 dark:text-yellow-300">Set up your owner account.</p>

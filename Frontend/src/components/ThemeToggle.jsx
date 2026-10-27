@@ -49,7 +49,7 @@ const ThemeToggle = () => {
       aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
       title={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
     >
-      {theme === "light" ? moonIcon : sunIcon}
+      {theme === "light" ? sunIcon : moonIcon}
     </button>
   );
 };

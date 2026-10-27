@@ -5,65 +5,110 @@ import upload from "../config/multer.js";
 
 import {
   deletePropertyDocument,
+  deleteTenantDocument,
+  getDocumentDownloadUrlForOwner,
   getMyTenantDocumentDownloadUrl,
   getMyTenantDocuments,
   getPropertyDocumentDownloadUrl,
   getPropertyDocuments,
+  getTenantDocumentsForOwner,
+  uploadDocumentForTenant,
   uploadMyTenantDocument,
   uploadPropertyDocument,
 } from "../controllers/propertyDocument.controller.js";
 
 const router = express.Router();
 
-// Tenant document routes
-// Keep these BEFORE /:propertyId routes so "mine" is treated as a
-// literal route segment rather than a property ID.
+// Mounted in app.js at: app.use("/document/", documentRouter)
+// Full URLs below are therefore prefixed with /document
 
-router.get(
-  "/mine",
+// IMPORTANT: keep the literal routes ("tenants", "documents", "upload", "mine")
+// BEFORE the /:propertyId routes so they are not treated as a property ID.
+
+// OWNER → TENANT documents
+// The owner selects a tenant first, then works inside that tenant.
+// Only owners of the tenant's property are allowed (checked in the controller).
+
+// GET /document/tenants/:tenantId
+router.get("/tenants/:tenantId", protect, getTenantDocumentsForOwner);
+
+// POST /document/tenants/:tenantId
+router.post(
+  "/tenants/:tenantId",
   protect,
-  getMyTenantDocuments
+  upload.single("document"),
+  uploadDocumentForTenant,
 );
+
+// GET /document/tenants/:tenantId/:documentId/download
+router.get(
+  "/tenants/:tenantId/:documentId/download",
+  protect,
+  getDocumentDownloadUrlForOwner,
+);
+
+// DELETE /document/tenants/:tenantId/:documentId
+// Only the owner can delete. Tenants have no delete route.
+router.delete(
+  "/tenants/:tenantId/:documentId",
+  protect,
+  deleteTenantDocument,
+);
+
+// TENANT documents (the tenant is always the logged-in user)
+
+// GET /document/documents
+router.get("/documents", protect, getMyTenantDocuments);
+
+// POST /document/upload
+router.post(
+  "/upload",
+  protect,
+  upload.single("document"),
+  uploadMyTenantDocument,
+);
+
+// GET /document/documents/:documentId/download
+router.get(
+  "/documents/:documentId/download",
+  protect,
+  getMyTenantDocumentDownloadUrl,
+);
+
+// Legacy tenant routes (unchanged)
+
+router.get("/mine", protect, getMyTenantDocuments);
 
 router.post(
   "/mine",
   protect,
   upload.single("document"),
-  uploadMyTenantDocument
+  uploadMyTenantDocument,
 );
 
 router.get(
   "/mine/:documentId/download",
   protect,
-  getMyTenantDocumentDownloadUrl
+  getMyTenantDocumentDownloadUrl,
 );
 
-// Property document routes
-// Owners can manage documents for properties they own.
+// Legacy property-level routes (unchanged)
 
 router.post(
   "/:propertyId",
   protect,
   upload.single("document"),
-  uploadPropertyDocument
+  uploadPropertyDocument,
 );
 
-router.get(
-  "/:propertyId",
-  protect,
-  getPropertyDocuments
-);
+router.get("/:propertyId", protect, getPropertyDocuments);
 
 router.get(
   "/:propertyId/:documentId/download",
   protect,
-  getPropertyDocumentDownloadUrl
+  getPropertyDocumentDownloadUrl,
 );
 
-router.delete(
-  "/:propertyId/:documentId",
-  protect,
-  deletePropertyDocument
-);
+router.delete("/:propertyId/:documentId", protect, deletePropertyDocument);
 
 export default router;

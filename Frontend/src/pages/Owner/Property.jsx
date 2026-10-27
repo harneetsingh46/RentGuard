@@ -537,8 +537,8 @@ const Property = () => {
         if (!formData.fullName) errors.fullName = "Full name is required.";
         else if (formData.fullName.length < 2 || formData.fullName.length > 100) {
             errors.fullName = "Full name must be between 2 and 100 characters.";
-        } else if (!/^[\\p{L}\\p{M} .'-]+$/u.test(formData.fullName)) {
-            errors.fullName = "Use only letters, spaces, apostrophes, periods, and hyphens.";
+        } else if (formData.fullName === '') {
+            errors.fullName = "Full name cannot be empty";
         }
 
         if (!formData.username) errors.username = "Username is required.";
@@ -552,18 +552,18 @@ const Property = () => {
         }
 
         if (!formData.aadhaarNumber) errors.aadhaarNumber = "Aadhaar number is required.";
-        else if (!/^\\d{12}$/.test(formData.aadhaarNumber)) {
+        else if (formData.aadhaarNumber.length !== 12) {
             errors.aadhaarNumber = "Aadhaar number must contain exactly 12 digits.";
         }
 
         if (!formData.email) errors.email = "Email is required.";
-        else if (formData.email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(formData.email)) {
+        else if (formData.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email)) {
             errors.email = "Enter a valid email address, such as name@example.com.";
         }
 
         if (!formData.password) errors.password = "Password is required.";
-        else if (formData.password.length < 8 || formData.password.length > 128) {
-            errors.password = "Password must be between 8 and 128 characters.";
+        else if (formData.password.length < 6 || formData.password.length > 128) {
+            errors.password = "Password must be between 6";
         }
 
         setTenantFieldErrors(errors);
@@ -777,11 +777,11 @@ const Property = () => {
                             </div>
 
                             {unitsLoading ? (
-                                <p className="py-6 text-gray-500 dark:text-gray-400">
+                                <p className="py-6 text-gray-500  text-center dark:text-gray-400">
                                     Loading units...
                                 </p>
                             ) : units.length === 0 ? (
-                                <div className="rounded-xs border border-gray-200 bg-white p-6 dark:border-stone-800 dark:bg-[#1b1b1b]">
+                                <div className="rounded-xs text-center border border-gray-200 bg-white p-6 dark:border-stone-800 dark:bg-[#1b1b1b]">
                                     <p className="text-gray-600 dark:text-gray-400">
                                         No units added to this property yet.
                                     </p>
@@ -789,7 +789,7 @@ const Property = () => {
                                     <button
                                         type="button"
                                         onClick={openAddUnitForm}
-                                        className="mt-4 rounded-xs bg-yellow-300 px-4 py-2 font-medium text-black hover:bg-yellow-400"
+                                        className="mt-4 rounded-xs text-center bg-yellow-300 px-4 py-2 font-medium text-black hover:bg-yellow-400"
                                     >
                                         + Add First Unit
                                     </button>

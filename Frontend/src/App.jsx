@@ -18,6 +18,8 @@ import Documents from "../src/pages/Owner/Documents";
 import TenantDocument from "./pages/Tenant/TenantDocument";
 import TenantLayout from "./common/TenantLayout";
 import TenantProfile from "./pages/Tenant/TenantProfile";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
 
 const router = createBrowserRouter([
   // Public pages: Navbar + page + Footer
@@ -38,6 +40,14 @@ const router = createBrowserRouter([
           {
             path: "/signup",
             element: <Signup />,
+          },
+          {
+            path: "/about",
+            element: <About />,
+          },
+          {
+            path: "/contact",
+            element: <Contact />,
           },
         ],
       },

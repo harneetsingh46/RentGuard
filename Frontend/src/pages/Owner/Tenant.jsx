@@ -1,13 +1,16 @@
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import apiClient from '../../ApiClient/interceptor.js'
 import { useToast } from "../../common/ToastProvider"
 import toast from "react-hot-toast";
 import ConfirmModal from "../../common/ConfirmModal"
-import { Pencil, LogOut } from "lucide-react"
+import { Pencil, LogOut, Search, Upload, X, FileText, FileImage, LoaderCircle } from "lucide-react"
 
 const Tenant = () => {
   const { showToast } = useToast()
+  const [tenantSearch, setTenantSearch] = useState('')
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false)
+  const searchRef = useRef(null)
   const [confirmTenant, setConfirmTenant] = useState(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [tenants, setTenants] = useState([])
@@ -26,6 +29,14 @@ const Tenant = () => {
     aadhaarNumber: '',
   })
   const [saving, setSaving] = useState(false)
+
+  // Upload-document modal state
+  const [uploadTenant, setUploadTenant] = useState(null)
+  const [documentName, setDocumentName] = useState('')
+  const [documentType, setDocumentType] = useState('agreement')
+  const [documentFile, setDocumentFile] = useState(null)
+  const [uploadingDocument, setUploadingDocument] = useState(false)
+  const [uploadError, setUploadError] = useState('')
 
   // Fetch tenants for all properties owned by the logged-in owner
   const getTenants = async () => {
@@ -175,6 +186,129 @@ const Tenant = () => {
   const displayedTenants =
     activeSection === 'active' ? tenants : history
 
+  const matchingTenants = useMemo(() => {
+    const query = tenantSearch.trim().toLowerCase()
+    if (!query) return []
+    return displayedTenants.filter((tenant) => {
+      const searchable = [
+        tenant.fullName,
+        tenant.user?.username,
+        tenant.user?.email,
+        tenant.email,
+        tenant.propertyName,
+        tenant.unit?.unitName,
+        tenant.address,
+      ].filter(Boolean).join(' ').toLowerCase()
+      return searchable.includes(query)
+    }).slice(0, 8)
+  }, [displayedTenants, tenantSearch])
+
+  const filteredTenants = useMemo(() => {
+    const query = tenantSearch.trim().toLowerCase()
+    if (!query) return displayedTenants
+    return displayedTenants.filter((tenant) => {
+      const searchable = [
+        tenant.fullName,
+        tenant.user?.username,
+        tenant.user?.email,
+        tenant.email,
+        tenant.propertyName,
+        tenant.unit?.unitName,
+        tenant.address,
+      ].filter(Boolean).join(' ').toLowerCase()
+      return searchable.includes(query)
+    })
+  }, [displayedTenants, tenantSearch])
+
+  const selectSearchTenant = (tenant) => {
+    setTenantSearch(tenant.fullName || tenant.user?.username || '')
+    setSearchDropdownOpen(false)
+  }
+
+  const openTenantDocuments = (tenant) => {
+    setUploadTenant(tenant)
+    setDocumentName('')
+    setDocumentType('agreement')
+    setDocumentFile(null)
+    setUploadError('')
+  }
+
+  const closeUploadModal = () => {
+    if (uploadingDocument) return
+    setUploadTenant(null)
+    setDocumentName('')
+    setDocumentType('agreement')
+    setDocumentFile(null)
+    setUploadError('')
+  }
+
+  const handleDocumentUpload = async (event) => {
+    event.preventDefault()
+    if (!uploadTenant) return
+
+    if (!documentName.trim()) {
+      setUploadError('Please enter a document name.')
+      return
+    }
+    if (documentName.trim().length > 100) {
+      setUploadError('Document name cannot exceed 100 characters.')
+      return
+    }
+    if (!documentFile) {
+      setUploadError('Please choose a file to upload.')
+      return
+    }
+
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+    if (!allowedTypes.includes(documentFile.type)) {
+      setUploadError('Only PDF, JPG, PNG, and WebP files are supported.')
+      return
+    }
+    if (documentFile.size > 5 * 1024 * 1024) {
+      setUploadError('The file must be 5 MB or smaller.')
+      return
+    }
+
+    const formData = new FormData()
+    formData.append('documentName', documentName.trim())
+    formData.append('documentType', documentType)
+    formData.append('document', documentFile)
+
+    try {
+      setUploadingDocument(true)
+      setUploadError('')
+      await apiClient.post(`/document/tenants/${uploadTenant._id}`, formData)
+      showToast('Document uploaded successfully.', 'success')
+      toast.success('Document uploaded successfully.')
+      closeUploadModalAfterSuccess()
+    } catch (err) {
+      const message = err.response?.data?.message || 'Failed to upload the document.'
+      setUploadError(message)
+      showToast(message, 'error')
+      toast.error(message)
+    } finally {
+      setUploadingDocument(false)
+    }
+  }
+
+  const closeUploadModalAfterSuccess = () => {
+    setUploadTenant(null)
+    setDocumentName('')
+    setDocumentType('agreement')
+    setDocumentFile(null)
+    setUploadError('')
+  }
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setSearchDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [])
+
   return (
     <div className="mx-auto w-full min-w-0 p-4 sm:p-6 lg:p-8">
       <h1 className="mb-4 break-words text-xl font-semibold text-gray-900 dark:text-white sm:mb-6 sm:text-2xl">
@@ -190,6 +324,56 @@ const Tenant = () => {
           {success}
         </p>
       )}
+
+      {/* Search tenants with autocomplete */}
+      <div className="relative mb-4 max-w-xl" ref={searchRef}>
+        <label htmlFor="tenant-management-search" className="sr-only">Search tenants</label>
+        <div className="relative">
+          <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            id="tenant-management-search"
+            type="search"
+            value={tenantSearch}
+            onChange={(event) => {
+              setTenantSearch(event.target.value)
+              setSearchDropdownOpen(true)
+            }}
+            onFocus={() => setSearchDropdownOpen(true)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') setSearchDropdownOpen(false)
+              if (event.key === 'Enter' && matchingTenants.length > 0) {
+                event.preventDefault()
+                selectSearchTenant(matchingTenants[0])
+              }
+            }}
+            placeholder="Search tenant by name, email, property, or unit..."
+            className="w-full rounded-xs border border-gray-300 bg-white py-3 pl-10 pr-10 text-sm text-gray-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 dark:border-stone-700 dark:bg-[#1b1b1b] dark:text-white"
+            autoComplete="off"
+          />
+        </div>
+        {searchDropdownOpen && tenantSearch.trim() && (
+          <div className="absolute z-40 mt-1 max-h-72 w-full overflow-y-auto rounded-xs border border-gray-200 bg-white py-1 shadow-xl dark:border-stone-700 dark:bg-neutral-900">
+            {matchingTenants.length ? matchingTenants.map((tenant) => (
+              <button
+                key={`${tenant._id}-${tenant.property}`}
+                type="button"
+                onClick={() => selectSearchTenant(tenant)}
+                className="flex w-full flex-col items-start px-4 py-3 text-left hover:bg-yellow-50 focus:bg-yellow-50 focus:outline-none dark:hover:bg-stone-800 dark:focus:bg-stone-800"
+              >
+                <span className="font-medium text-gray-900 dark:text-white">{tenant.fullName || tenant.user?.username || 'Unnamed tenant'}</span>
+                <span className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  {[tenant.propertyName, tenant.unit?.unitName, tenant.user?.email || tenant.email].filter(Boolean).join(' · ')}
+                </span>
+              </button>
+            )) : (
+              <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">No matching tenants found.</p>
+            )}
+          </div>
+        )}
+        {tenantSearch.trim() && !searchDropdownOpen && (
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{filteredTenants.length} matching tenant{filteredTenants.length === 1 ? '' : 's'}</p>
+        )}
+      </div>
 
       {/* Active tenants and history sections */}
       <div className="mb-4 flex flex-wrap gap-x-2 gap-y-1 border-b border-gray-200 dark:border-stone-800 sm:mb-5 sm:gap-3">
@@ -228,7 +412,7 @@ const Tenant = () => {
         <p className="text-gray-600 dark:text-gray-300">
           Loading tenants...
         </p>
-      ) : displayedTenants.length === 0 ? (
+      ) : filteredTenants.length === 0 ? (
         <p className="text-gray-600 dark:text-gray-300">
           {activeSection === 'active'
             ? 'No active tenants found across your properties.'
@@ -238,7 +422,7 @@ const Tenant = () => {
         <>
         {/* Mobile tenant cards */}
         <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:hidden">
-          {displayedTenants.map((tenant) => (
+          {filteredTenants.map((tenant) => (
             <article
               key={tenant._id}
               className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-4"
@@ -301,6 +485,16 @@ const Tenant = () => {
                   </button>
                   <button
                     type="button"
+                    onClick={() => openTenantDocuments(tenant)}
+                    aria-label={`Upload document for ${tenant.fullName}`}
+                    title="Upload document"
+                    className="inline-flex min-h-10 items-center justify-center rounded-xs border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                  >
+                    <Upload size={17} />
+                    <span className="ml-2 text-sm">Upload Document</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleMoveOut(tenant)}
                     aria-label={`Move out ${tenant.fullName}`}
                     title="Move tenant out"
@@ -336,7 +530,7 @@ const Tenant = () => {
             </thead>
 
             <tbody className="divide-y divide-gray-200 bg-white dark:divide-stone-800 dark:bg-[#1b1b1b]">
-              {displayedTenants.map((tenant) => (
+              {filteredTenants.map((tenant) => (
                 <tr
                   key={tenant._id}
                   className="text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-stone-900"
@@ -395,6 +589,16 @@ const Tenant = () => {
 
                         <button
                           type="button"
+                          onClick={() => openTenantDocuments(tenant)}
+                          aria-label={`Upload document for ${tenant.fullName}`}
+                          title="Upload document"
+                          className="mx-1 my-1 inline-flex items-center justify-center gap-2 rounded-xs border border-gray-300 px-3 py-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                        >
+                          <Upload size={16} />
+                          <span>Upload Document</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleMoveOut(tenant)}
                           aria-label={`Move out ${tenant.fullName}`}
                           title="Move tenant out"
@@ -411,6 +615,72 @@ const Tenant = () => {
           </table>
         </div>
         </>
+      )}
+
+      {/* Upload document modal */}
+      {uploadTenant && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:p-4"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) closeUploadModal() }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upload-tenant-document-title"
+            className="my-auto w-full max-w-xl rounded-xs border border-gray-200 bg-white shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b]"
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-stone-800 sm:p-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-yellow-300 text-black"><Upload size={19} /></span>
+                <div className="min-w-0">
+                  <h2 id="upload-tenant-document-title" className="text-lg font-semibold text-gray-900 dark:text-white">Upload Document</h2>
+                  <p className="truncate text-sm text-gray-500 dark:text-gray-400">For {uploadTenant.fullName || uploadTenant.user?.username || 'Selected tenant'}</p>
+                </div>
+              </div>
+              <button type="button" onClick={closeUploadModal} disabled={uploadingDocument} aria-label="Close upload modal" className="rounded-xs p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-stone-800"><X size={19} /></button>
+            </div>
+
+            <form onSubmit={handleDocumentUpload} className="space-y-4 p-4 sm:p-5">
+              {uploadError && <p role="alert" className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{uploadError}</p>}
+              <div className="rounded-xs border border-gray-200 bg-gray-50 p-3 text-sm dark:border-stone-800 dark:bg-neutral-900">
+                <p className="font-medium text-gray-900 dark:text-white">{uploadTenant.propertyName || 'Property'}</p>
+                <p className="mt-1 text-gray-500 dark:text-gray-400">{uploadTenant.unit?.unitName || 'Unit unavailable'}</p>
+              </div>
+              <div>
+                <label htmlFor="tenant-modal-document-name" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Document name</label>
+                <input id="tenant-modal-document-name" type="text" value={documentName} onChange={(event) => setDocumentName(event.target.value)} placeholder="e.g. Rental Agreement" maxLength={100} required className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-yellow-400 dark:border-stone-700 dark:bg-neutral-900 dark:text-white" />
+              </div>
+              <div>
+                <label htmlFor="tenant-modal-document-type" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Document type</label>
+                <select id="tenant-modal-document-type" value={documentType} onChange={(event) => setDocumentType(event.target.value)} className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-yellow-400 dark:border-stone-700 dark:bg-neutral-900 dark:text-white">
+                  <option value="agreement">Rental Agreement</option>
+                  <option value="ownership">Ownership Document</option>
+                  <option value="tax">Tax Document</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="tenant-modal-document-file" className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Select file</label>
+                <input id="tenant-modal-document-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => setDocumentFile(event.target.files?.[0] || null)} required className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 file:mr-3 file:rounded file:border-0 file:bg-yellow-300 file:px-3 file:py-1.5 file:font-medium file:text-black dark:border-stone-700 dark:bg-neutral-900 dark:text-white" />
+                <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">PDF, JPG, PNG, or WebP · Maximum size: 5 MB</p>
+              </div>
+              {documentFile && (
+                <div className="flex min-w-0 items-center gap-3 rounded border border-gray-200 p-3 dark:border-stone-800">
+                  {documentFile.type === 'application/pdf' ? <FileText size={18} className="shrink-0 text-red-500" /> : <FileImage size={18} className="shrink-0 text-blue-500" />}
+                  <span className="min-w-0 flex-1 break-all text-sm text-gray-700 dark:text-gray-200">{documentFile.name}</span>
+                  <span className="shrink-0 text-xs text-gray-500">{(documentFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+                  <button type="button" aria-label="Remove selected file" onClick={() => { setDocumentFile(null); const input = window.document.getElementById('tenant-modal-document-file'); if (input) input.value = '' }} className="text-gray-500 hover:text-red-500"><X size={17} /></button>
+                </div>
+              )}
+              <div className="flex flex-col-reverse gap-2 border-t border-gray-200 pt-4 dark:border-stone-800 sm:flex-row sm:justify-end">
+                <button type="button" onClick={closeUploadModal} disabled={uploadingDocument} className="rounded-xs border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-stone-700 dark:text-gray-300 dark:hover:bg-stone-800">Cancel</button>
+                <button type="submit" disabled={uploadingDocument} className="inline-flex items-center justify-center gap-2 rounded-xs bg-yellow-300 px-4 py-2 font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60">
+                  {uploadingDocument ? <><LoaderCircle size={16} className="animate-spin" /> Uploading...</> : <><Upload size={16} /> Upload Document</>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Edit tenant modal */}

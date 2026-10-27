@@ -2,14 +2,13 @@ import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
-    <footer className="w-full m-0 border-t border-black/10 bg-white mb-0 text-black dark:border-white/10 dark:bg-neutral-950 dark:text-white sm:px-6 sm:py-8 lg:px-10 lg:py-5">
-      <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-5 sm:gap-6 lg:flex-row lg:justify-between">
-        
+    <footer className="m-0 w-full border-t border-black/10 bg-white px-4 py-5 text-black dark:border-white/10 dark:bg-neutral-950 dark:text-white sm:px-6 sm:py-6 lg:px-10">
+      <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-center gap-4 text-center sm:gap-5 lg:flex-row lg:justify-between lg:gap-8 lg:text-left">
         {/* Logo */}
         <div className="shrink-0">
           <Link
             to="/"
-            className="inline-flex items-center text-xl font-semibold sm:text-2xl"
+            className="inline-flex items-center text-lg font-semibold sm:text-xl"
           >
             <span className="mr-2 rounded-lg bg-yellow-300 px-2 py-0 text-black">
               R
@@ -19,25 +18,38 @@ const Footer = () => {
         </div>
 
         {/* Description */}
-        <p className="text-center text-sm text-neutral-500 dark:text-neutral-400">
+        <p className="max-w-full text-balance text-sm leading-5 text-neutral-500 dark:text-neutral-400 sm:max-w-md">
           A clearer way to manage rental information.
         </p>
 
         {/* Navigation Links */}
         <nav
           aria-label="Footer navigation"
-          className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3 text-sm sm:gap-x-6"
+          className="flex flex-wrap items-center justify-center gap-x-1 gap-y-2 text-sm sm:gap-x-6"
         >
           <Link
+            to="/about"
+            className="text-sm font-semibold text-black transition hover:text-slate-950 dark:text-stone-300 dark:hover:text-white"
+          >
+            About
+          </Link>
+
+          <Link
+            to="/contact"
+            className="text-sm font-semibold text-black transition hover:text-slate-950 dark:text-stone-300 dark:hover:text-white"
+          >
+            Contact Us
+          </Link>
+          <Link
             to="/login"
-            className="transition-colors hover:text-yellow-700 dark:hover:text-yellow-300"
+            className="text-sm font-semibold text-black transition hover:text-slate-950 dark:text-stone-300 dark:hover:text-white"
           >
             Login
           </Link>
 
           <Link
             to="/signup"
-            className="transition-colors hover:text-yellow-700 dark:hover:text-yellow-300"
+            className="text-sm font-semibold text-black transition hover:text-slate-950 dark:text-stone-300 dark:hover:text-white"
           >
             Sign up
           </Link>

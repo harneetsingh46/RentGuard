@@ -22,6 +22,7 @@ const Rent = () => {
   const [selectedProperty, setSelectedProperty] = useState("");
 
   const [rents, setRents] = useState([]);
+  const [rentSection, setRentSection] = useState("active");
   const [tenants, setTenants] = useState([]);
 
   const [loadingProperties, setLoadingProperties] = useState(true);
@@ -149,9 +150,36 @@ const Rent = () => {
     setSelectedTenant("");
   }, [selectedProperty]);
 
-  // Calculate summary amounts
+
+  // A rent record is completed when its unit/tenant is no longer available,
+  // or the backend explicitly marks the record as completed/closed.
+  // A normal "paid" monthly rent remains active while the tenancy continues.
+  const isCompletedRent = (rent) => {
+    const status = String(rent.status || "").toLowerCase();
+    const tenantStatus = String(rent.tenant?.status || "").toLowerCase();
+
+    return (
+      !rent.unit ||
+      !rent.tenant ||
+      ["completed", "cancelled", "canceled", "closed", "terminated"].includes(status) ||
+      ["inactive", "ended", "terminated", "removed"].includes(tenantStatus)
+    );
+  };
+
+  const completedRents = useMemo(
+    () => rents.filter(isCompletedRent),
+    [rents],
+  );
+
+  const activeRents = useMemo(
+    () => rents.filter((rent) => !isCompletedRent(rent)),
+    [rents],
+  );
+
+  // Summary cards include ongoing rents only. Completed rent records remain
+  // visible in the Completed section but are excluded from overall totals.
   const summary = useMemo(() => {
-    return rents.reduce(
+    return activeRents.reduce(
       (totals, rent) => {
         const amount = Number(rent.amount) || 0;
         const paid = Number(rent.paidAmount) || 0;
@@ -174,7 +202,9 @@ const Rent = () => {
         overdue: 0,
       },
     );
-  }, [rents]);
+  }, [activeRents]);
+
+  const visibleRents = rentSection === "completed" ? completedRents : activeRents;
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("en-IN", {
@@ -482,11 +512,35 @@ const Rent = () => {
               <h2 className="text-lg font-semibold">Rent Records</h2>
 
               <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                {rents.length} record{rents.length === 1 ? "" : "s"}
+                {visibleRents.length} {rentSection} record{visibleRents.length === 1 ? "" : "s"}
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="mr-1 flex rounded-xs border border-stone-200 p-1 dark:border-neutral-700">
+                <button
+                  type="button"
+                  onClick={() => setRentSection("active")}
+                  aria-pressed={rentSection === "active"}
+                  className={`rounded-xs px-3 py-2 text-sm font-medium transition ${rentSection === "active"
+                      ? "bg-yellow-400 text-stone-900"
+                      : "text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-neutral-800"
+                    }`}
+                >
+                  Ongoing ({activeRents.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRentSection("completed")}
+                  aria-pressed={rentSection === "completed"}
+                  className={`rounded-xs px-3 py-2 text-sm font-medium transition ${rentSection === "completed"
+                      ? "bg-yellow-400 text-stone-900"
+                      : "text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-neutral-800"
+                    }`}
+                >
+                  Completed ({completedRents.length})
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={openCreateModal}
@@ -519,12 +573,16 @@ const Rent = () => {
                 Add a property before managing its rent.
               </p>
             </div>
-          ) : rents.length === 0 ? (
+          ) : visibleRents.length === 0 ? (
             <div className="p-10 text-center">
-              <p className="font-medium">No rent records yet</p>
+              <p className="font-medium">
+                {rentSection === "completed" ? "No completed rent records" : "No ongoing rent records"}
+              </p>
 
               <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
-                Create a rent record for an active tenant to see it here.
+                {rentSection === "completed"
+                  ? "Rent records for deleted units or ended tenancies will appear here."
+                  : "Create a rent record for an active tenant to see it here."}
               </p>
             </div>
           ) : (
@@ -545,7 +603,7 @@ const Rent = () => {
                 </thead>
 
                 <tbody className="divide-y divide-stone-200 dark:divide-neutral-800">
-                  {rents.map((rent) => {
+                  {visibleRents.map((rent) => {
                     const amount = Number(rent.amount) || 0;
                     const paid = Number(rent.paidAmount) || 0;
                     const remaining = Math.max(amount - paid, 0);
@@ -630,194 +688,17 @@ const Rent = () => {
             className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
           >
             <div className="shrink-0 border-b border-stone-200 p-6 dark:border-neutral-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 id="create-rent-title" className="text-xl font-semibold">
-                  Create Rent
-                </h2>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 id="create-rent-title" className="text-xl font-semibold">
+                    Create Rent
+                  </h2>
 
-                <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                  Create a monthly rent record for an active tenant.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setMonthDropdownOpen(false);
-                }}
-                disabled={creatingRent}
-                className="text-2xl text-stone-500 hover:text-stone-900 disabled:opacity-50 dark:hover:text-white"
-                aria-label="Close modal"
-              >
-                &times;
-              </button>
-            </div>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-6">
-            <form onSubmit={handleCreateRent} className="space-y-4">
-              {/* Tenant */}
-              <div>
-                <label
-                  htmlFor="rent-tenant"
-                  className="mb-1 block text-sm font-medium"
-                >
-                  Tenant
-                </label>
-
-                <select
-                  id="rent-tenant"
-                  value={selectedTenant}
-                  onChange={(e) => setSelectedTenant(e.target.value)}
-                  required
-                  disabled={loadingTenants || tenants.length === 0}
-                  className="w-full rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-yellow-500 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
-                >
-                  <option value="">
-                    {loadingTenants ? "Loading tenants..." : "Select tenant"}
-                  </option>
-
-                  {tenants.map((tenant) => (
-                    <option key={tenant._id} value={tenant._id}>
-                      {tenant.fullName} — {tenant.unit?.unitName || "Unit"}
-                    </option>
-                  ))}
-                </select>
-
-                {!loadingTenants && tenants.length === 0 && (
                   <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                    No active tenants found for this property.
+                    Create a monthly rent record for an active tenant.
                   </p>
-                )}
-              </div>
-
-              {/* Custom scrollable month dropdown */}
-              <div>
-                <label className="mb-1 block text-sm font-medium">
-                  Billing Month
-                </label>
-
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setMonthDropdownOpen((open) => !open)}
-                    disabled={creatingRent}
-                    aria-expanded={monthDropdownOpen}
-                    aria-haspopup="listbox"
-                    className="flex w-full items-center justify-between rounded-xs border border-stone-300 bg-white px-3 py-2 text-left text-sm outline-none transition focus:border-yellow-500 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
-                  >
-                    <span>{MONTHS[month - 1]}</span>
-
-                    <svg
-                      className={`h-4 w-4 transition-transform ${monthDropdownOpen ? "rotate-180" : ""
-                        }`}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path
-                        d="m6 9 6 6 6-6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </button>
-
-                  {monthDropdownOpen && (
-                    <div className="absolute z-[60] mt-1 w-full overflow-hidden rounded-xs border border-stone-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
-                      <div
-                        role="listbox"
-                        aria-label="Billing month"
-                        className="month-dropdown-scroll"
-                      >
-                        {MONTHS.map((monthName, index) => {
-                          const monthNumber = index + 1;
-                          const isSelected = month === monthNumber;
-
-                          return (
-                            <button
-                              key={monthName}
-                              type="button"
-                              role="option"
-                              aria-selected={isSelected}
-                              onClick={() => {
-                                setMonth(monthNumber);
-                                setMonthDropdownOpen(false);
-                              }}
-                              className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition ${isSelected
-                                ? "bg-yellow-400 font-medium text-stone-900"
-                                : "text-stone-800 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-neutral-800"
-                                }`}
-                            >
-                              <span>{monthName}</span>
-
-                              {isSelected && (
-                                <svg
-                                  className="h-4 w-4"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                >
-                                  <path
-                                    d="m5 12 4 4L19 6"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  />
-                                </svg>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
 
-              {/* Billing year */}
-              <div>
-                <label
-                  htmlFor="rent-year"
-                  className="mb-1 block text-sm font-medium"
-                >
-                  Billing Year
-                </label>
-
-                <input
-                  id="rent-year"
-                  type="number"
-                  value={year}
-                  onChange={(e) => setYear(e.target.value)}
-                  min="2000"
-                  required
-                  className="w-full rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-yellow-500 dark:border-neutral-700 dark:bg-neutral-950"
-                />
-              </div>
-
-              {/* Due date */}
-              <div>
-                <label
-                  htmlFor="rent-due-date"
-                  className="mb-1 block text-sm font-medium"
-                >
-                  Due Date
-                </label>
-
-                <input
-                  id="rent-due-date"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  required
-                  className="w-full rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-yellow-500 dark:border-neutral-700 dark:bg-neutral-950"
-                />
-              </div>
-
-              {/* Modal actions */}
-              <div className="flex justify-end gap-3 pt-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -825,22 +706,199 @@ const Rent = () => {
                     setMonthDropdownOpen(false);
                   }}
                   disabled={creatingRent}
-                  className="rounded-xs border border-stone-300 px-4 py-2 text-sm transition hover:bg-stone-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                  className="text-2xl text-stone-500 hover:text-stone-900 disabled:opacity-50 dark:hover:text-white"
+                  aria-label="Close modal"
                 >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={
-                    creatingRent || loadingTenants || tenants.length === 0
-                  }
-                  className="rounded-xs bg-yellow-400 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {creatingRent ? "Creating..." : "Create Rent"}
+                  &times;
                 </button>
               </div>
-            </form>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
+              <form onSubmit={handleCreateRent} className="space-y-4">
+                {/* Tenant */}
+                <div>
+                  <label
+                    htmlFor="rent-tenant"
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Tenant
+                  </label>
+
+                  <select
+                    id="rent-tenant"
+                    value={selectedTenant}
+                    onChange={(e) => setSelectedTenant(e.target.value)}
+                    required
+                    disabled={loadingTenants || tenants.length === 0}
+                    className="w-full rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-yellow-500 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
+                  >
+                    <option value="">
+                      {loadingTenants ? "Loading tenants..." : "Select tenant"}
+                    </option>
+
+                    {tenants.map((tenant) => (
+                      <option key={tenant._id} value={tenant._id}>
+                        {tenant.fullName} — {tenant.unit?.unitName || "Unit"}
+                      </option>
+                    ))}
+                  </select>
+
+                  {!loadingTenants && tenants.length === 0 && (
+                    <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                      No active tenants found for this property.
+                    </p>
+                  )}
+                </div>
+
+                {/* Custom scrollable month dropdown */}
+                <div>
+                  <label className="mb-1 block text-sm font-medium">
+                    Billing Month
+                  </label>
+
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setMonthDropdownOpen((open) => !open)}
+                      disabled={creatingRent}
+                      aria-expanded={monthDropdownOpen}
+                      aria-haspopup="listbox"
+                      className="flex w-full items-center justify-between rounded-xs border border-stone-300 bg-white px-3 py-2 text-left text-sm outline-none transition focus:border-yellow-500 disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950"
+                    >
+                      <span>{MONTHS[month - 1]}</span>
+
+                      <svg
+                        className={`h-4 w-4 transition-transform ${monthDropdownOpen ? "rotate-180" : ""
+                          }`}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path
+                          d="m6 9 6 6 6-6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </button>
+
+                    {monthDropdownOpen && (
+                      <div className="absolute z-[60] mt-1 w-full overflow-hidden rounded-xs border border-stone-200 bg-white shadow-lg dark:border-neutral-700 dark:bg-neutral-900">
+                        <div
+                          role="listbox"
+                          aria-label="Billing month"
+                          className="month-dropdown-scroll"
+                        >
+                          {MONTHS.map((monthName, index) => {
+                            const monthNumber = index + 1;
+                            const isSelected = month === monthNumber;
+
+                            return (
+                              <button
+                                key={monthName}
+                                type="button"
+                                role="option"
+                                aria-selected={isSelected}
+                                onClick={() => {
+                                  setMonth(monthNumber);
+                                  setMonthDropdownOpen(false);
+                                }}
+                                className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition ${isSelected
+                                  ? "bg-yellow-400 font-medium text-stone-900"
+                                  : "text-stone-800 hover:bg-stone-100 dark:text-stone-200 dark:hover:bg-neutral-800"
+                                  }`}
+                              >
+                                <span>{monthName}</span>
+
+                                {isSelected && (
+                                  <svg
+                                    className="h-4 w-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <path
+                                      d="m5 12 4 4L19 6"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Billing year */}
+                <div>
+                  <label
+                    htmlFor="rent-year"
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Billing Year
+                  </label>
+
+                  <input
+                    id="rent-year"
+                    type="number"
+                    value={year}
+                    onChange={(e) => setYear(e.target.value)}
+                    min="2000"
+                    required
+                    className="w-full rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-yellow-500 dark:border-neutral-700 dark:bg-neutral-950"
+                  />
+                </div>
+
+                {/* Due date */}
+                <div>
+                  <label
+                    htmlFor="rent-due-date"
+                    className="mb-1 block text-sm font-medium"
+                  >
+                    Due Date
+                  </label>
+
+                  <input
+                    id="rent-due-date"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    required
+                    className="w-full rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-yellow-500 dark:border-neutral-700 dark:bg-neutral-950"
+                  />
+                </div>
+
+                {/* Modal actions */}
+                <div className="flex justify-end gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateModal(false);
+                      setMonthDropdownOpen(false);
+                    }}
+                    disabled={creatingRent}
+                    className="rounded-xs border border-stone-300 px-4 py-2 text-sm transition hover:bg-stone-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={
+                      creatingRent || loadingTenants || tenants.length === 0
+                    }
+                    className="rounded-xs bg-yellow-400 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {creatingRent ? "Creating..." : "Create Rent"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -861,158 +919,158 @@ const Rent = () => {
             className="flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
           >
             <div className="shrink-0 border-b border-stone-200 p-6 dark:border-neutral-800">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2
-                  id="payment-history-title"
-                  className="text-xl font-semibold"
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2
+                    id="payment-history-title"
+                    className="text-xl font-semibold"
+                  >
+                    Payment History
+                  </h2>
+                  <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                    {selectedRent.tenant?.fullName || "Unknown tenant"} ·{" "}
+                    {formatMonth(selectedRent.month, selectedRent.year)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closePaymentHistory}
+                  disabled={loadingPayments}
+                  className="text-2xl text-stone-500 hover:text-stone-900 disabled:opacity-50 dark:hover:text-white"
+                  aria-label="Close payment history"
                 >
-                  Payment History
-                </h2>
-                <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-                  {selectedRent.tenant?.fullName || "Unknown tenant"} ·{" "}
-                  {formatMonth(selectedRent.month, selectedRent.year)}
-                </p>
+                  &times;
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={closePaymentHistory}
-                disabled={loadingPayments}
-                className="text-2xl text-stone-500 hover:text-stone-900 disabled:opacity-50 dark:hover:text-white"
-                aria-label="Close payment history"
-              >
-                &times;
-              </button>
-            </div>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-6">
-            <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
-                <p className="text-sm text-stone-500 dark:text-stone-400">
-                  Rent Amount
-                </p>
-                <p className="mt-1 text-lg font-semibold">
-                  {formatCurrency(Number(selectedRent.amount) || 0)}
-                </p>
+              <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                    Rent Amount
+                  </p>
+                  <p className="mt-1 text-lg font-semibold">
+                    {formatCurrency(Number(selectedRent.amount) || 0)}
+                  </p>
+                </div>
+                <div className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                    Total Paid
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-green-700 dark:text-green-400">
+                    {formatCurrency(Number(selectedRent.paidAmount) || 0)}
+                  </p>
+                </div>
+                <div className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
+                  <p className="text-sm text-stone-500 dark:text-stone-400">
+                    Remaining
+                  </p>
+                  <p className="mt-1 text-lg font-semibold">
+                    {formatCurrency(
+                      Math.max(
+                        (Number(selectedRent.amount) || 0) -
+                        (Number(selectedRent.paidAmount) || 0),
+                        0,
+                      ),
+                    )}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
-                <p className="text-sm text-stone-500 dark:text-stone-400">
-                  Total Paid
-                </p>
-                <p className="mt-1 text-lg font-semibold text-green-700 dark:text-green-400">
-                  {formatCurrency(Number(selectedRent.paidAmount) || 0)}
-                </p>
-              </div>
-              <div className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
-                <p className="text-sm text-stone-500 dark:text-stone-400">
-                  Remaining
-                </p>
-                <p className="mt-1 text-lg font-semibold">
-                  {formatCurrency(
-                    Math.max(
-                      (Number(selectedRent.amount) || 0) -
-                      (Number(selectedRent.paidAmount) || 0),
-                      0,
-                    ),
-                  )}
-                </p>
-              </div>
-            </div>
 
-            {paymentError && (
-              <div
-                role="alert"
-                className="mb-4 rounded-xs border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
-              >
-                {paymentError}
-              </div>
-            )}
+              {paymentError && (
+                <div
+                  role="alert"
+                  className="mb-4 rounded-xs border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+                >
+                  {paymentError}
+                </div>
+              )}
 
-            {loadingPayments ? (
-              <div className="p-8 text-center text-sm text-stone-500 dark:text-stone-400">
-                Loading payment history...
-              </div>
-            ) : paymentError && rentPayments.length === 0 ? null : rentPayments.length === 0 ? (
-              <div className="rounded-xs border border-stone-200 p-8 text-center dark:border-neutral-800">
-                <p className="font-medium">No payments recorded</p>
-                <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
-                  Transactions for this rent record will appear here after a
-                  payment is recorded.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto rounded-xs border border-stone-200 dark:border-neutral-800">
-                <table className="w-full min-w-[850px] text-left text-sm">
-                  <thead className="bg-stone-50 text-xs uppercase text-stone-500 dark:bg-neutral-800 dark:text-stone-400">
-                    <tr>
-                      <th className="px-4 py-3 font-medium">Payment Date</th>
-                      <th className="px-4 py-3 font-medium">Amount</th>
-                      <th className="px-4 py-3 font-medium">Transaction ID</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium">Receipt</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-200 dark:divide-neutral-800">
-                    {rentPayments.map((payment) => (
-                      <tr key={payment._id}>
-                        <td className="px-4 py-3">
-                          {formatDate(payment.createdAt)}
-                        </td>
-                        <td className="px-4 py-3 font-medium">
-                          {formatCurrency(Number(payment.amount) || 0)}
-                        </td>
-                        <td className="break-all px-4 py-3 text-xs">
-                          {payment.razorpayPaymentId ||
-                            payment.razorpayOrderId ||
-                            "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${payment.status === "paid"
-                              ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
-                              : payment.status === "failed"
-                                ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
-                                : "bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-stone-300"
-                              }`}
-                          >
-                            {payment.status || "created"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          {payment.status === "paid" ? (
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadReceipt(payment)}
-                              disabled={downloadingReceiptId === payment._id}
-                              className="rounded-xs bg-yellow-400 px-3 py-2 text-xs font-medium text-stone-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {downloadingReceiptId === payment._id
-                                ? "Downloading..."
-                                : "Download Receipt"}
-                            </button>
-                          ) : (
-                            <span className="text-xs text-stone-400 dark:text-stone-500">
-                              Not available
-                            </span>
-                          )}
-                        </td>
+              {loadingPayments ? (
+                <div className="p-8 text-center text-sm text-stone-500 dark:text-stone-400">
+                  Loading payment history...
+                </div>
+              ) : paymentError && rentPayments.length === 0 ? null : rentPayments.length === 0 ? (
+                <div className="rounded-xs border border-stone-200 p-8 text-center dark:border-neutral-800">
+                  <p className="font-medium">No payments recorded</p>
+                  <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
+                    Transactions for this rent record will appear here after a
+                    payment is recorded.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xs border border-stone-200 dark:border-neutral-800">
+                  <table className="w-full min-w-[850px] text-left text-sm">
+                    <thead className="bg-stone-50 text-xs uppercase text-stone-500 dark:bg-neutral-800 dark:text-stone-400">
+                      <tr>
+                        <th className="px-4 py-3 font-medium">Payment Date</th>
+                        <th className="px-4 py-3 font-medium">Amount</th>
+                        <th className="px-4 py-3 font-medium">Transaction ID</th>
+                        <th className="px-4 py-3 font-medium">Status</th>
+                        <th className="px-4 py-3 font-medium">Receipt</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody className="divide-y divide-stone-200 dark:divide-neutral-800">
+                      {rentPayments.map((payment) => (
+                        <tr key={payment._id}>
+                          <td className="px-4 py-3">
+                            {formatDate(payment.createdAt)}
+                          </td>
+                          <td className="px-4 py-3 font-medium">
+                            {formatCurrency(Number(payment.amount) || 0)}
+                          </td>
+                          <td className="break-all px-4 py-3 text-xs">
+                            {payment.razorpayPaymentId ||
+                              payment.razorpayOrderId ||
+                              "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${payment.status === "paid"
+                                ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
+                                : payment.status === "failed"
+                                  ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+                                  : "bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-stone-300"
+                                }`}
+                            >
+                              {payment.status || "created"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {payment.status === "paid" ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadReceipt(payment)}
+                                disabled={downloadingReceiptId === payment._id}
+                                className="rounded-xs bg-yellow-400 px-3 py-2 text-xs font-medium text-stone-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {downloadingReceiptId === payment._id
+                                  ? "Downloading..."
+                                  : "Download Receipt"}
+                              </button>
+                            ) : (
+                              <span className="text-xs text-stone-400 dark:text-stone-500">
+                                Not available
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                onClick={closePaymentHistory}
-                disabled={loadingPayments}
-                className="rounded-xs bg-yellow-400 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Close
-              </button>
-            </div>
+              <div className="mt-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={closePaymentHistory}
+                  disabled={loadingPayments}
+                  className="rounded-xs bg-yellow-400 px-4 py-2 text-sm font-medium text-stone-900 transition hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

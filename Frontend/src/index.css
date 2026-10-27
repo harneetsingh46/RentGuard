@@ -71,3 +71,8 @@ body {
 .dark .month-dropdown-scroll::-webkit-scrollbar-thumb:hover {
   background: #737373;
 }
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(78%) sepia(98%) saturate(1500%) hue-rotate(1deg);
+  cursor: pointer;
+}
