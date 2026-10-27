@@ -68,6 +68,10 @@ const router = createBrowserRouter([
             element: <Rent />,
           },
           {
+            path: "/owner/documents",
+            element: <Documents />
+          },
+          {
             path: "/owner/documents/:propertyId",
             element: <Documents />
           },
@@ -90,6 +94,10 @@ const router = createBrowserRouter([
           {
             path: "/tenant/rent",
             element: <TenantRent />,
+          },
+          {
+            path: "/tenant/documents",
+            element: <TenantDocument />
           },
           {
             path: "/tenant/documents/:propertyId",

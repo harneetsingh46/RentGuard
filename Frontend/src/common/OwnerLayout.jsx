@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import ThemeToggle from "../components/ThemeToggle";
 import {
@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 const OwnerLayout = () => {
+  const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -36,7 +37,7 @@ const OwnerLayout = () => {
     },
     {
       label: "Documents",
-      path: "/owner/documents/:propertyId",
+      path: "/owner/documents",
       icon: Files,
     },
   ];
@@ -156,12 +157,17 @@ const OwnerLayout = () => {
                 to={item.path}
                 end={item.path === "/owner/dashboard"}
                 onClick={closeMenu}
-                className={({ isActive }) =>
-                  `group flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition-all duration-200 sm:px-4 sm:text-base ${isActive
-                    ? "bg-yellow-300 font-medium text-black shadow-sm"
-                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#292929]"
-                  }`
-                }
+                className={({ isActive }) => {
+                  const isCurrent =
+                    isActive ||
+                    (item.path === "/owner/documents" &&
+                      location.pathname.startsWith("/owner/documents"));
+                  return `group flex items-center gap-3 rounded-lg px-3 py-3 text-sm transition-all duration-200 sm:px-4 sm:text-base ${
+                    isCurrent
+                      ? "bg-yellow-300 font-medium text-black shadow-sm"
+                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#292929]"
+                  }`;
+                }}
               >
                 <Icon size={20} strokeWidth={1.8} className="shrink-0" />
 

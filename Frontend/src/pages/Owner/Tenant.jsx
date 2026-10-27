@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import apiClient from '../../ApiClient/interceptor.js'
 import { useToast } from "../../common/ToastProvider"
+import toast from "react-hot-toast";
 import ConfirmModal from "../../common/ConfirmModal"
 import { Pencil, LogOut } from "lucide-react"
 
@@ -138,10 +139,10 @@ const Tenant = () => {
       setEditModalOpen(false)
       setSelectedTenant(null)
       setSuccess('Tenant updated successfully.')
-      showToast('Tenant updated successfully.', 'success')
+      showToast('Tenant updated successfully.', 'success'); toast.success('Tenant updated successfully.');
       await getTenants()
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to update tenant.', 'error')
+      showToast(err.response?.data?.message || 'Failed to update tenant.', 'error'); toast.error(err.response?.data?.message || 'Failed to update tenant.');
       setError(
         err.response?.data?.message || 'Failed to update tenant.'
       )
@@ -162,10 +163,10 @@ const Tenant = () => {
         `/property/${tenantToMove.property}/tenants/${tenantToMove._id}/move-out`
       )
       setConfirmTenant(null)
-      showToast(`${tenantToMove.fullName} has been moved out successfully.`, 'success')
+      showToast(`${tenantToMove.fullName} has been moved out successfully.`, "success"); toast.success(`${tenantToMove.fullName} has been moved out successfully.`);
       await getTenants()
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to move out tenant.', 'error')
+      showToast(err.response?.data?.message || 'Failed to move out tenant.', 'error'); toast.error(err.response?.data?.message || 'Failed to move out tenant.');
     } finally {
       setConfirmLoading(false)
     }
@@ -175,7 +176,7 @@ const Tenant = () => {
     activeSection === 'active' ? tenants : history
 
   return (
-    <div className="mx-auto w-full min-w-0 p-3 sm:p-4 lg:p-6">
+    <div className="mx-auto w-full min-w-0 p-4 sm:p-6 lg:p-8">
       <h1 className="mb-4 break-words text-xl font-semibold text-gray-900 dark:text-white sm:mb-6 sm:text-2xl">
         Tenant Management
       </h1>

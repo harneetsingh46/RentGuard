@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import apiClient from "../../ApiClient/interceptor.js";
 import {
   Eye,
@@ -48,6 +49,7 @@ const isPdfDocument = (document) =>
   getDocumentFormat(document) === "pdf";
 
 const Documents = () => {
+  const { propertyId: routePropertyId } = useParams();
   const [properties, setProperties] = useState([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState("");
 
@@ -216,7 +218,7 @@ const Documents = () => {
 
       if (fileInput) fileInput.value = "";
 
-      setSuccess("Document uploaded successfully.");
+      setSuccess("Document uploaded successfully."); toast.success("Document uploaded successfully.");
 
       await fetchDocuments(selectedPropertyId);
     } catch (err) {
@@ -325,7 +327,7 @@ const Documents = () => {
         closePreview();
       }
 
-      setSuccess("Document deleted successfully.");
+      setSuccess("Document deleted successfully."); toast.success("Document deleted successfully.");
     } catch (err) {
       setError(
         err.response?.data?.message || "Failed to delete the document."
@@ -396,7 +398,7 @@ const Documents = () => {
   );
 
   return (
-    <main className="min-h-full w-full min-w-0 bg-stone-50 p-4 text-stone-900 transition-colors duration-300 dark:bg-neutral-950 dark:text-stone-100 sm:p-6">
+    <div className="w-full min-w-0 p-4 text-stone-900 transition-colors duration-300 dark:text-stone-100 sm:p-6 lg:p-8">
       <div className="mx-auto w-full max-w-7xl min-w-0">
         {/* Page heading */}
         <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1085,7 +1087,7 @@ const Documents = () => {
           </section>
         </div>
       )}
-    </main>
+    </div>
   );
 };
 

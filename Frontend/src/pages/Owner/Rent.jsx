@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import apiClient from "../../ApiClient/interceptor";
+import toast from "react-hot-toast";
 
 const MONTHS = [
   "January",
@@ -285,15 +286,13 @@ const Rent = () => {
       link.click();
 
       // Clean up
-      link.remove();
+      link.remove(); toast.success("Receipt downloaded successfully.");
       // Let the browser begin the download before releasing the temporary URL.
       window.setTimeout(() => {
         window.URL.revokeObjectURL(downloadUrl);
       }, 1000);
     } catch (err) {
-      setPaymentError(
-        "Failed to download receipt. Please try again."
-      );
+      setPaymentError("Failed to download receipt. Please try again."); toast.error("Failed to download receipt. Please try again.");
     } finally {
       setDownloadingReceiptId("");
     }
@@ -353,18 +352,18 @@ const Rent = () => {
       setSelectedTenant("");
       setDueDate("");
       setMonthDropdownOpen(false);
-      setSuccess("Rent record created successfully.");
+      setSuccess("Rent record created successfully."); toast.success("Rent record created successfully.");
 
       await fetchRents(selectedProperty);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create rent record.");
+      const msg = err.response?.data?.message || "Failed to create rent record."; setError(msg); toast.error(msg);
     } finally {
       setCreatingRent(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 p-4 text-stone-900 dark:bg-neutral-950 dark:text-stone-100 sm:p-6">
+    <div className="w-full min-w-0 p-4 text-stone-900 dark:text-stone-100 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl">
         {/* Page heading */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
