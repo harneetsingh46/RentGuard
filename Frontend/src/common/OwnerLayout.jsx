@@ -7,8 +7,7 @@ import {
   Users,
   Wallet,
   Files,
-} from "lucide-react"
-
+} from "lucide-react";
 
 const OwnerLayout = () => {
   const navigate = useNavigate();
@@ -42,7 +41,6 @@ const OwnerLayout = () => {
     },
   ];
 
-
   const handleSignOut = () => {
     setIsMenuOpen(false);
     navigate("/sign-out");
@@ -61,7 +59,9 @@ const OwnerLayout = () => {
           <button
             type="button"
             onClick={() => setIsMenuOpen((open) => !open)}
-            aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-label={
+              isMenuOpen ? "Close navigation menu" : "Open navigation menu"
+            }
             aria-expanded={isMenuOpen}
             aria-controls="owner-sidebar"
             className="shrink-0 rounded-lg p-2 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 dark:hover:bg-[#292929] md:hidden"
@@ -163,15 +163,9 @@ const OwnerLayout = () => {
                   }`
                 }
               >
-                <Icon
-                  size={20}
-                  strokeWidth={1.8}
-                  className="shrink-0"
-                />
+                <Icon size={20} strokeWidth={1.8} className="shrink-0" />
 
-                <span className="min-w-0 break-words">
-                  {item.label}
-                </span>
+                <span className="min-w-0 break-words">{item.label}</span>
               </NavLink>
             );
           })}
@@ -182,7 +176,15 @@ const OwnerLayout = () => {
       </aside>
 
       {/* Page Content */}
-      <main className="mt-16 h-[calc(100dvh-4rem)] min-w-0 overflow-x-hidden overflow-y-auto bg-[#f2f2f1] dark:bg-[#101010] sm:mt-20 sm:h-[calc(100dvh-5rem)] md:ml-64">
+      <main
+        className="
+    fixed inset-x-0 bottom-0 top-16
+    min-w-0 overflow-x-hidden overflow-y-auto
+    overscroll-y-contain scroll-smooth
+    bg-[#f2f2f1] dark:bg-[#101010]
+    sm:top-20 md:left-64
+  "
+      >
         <Outlet />
       </main>
     </div>

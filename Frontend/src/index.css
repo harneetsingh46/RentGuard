@@ -3,14 +3,30 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Global smooth scrolling */
 html {
-    transition: background-color 200ms ease, color 200ms ease;
+  scroll-behavior: smooth;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  width: 100%;
 }
 
 body {
-    margin: 0;
-    min-width: 320px;
-    min-height: 100vh;
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+/* Respect accessibility preferences */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 /* RentGuard month dropdown scrollbar */
@@ -39,6 +55,7 @@ body {
   background: #a8a29e;
 }
 
+/* Dark mode */
 .dark .month-dropdown-scroll {
   scrollbar-color: #525252 #171717;
 }

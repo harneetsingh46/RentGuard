@@ -1,5 +1,5 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-
+import { Toaster } from "react-hot-toast";
 import { Login } from "../src/pages/auth/Login";
 import Layout from "./common/Layout";
 import Signup from "../src/pages/auth/Signup";
@@ -97,7 +97,7 @@ const router = createBrowserRouter([
           },
           {
             path: "/tenant/profile",
-            element: <TenantProfile/>
+            element: <TenantProfile />
           }
         ],
       }
@@ -117,7 +117,21 @@ const router = createBrowserRouter([
 ]);
 
 const App = () => {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />;
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            borderRadius: "8px",
+            padding: "12px 16px",
+          },
+        }}
+      />
+    </>
+  )
 };
 
 export default App;

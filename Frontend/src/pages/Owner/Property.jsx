@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import apiClient from "../../ApiClient/interceptor.js"
 import { Pencil, Trash2, X, AlertTriangle } from "lucide-react";
+import toast from "react-hot-toast";
 
 const emptyProperty = {
     propertyName: "",
@@ -43,7 +44,8 @@ const Property = () => {
     const [isEditingUnit, setIsEditingUnit] = useState(false);
 
     // tenant state
-    const [tenant, setTenant] = useState(emptyTenant)
+    const [tenant, setTenant] = useState(emptyTenant);
+    const [tenantFieldErrors, setTenantFieldErrors] = useState({});
 
     // Tenant modal state
     const [tenantModalOpen, setTenantModalOpen] = useState(false);
@@ -56,10 +58,28 @@ const Property = () => {
     const [loading, setLoading] = useState(true);
     const [unitsLoading, setUnitsLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState("");
-    const [unitError, setUnitError] = useState("");
-    const [tenantError, setTenantError] = useState("");
-    const [success, setSuccess] = useState("");
+    const [, setErrorState] = useState("");
+    const [, setUnitErrorState] = useState("");
+    const [, setTenantErrorState] = useState("");
+    const [, setSuccessState] = useState("");
+
+    // Keep existing validation logic while showing all messages as toast notifications.
+    const setError = (message) => {
+        setErrorState(message);
+        if (message) toast.error(message);
+    };
+    const setUnitError = (message) => {
+        setUnitErrorState(message);
+        if (message) toast.error(message);
+    };
+    const setTenantError = (message) => {
+        setTenantErrorState(message);
+        if (message) toast.error(message);
+    };
+    const setSuccess = (message) => {
+        setSuccessState(message);
+        if (message) toast.success(message);
+    };
     const [confirmModal, setConfirmModal] = useState({ open: false, type: "", id: null, title: "", message: "" });
     const [deleting, setDeleting] = useState(false);
 
@@ -212,6 +232,11 @@ const Property = () => {
 
             setPropertyModalOpen(false);
             setProperty({ ...emptyProperty });
+            setSuccess(
+                isEditingProperty
+                    ? "Property updated successfully!"
+                    : "Property added successfully!"
+            );
 
             await getProperties();
         } catch (err) {
@@ -272,6 +297,7 @@ const Property = () => {
                 }
 
                 setConfirmModal({ open: false, type: "", id: null, title: "", message: "" });
+                setSuccess("Property deleted successfully!");
                 await getProperties();
             } else if (confirmModal.type === "unit") {
                 await apiClient.delete(
@@ -418,10 +444,9 @@ const Property = () => {
 
     // Tenant form input
     const handleTenantChange = (e) => {
-        setTenant((current) => ({
-            ...current,
-            [e.target.name]: e.target.value,
-        }));
+        const { name, value } = e.target;
+        setTenant((current) => ({ ...current, [name]: value }));
+        setTenantFieldErrors((current) => ({ ...current, [name]: "" }));
     };
 
     // Open add Tenant modal
@@ -431,6 +456,7 @@ const Property = () => {
 
         setSelectedUnit(item);
         setTenant({ ...emptyTenant });
+        setTenantFieldErrors({});
         setTenantError("");
         setSuccess("");
         setTenantModalOpen(true);
@@ -482,50 +508,72 @@ const Property = () => {
 
         setTenantModalOpen(false);
         setTenant({ ...emptyTenant });
+        setTenantFieldErrors({});
         setSelectedUnit(null);
         setTenantError("");
     };
 
     // Register a tenant for the selected available unit
+    // Register tenant with form validation
     const handleTenantSubmit = async (e) => {
         e.preventDefault();
 
         if (!selectedProperty?._id || !selectedUnit?._id) {
-            setTenantError("Please select a property and an available unit first.");
+            toast.error("Please select a property and an available unit first.");
             return;
         }
-
-        const aadhaarNumber = tenant.aadhaarNumber.trim();
 
         const formData = {
             fullName: tenant.fullName.trim(),
             address: tenant.address.trim(),
-            aadhaarNumber,
+            aadhaarNumber: tenant.aadhaarNumber.trim(),
             username: tenant.username.trim(),
-            email: tenant.email.trim(),
+            email: tenant.email.trim().toLowerCase(),
             password: tenant.password,
         };
 
-        if (
-            !formData.fullName ||
-            !formData.address ||
-            !formData.username ||
-            !formData.email ||
-            !formData.password
-        ) {
-            setTenantError("Please fill in all required fields.");
-            return;
+        const errors = {};
+        if (!formData.fullName) errors.fullName = "Full name is required.";
+        else if (formData.fullName.length < 2 || formData.fullName.length > 100) {
+            errors.fullName = "Full name must be between 2 and 100 characters.";
+        } else if (!/^[\\p{L}\\p{M} .'-]+$/u.test(formData.fullName)) {
+            errors.fullName = "Use only letters, spaces, apostrophes, periods, and hyphens.";
         }
 
-        if (!/^\d{12}$/.test(aadhaarNumber)) {
-            setTenantError("Aadhaar number must contain exactly 12 digits.");
+        if (!formData.username) errors.username = "Username is required.";
+        else if (!/^[a-zA-Z0-9_]{3,30}$/.test(formData.username)) {
+            errors.username = "Username must be 3–30 characters using letters, numbers, or underscores.";
+        }
+
+        if (!formData.address) errors.address = "Address is required.";
+        else if (formData.address.length < 5 || formData.address.length > 250) {
+            errors.address = "Address must be between 5 and 250 characters.";
+        }
+
+        if (!formData.aadhaarNumber) errors.aadhaarNumber = "Aadhaar number is required.";
+        else if (!/^\\d{12}$/.test(formData.aadhaarNumber)) {
+            errors.aadhaarNumber = "Aadhaar number must contain exactly 12 digits.";
+        }
+
+        if (!formData.email) errors.email = "Email is required.";
+        else if (formData.email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(formData.email)) {
+            errors.email = "Enter a valid email address, such as name@example.com.";
+        }
+
+        if (!formData.password) errors.password = "Password is required.";
+        else if (formData.password.length < 8 || formData.password.length > 128) {
+            errors.password = "Password must be between 8 and 128 characters.";
+        }
+
+        setTenantFieldErrors(errors);
+        if (Object.keys(errors).length > 0) {
+            toast.error("Please correct the highlighted fields.");
             return;
         }
 
         try {
             setSubmitting(true);
             setTenantError("");
-            setSuccess("");
 
             await apiClient.post(
                 `/property/${selectedProperty._id}/units/${selectedUnit._id}/tenants`,
@@ -534,19 +582,16 @@ const Property = () => {
 
             setTenantModalOpen(false);
             setTenant({ ...emptyTenant });
+            setTenantFieldErrors({});
             setSelectedUnit(null);
-            setSuccess("Tenant registered successfully!");
-
+            toast.success("Tenant registered successfully!");
             await getUnits(selectedProperty._id);
         } catch (err) {
-            setTenantError(
-                err.response?.data?.message || "Failed to register tenant."
-            );
+            toast.error(err.response?.data?.message || "Failed to register tenant.");
         } finally {
             setSubmitting(false);
         }
     };
-
 
     return (
         <div className="min-h-full w-full bg-[#faf9f6] p-4 transition-colors duration-300 dark:bg-[#111111] md:p-8" >
@@ -583,12 +628,6 @@ const Property = () => {
                         {properties.length === 1 ? "property" : "properties"}
                     </span>
                 </div>
-
-                {error && !propertyModalOpen && (
-                    <p className="mb-4 text-sm text-red-600 dark:text-red-400">
-                        {error}
-                    </p>
-                )}
 
                 {loading ? (
                     <p className="py-10 text-center text-gray-500 dark:text-gray-400">
@@ -719,17 +758,9 @@ const Property = () => {
                         </div>
 
                         {/* Unit Messages */}
-                        {unitError && !unitModalOpen && (
-                            <p className="mt-4 text-sm text-red-600 dark:text-red-400">
-                                {unitError}
-                            </p>
-                        )}
 
-                        {success && (
-                            <p className="mt-4 text-sm text-green-700 dark:text-green-400">
-                                {success}
-                            </p>
-                        )}
+
+
 
 
                         {/* Units List */}
@@ -944,11 +975,7 @@ const Property = () => {
                                 />
                             </div>
 
-                            {error && (
-                                <p className="mb-4 text-sm text-red-600 dark:text-red-400">
-                                    {error}
-                                </p>
-                            )}
+
 
                             <div className="flex justify-end gap-3">
                                 <button
@@ -1082,11 +1109,7 @@ const Property = () => {
                                 />
                             </div>
 
-                            {unitError && (
-                                <p className="mb-4 text-sm text-red-600 dark:text-red-400">
-                                    {unitError}
-                                </p>
-                            )}
+
 
                             <div className="flex justify-end gap-3">
                                 <button
@@ -1153,7 +1176,7 @@ const Property = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleTenantSubmit} className="min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 md:pt-5">
+                        <form noValidate onSubmit={handleTenantSubmit} className="min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 md:pt-5">
                             <div className="mb-5">
                                 <label
                                     htmlFor="fullName"
@@ -1169,10 +1192,17 @@ const Property = () => {
                                     value={tenant.fullName}
                                     onChange={handleTenantChange}
                                     placeholder="e.g. Harneet Singh"
+                                    minLength={2}
+                                    maxLength={100}
                                     required
                                     disabled={submitting}
                                     className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
+                                {tenantFieldErrors.fullName && (
+                                    <p className="mt-1 text-sm text-red-600" role="alert">
+                                        {tenantFieldErrors.fullName}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="mb-5">
@@ -1186,13 +1216,23 @@ const Property = () => {
                                 <input
                                     id="username"
                                     name="username"
+                                    type="text"
                                     value={tenant.username}
                                     onChange={handleTenantChange}
+                                    placeholder="Enter tenant's username"
+                                    minLength={3}
+                                    maxLength={30}
+                                    pattern="[a-zA-Z0-9_]{3,30}"
+                                    autoComplete="username"
                                     required
-                                    placeholder="Enter tenant's Username"
                                     disabled={submitting}
                                     className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:focus:ring-yellow-400/20"
                                 />
+                                {tenantFieldErrors.username && (
+                                    <p className="mt-1 text-sm text-red-600" role="alert">
+                                        {tenantFieldErrors.username}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="mb-6">
@@ -1209,11 +1249,19 @@ const Property = () => {
                                     type="text"
                                     value={tenant.address}
                                     onChange={handleTenantChange}
-                                    placeholder="Enter your address"
+                                    placeholder="Enter tenant's address"
+                                    autoComplete="street-address"
+                                    minLength={5}
+                                    maxLength={250}
                                     required
                                     disabled={submitting}
                                     className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
+                                {tenantFieldErrors.address && (
+                                    <p className="mt-1 text-sm text-red-600" role="alert">
+                                        {tenantFieldErrors.address}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="mb-6">
@@ -1232,12 +1280,24 @@ const Property = () => {
                                     pattern="[0-9]{12}"
                                     maxLength={12}
                                     value={tenant.aadhaarNumber}
-                                    onChange={handleTenantChange}
+                                    onChange={(e) => {
+                                        const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 12);
+                                        setTenant((current) => ({
+                                            ...current,
+                                            aadhaarNumber: digitsOnly,
+                                        }));
+                                        setTenantFieldErrors((current) => ({ ...current, aadhaarNumber: "" }));
+                                    }}
                                     placeholder="Enter 12-digit Aadhaar number"
                                     required
                                     disabled={submitting}
                                     className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
+                                {tenantFieldErrors.aadhaarNumber && (
+                                    <p className="mt-1 text-sm text-red-600" role="alert">
+                                        {tenantFieldErrors.aadhaarNumber}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="mb-6">
@@ -1255,10 +1315,17 @@ const Property = () => {
                                     value={tenant.email}
                                     onChange={handleTenantChange}
                                     placeholder="e.g. example@gmail.com"
+                                    maxLength={254}
+                                    autoComplete="email"
                                     required
                                     disabled={submitting}
                                     className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
+                                {tenantFieldErrors.email && (
+                                    <p className="mt-1 text-sm text-red-600" role="alert">
+                                        {tenantFieldErrors.email}
+                                    </p>
+                                )}
                             </div>
 
                             <div className="mb-6">
@@ -1275,18 +1342,22 @@ const Property = () => {
                                     type="password"
                                     value={tenant.password}
                                     onChange={handleTenantChange}
-                                    placeholder="e.g. Enter tenant's password"
+                                    placeholder="Enter tenant's password"
+                                    minLength={8}
+                                    maxLength={128}
+                                    autoComplete="new-password"
                                     required
                                     disabled={submitting}
                                     className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
+                                {tenantFieldErrors.password && (
+                                    <p className="mt-1 text-sm text-red-600" role="alert">
+                                        {tenantFieldErrors.password}
+                                    </p>
+                                )}
                             </div>
 
-                            {tenantError && (
-                                <p className="mb-4 text-sm text-red-600 dark:text-red-400">
-                                    {tenantError}
-                                </p>
-                            )}
+
 
                             <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
                                 <button

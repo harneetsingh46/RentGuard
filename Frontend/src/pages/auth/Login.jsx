@@ -87,7 +87,7 @@ export const Login = () => {
         }`;
 
     return (
-        <main className="flex min-h-[calc(100dvh-145px)] w-full items-center justify-center bg-white bg-[url(/login.jpg)]  bg-cover bg-center px-4 py-6 dark:bg-[#101010] sm:px-6 lg:px-8">
+        <main className="flex min-h-[calc(100dvh-145px)] w-full items-center justify-center bg-white bg-[url(/login.jpg)]  bg-cover bg-center px-4 py-6 dark:bg-[#101010] sm:px-6 lg:px-8 ">
             <form
                 onSubmit={handleSubmit}
                 noValidate

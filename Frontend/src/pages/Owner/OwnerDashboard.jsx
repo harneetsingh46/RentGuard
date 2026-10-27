@@ -79,9 +79,9 @@ const OwnerDashboard = () => {
   // Display a loading message
   if (loading && !dashboard) {
     return (
-      <div className="flex items-start bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
-        <main className="min-w-0 flex-1">
-          <section className="min-h-[80vh] p-8">
+      <div className="w-full min-w-0 bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
+        <main className="w-full min-w-0">
+          <section className="p-8">
             <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
               Owner Overview
             </h1>
@@ -148,11 +148,11 @@ const OwnerDashboard = () => {
   ];
 
   return (
-    <div className="flex items-start bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
+    <div className="w-full min-w-0 bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
       {/* Main content */}
-      <main className="min-w-0 flex-1">
+      <main className="w-full min-w-0">
         {/* Dashboard content */}
-        <section className="min-h-[80vh] p-8">
+        <section className="p-8">
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
             <div>
               <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
