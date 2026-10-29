@@ -10,8 +10,8 @@ const Navbar = () => {
 
   const closeMenu = () => setIsMenuOpen(false);
 
-  const navLinkClass = (path) =>
-    `relative text-sm font-semibold transition-colors duration-200 text-black dark:text-white`
+  const navLinkClass = () =>
+    `relative text-sm shadow-2xl p-2 rounded font-semibold transition-colors duration-200 text-black dark:text-white hover:bg-yellow-300 dark:hover:bg-yellow-300 dark:hover:text-black`
 
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/10 font-['Inter','Segoe_UI',sans-serif] shadow-md transition-colors duration-300 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-2xl backdrop-blur-xs">
@@ -33,7 +33,7 @@ const Navbar = () => {
           {isAuthenticated ? (
             <Link
               to="/sign-out"
-              className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-yellow-400 hover:bg-yellow-300 hover:text-black hover:shadow-md dark:border-neutral-700 dark:text-stone-300 dark:hover:border-yellow-300 dark:hover:bg-yellow-300 dark:hover:text-black"
+              className="rounded-xl border border-gray-200 bg-white/10 px-4 py-2 text-sm font-semibold text-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-yellow-400 hover:bg-yellow-300 hover:text-black hover:shadow-md dark:border-neutral-700 dark:text-stone-300 dark:hover:border-yellow-300 dark:hover:bg-yellow-300 dark:hover:text-black"
             >
               Sign Out
             </Link>
@@ -47,7 +47,7 @@ const Navbar = () => {
                 Contact Us
               </Link>
 
-              <Link to="/login" className={navLinkClass("/login")}>
+              <Link to="/login" className={navLinkClass("/contact")}>
                 Login
               </Link>
 
@@ -115,11 +115,10 @@ const Navbar = () => {
       {/* Mobile Navigation Menu */}
       <div
         id="mobile-navigation"
-        className={`overflow-hidden border-t border-slate-200 bg-white transition-all duration-300 ease-in-out dark:border-neutral-800 dark:bg-neutral-950 md:hidden ${
-          isMenuOpen
+        className={`overflow-hidden border-t border-slate-200 bg-white transition-all duration-300 ease-in-out dark:border-neutral-800 dark:bg-neutral-950 md:hidden ${isMenuOpen
             ? "max-h-96 opacity-100"
             : "pointer-events-none max-h-0 opacity-0"
-        }`}
+          }`}
         aria-hidden={!isMenuOpen}
       >
         <div className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3 sm:px-6">

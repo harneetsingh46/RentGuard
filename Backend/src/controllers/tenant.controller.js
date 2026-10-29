@@ -5,154 +5,201 @@ import { Unit } from "../models/unit.model.js";
 import { User } from "../models/user.model.js";
 import uploadToCloudinary from "../utils/uploadToCloudinary.js";
 import cloudinary from "../config/cloudinary.js";
+import mongoose from "mongoose";
+
+// Helper: verify the logged-in owner owns the property
+const getOwnedProperty = (propertyId, ownerId) =>
+  Property.findOne({ _id: propertyId, owner: ownerId });
 
 // REGISTER TENANT
-
-export const registerTenant = async (req, res, next) => {
+export const registerTenant = async (req, res) => {
   try {
     const { propertyId, unitId } = req.params;
+    const { fullName, address, password } = req.body;
 
-    const { fullName, address, aadhaarNumber, username, email, password } =
-      req.body;
+    const aadhaarNumber = req.body.aadhaarNumber?.toString().trim();
+    const username = req.body.username?.trim().toLowerCase();
+    const email = req.body.email?.trim().toLowerCase();
 
-    // Validate request body
     if (
-      !fullName ||
-      !address ||
-      !aadhaarNumber ||
-      !username ||
-      !email ||
-      !password
+      !mongoose.isValidObjectId(propertyId) ||
+      !mongoose.isValidObjectId(unitId)
     ) {
-      return res.status(400).json({
-        message:
-          "Full Name, Address, Aadhaar Number, Username, Email, and Password are required!",
-      });
+      return res.status(400).json({ message: "Invalid property or unit ID!" });
     }
 
-    // Only owner can create tenant
     if (req.user.role !== "owner") {
-      return res.status(403).json({
-        message: "Only owner can create a tenant!",
-      });
+      return res
+        .status(403)
+        .json({ message: "Only owners can register tenants!" });
     }
 
-    // Check property
-    const property = await Property.findById(propertyId);
+    if (!fullName || !address || !aadhaarNumber || !username || !email) {
+      return res
+        .status(400)
+        .json({ message: "Please fill in all required fields!" });
+    }
 
+    // Enable after testing
+    // if (!/^[2-9]\d{11}$/.test(aadhaarNumber)) {
+    //   return res.status(400).json({ message: "Invalid Aadhaar number format!" });
+    // }
+
+    if (password && password.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters long!" });
+    }
+
+    const property = await Property.findOne({
+      _id: propertyId,
+      owner: req.user._id,
+    });
     if (!property) {
-      return res.status(404).json({
-        message: "Property not found!",
-      });
+      return res
+        .status(404)
+        .json({ message: "Property not found or access denied!" });
     }
 
-    // Check property ownership
-    if (property.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        message: "You are not authorized for this property!",
-      });
-    }
-
-    // Check unit
-    const unit = await Unit.findOne({
-      _id: unitId,
-      property: propertyId,
-    });
-
+    const unit = await Unit.findOne({ _id: unitId, property: propertyId });
     if (!unit) {
-      return res.status(404).json({
-        message: "Unit not found!",
-      });
+      return res.status(404).json({ message: "Unit not found!" });
+    }
+    if (unit.status !== "available") {
+      return res.status(400).json({ message: "This unit is not available!" });
     }
 
-    // Unit must be available
-    if (unit.status === "occupied") {
-      return res.status(400).json({
-        message: "Unit is already occupied!",
-      });
-    }
+    // 1. Find an existing account: by Aadhaar first, then by username/email
+    let user = null;
 
-    if (unit.status === "maintenance") {
-      return res.status(400).json({
-        message: "Unit is under maintenance!",
-      });
-    }
-
-    // Check existing active tenant in unit
-    const existingTenant = await Tenant.findOne({
-      unit: unitId,
-      property: propertyId,
-      isActive: true,
+    const previousTenant = await Tenant.findOne({ aadhaarNumber }).sort({
+      createdAt: -1,
     });
-
-    if (existingTenant) {
-      return res.status(400).json({
-        message: "This unit already has an active tenant!",
-      });
+    if (previousTenant) {
+      user = await User.findById(previousTenant.user);
     }
 
-    // Check Aadhaar
-    const existingAadhaar = await Tenant.findOne({
-      aadhaarNumber,
-      isActive: true,
-    });
-
-    if (existingAadhaar) {
-      return res.status(400).json({
-        message: "An active tenant with this Aadhaar already exists!",
+    if (!user) {
+      const loginMatch = await User.findOne({
+        $or: [{ username }, { email }],
       });
+
+      if (loginMatch) {
+        if (loginMatch.role !== "tenant") {
+          return res
+            .status(409)
+            .json({ message: "Username or email is already registered!" });
+        }
+        user = loginMatch;
+      }
     }
 
-    // Check username/email
-    const existingUser = await User.findOne({
-      $or: [{ username }, { email }],
-    });
-
-    if (existingUser) {
-      return res.status(400).json({
-        message: "Username or email is already registered!",
-      });
+    if (user && user.role !== "tenant") {
+      return res
+        .status(400)
+        .json({ message: "This account is not a tenant account!" });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // 2. A returning tenant must not be active anywhere
+    if (user) {
+      const activeTenancy = await Tenant.findOne({
+        user: user._id,
+        isActive: true,
+      });
+      if (activeTenancy.user === req.user._id) {
+        return res
+          .status(400)
+          .json({ message: "This tenant already has an active tenancy!" });
+      }
+    }
 
-    // Create tenant login account
-    const user = await User.create({
-      username,
-      email,
-      password: hashedPassword,
-      role: "tenant",
-      isActive: true,
-    });
+    // 3. New username/email must not belong to a different user
+    const conflictFilter = { $or: [{ username }, { email }] };
+    if (user) conflictFilter._id = { $ne: user._id };
 
-    // Create tenant profile
-    const tenant = await Tenant.create({
-      user: user._id,
-      property: propertyId,
-      unit: unitId,
-      fullName,
-      address,
-      aadhaarNumber,
-      isActive: true,
-      moveOutDate: null,
-    });
+    if (await User.findOne(conflictFilter)) {
+      return res
+        .status(409)
+        .json({ message: "Username or email is already registered!" });
+    }
 
-    // Occupy unit
+    // 4. Create or update the User
+    let isNewUser = false;
+
+    if (!user) {
+      if (!password) {
+        return res
+          .status(400)
+          .json({ message: "Password is required for a new tenant!" });
+      }
+
+      user = await User.create({
+        username,
+        email,
+        password: await bcrypt.hash(password, 10),
+        role: "tenant",
+        isActive: true,
+      });
+      isNewUser = true;
+    } else {
+      // Returning tenant: saved only after the Tenant is created
+      user.username = username;
+      user.email = email;
+      user.isActive = true;
+      if (password) user.password = await bcrypt.hash(password, 10);
+    }
+
+    // 5. Create a new Tenant record (old tenancies stay as history)
+    let tenant;
+    try {
+      tenant = await Tenant.create({
+        user: user._id,
+        property: propertyId,
+        unit: unitId,
+        fullName,
+        address,
+        aadhaarNumber,
+        isActive: true,
+        moveOutDate: null,
+      });
+
+      if (!isNewUser) await user.save();
+    } catch (err) {
+      if (tenant) await Tenant.findByIdAndDelete(tenant._id);
+      if (isNewUser) await User.findByIdAndDelete(user._id);
+      throw err;
+    }
+
+    // 6. Occupy the unit
     unit.status = "occupied";
     await unit.save();
 
     return res.status(201).json({
       message: "Tenant registered successfully!",
-      data: tenant,
+      data: {
+        tenantId: tenant._id,
+        userId: user._id,
+        fullName: tenant.fullName,
+        property: tenant.property,
+        unit: tenant.unit,
+        isActive: tenant.isActive,
+      },
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: error.keyPattern?.user
+          ? "This tenant already has an active tenancy!"
+          : "Username or email is already registered!",
+      });
+    }
+
+    console.error("Register tenant error:", error);
     return res.status(500).json({
-      message: error.message,
+      message: "Something went wrong while registering the tenant!",
     });
   }
 };
-
 // GET ALL ACTIVE TENANTS OF PROPERTY
 
 export const getAllTenants = async (req, res, next) => {
@@ -338,58 +385,47 @@ export const updateTenant = async (req, res, next) => {
   }
 };
 
-// GET TENANT HISTORY
 
-export const getTenantHistory = async (req, res, next) => {
+// GET TENANT HISTORY
+export const getTenantHistory = async (req, res) => {
   try {
     const { propertyId } = req.params;
 
-    // Only owner can access history
     if (req.user.role !== "owner") {
-      return res.status(403).json({
-        message: "Only owner can access tenant history!",
-      });
+      return res
+        .status(403)
+        .json({ message: "Only owner can access tenant history!" });
     }
 
-    // Check property
-    const property = await Property.findById(propertyId);
-
+    const property = await getOwnedProperty(propertyId, req.user._id);
     if (!property) {
-      return res.status(404).json({
-        message: "Property not found!",
-      });
+      return res
+        .status(404)
+        .json({ message: "Property not found or access denied!" });
     }
 
-    // Check ownership
-    if (property.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        message: "You are not authorized for this property!",
-      });
-    }
+    // Users who are currently active in this property (returned tenants)
+    const activeUserIds = await Tenant.find({
+      property: propertyId,
+      isActive: true,
+    }).distinct("user");
 
-    // Get inactive tenants
     const tenants = await Tenant.find({
       property: propertyId,
       isActive: false,
+      user: { $nin: activeUserIds },
     })
       .populate("user", "username email isActive")
       .populate("unit", "unitName unitType rent status")
       .sort({ moveOutDate: -1 });
 
-    if (tenants.length === 0) {
-      return res.status(404).json({
-        message: "No tenant history found!",
-      });
-    }
-
+    // An empty history is not an error
     return res.status(200).json({
       message: "Tenant history fetched successfully!",
       data: tenants,
     });
   } catch (error) {
-    return res.status(500).json({
-      message: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 };
 

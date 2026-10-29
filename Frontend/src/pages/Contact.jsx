@@ -51,7 +51,7 @@ const Contact = () => {
             <h1 className="max-w-2xl font-serif text-5xl leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl">
               Let’s make
               <br />
-              renting feel <span className="underline decoration-purple-700 decoration-4 underline-offset-4">simpler.</span>
+              renting feel <span className="underline decoration-yellow-300 decoration-4 underline-offset-4">simpler.</span>
             </h1>
             <p className="mt-6 max-w-lg text-base leading-7 text-neutral-600 dark:text-neutral-300 sm:text-lg sm:leading-8">
               Have a question about your property, rent records, or documents? Send us a note and tell us what you need.

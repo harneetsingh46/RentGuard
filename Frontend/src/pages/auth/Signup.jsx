@@ -115,48 +115,48 @@ const Signup = () => {
         }`;
 
     return (
-        <div className="min-h-[calc(100dvh-145px)] w-full overflow-hidden bg-[#f3f3f3] px-4 py-3 flex items-center justify-center bg-[url(/signup.jpg)]  bg-cover bg-center dark:text-white dark:bg-[#101010]">
-            <form onSubmit={handleSubmit} noValidate className="w-full max-w-2xl rounded-2xs bg-white backdrop-blur-xs  border-white/20 shadow-lg  p-5 shadow-2xl dark:bg-[#1B1B1B] dark:border-[#373737] sm:p-6">
+        <div className="min-h-[calc(100dvh-150px)] w-full overflow-hidden bg-[#f3f3f3] px-3 py-3 flex items-center justify-center bg-[url(/signup.jpg)]  bg-cover bg-center dark:text-white dark:bg-[#101010]">
+            <form onSubmit={handleSubmit} noValidate className="w-full max-w-xl rounded-2xs bg-white/70 backdrop-blur-xs  border-white/20 shadow-lg  p-5 shadow-2xl dark:bg-[#1B1B1B] dark:border-[#373737] sm:p-6">
                 <div className="mb-5 text-center">
                     <h1 className="text-3xl text-black dark:text-[#F1F0ED]">OWNER REGISTRATION</h1>
-                    <p className="mt-2 text-sm text-gray-900 dark:text-yellow-300">Set up your owner account.</p>
+                    <p className="mt-2 text-sm font-medium text-gray-900 dark:text-yellow-300">Set up your owner account.</p>
                 </div>
 
                 <div className="grid grid-cols-1 p-4 gap-x-7 gap-y-4 sm:grid-cols-2">
                     <div className="min-w-0">
-                        <label htmlFor="username" className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]">Username</label>
+                        <label htmlFor="username" className="mb-2 block text-sm font-medium  text-black dark:text-[#F1F0ED]">Username</label>
                         <input id="username" type="text" name="username" value={formData.username} onChange={handleChange} required minLength={3} maxLength={30} autoComplete="username" aria-invalid={Boolean(fieldErrors.username)} aria-describedby={fieldErrors.username ? "username-error" : undefined} placeholder="Enter your Username" className={inputClass("username")} />
                         {fieldErrors.username && <p id="username-error" className="mt-1 text-xs text-red-600 dark:text-[#FF8F86]">{fieldErrors.username}</p>}
                     </div>
 
                     <div className="min-w-0">
-                        <label htmlFor="email" className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]">Email address</label>
+                        <label htmlFor="email" className="mb-2 block text-sm font-medium  text-black dark:text-[#F1F0ED]">Email address</label>
                         <input id="email" type="email" name="email" value={formData.email} onChange={handleChange} required autoComplete="email" aria-invalid={Boolean(fieldErrors.email)} aria-describedby={fieldErrors.email ? "email-error" : undefined} placeholder="Enter your email" className={inputClass("email")} />
                         {fieldErrors.email && <p id="email-error" className="mt-1 text-xs text-red-600 dark:text-[#FF8F86]">{fieldErrors.email}</p>}
                     </div>
 
                     <div className="min-w-0">
-                        <label htmlFor="password" className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]">Password</label>
+                        <label htmlFor="password" className="mb-2 block text-sm font-medium  text-black dark:text-[#F1F0ED]">Password</label>
                         <input id="password" type="password" name="password" value={formData.password} onChange={handleChange} required minLength={6} maxLength={128} autoComplete="new-password" aria-invalid={Boolean(fieldErrors.password)} aria-describedby={fieldErrors.password ? "password-error" : "password-help"} placeholder="Enter your password" className={inputClass("password")} />
-                        <p id="password-help" className="mt-1 text-xs text-gray-500 dark:text-[#85827D]">Use at least 6 characters.</p>
+                        <p id="password-help" className="mt-1 text-xs text-gray-700 dark:text-[#85827D]">Use strong password.</p>
                         {fieldErrors.password && <p id="password-error" className="mt-1 text-xs text-red-600 dark:text-[#FF8F86]">{fieldErrors.password}</p>}
                     </div>
 
                     <div className="min-w-0">
-                        <label htmlFor="phone" className="mb-2 block text-sm font-normal text-black dark:text-[#F1F0ED]">Phone</label>
+                        <label htmlFor="phone" className="mb-2 block text-sm font-medium  text-black dark:text-[#F1F0ED]">Phone</label>
                         <input id="phone" type="tel" name="phone" value={formData.phone} onChange={handleChange} required autoComplete="tel" inputMode="tel" aria-invalid={Boolean(fieldErrors.phone)} aria-describedby={fieldErrors.phone ? "phone-error" : "phone-help"} placeholder="Enter phone number" className={inputClass("phone")} />
-                        <p id="phone-help" className="mt-1 text-xs text-gray-500 dark:text-[#85827D]">Indian mobile number (10 digits).</p>
+                        <p id="phone-help" className="mt-1 text-xs text-gray-700 dark:text-[#85827D]">Indian mobile number (10 digits).</p>
                         {fieldErrors.phone && <p id="phone-error" className="mt-1 text-xs text-red-600 dark:text-[#FF8F86]">{fieldErrors.phone}</p>}
                     </div>
                 </div>
 
-                {errorMessage && <p role="alert" className="mt-4 text-sm text-red-600 dark:text-[#FF8F86]">{errorMessage}</p>}
+                {errorMessage && <p role="alert" className="mt-4 text-sm font-medium text-red-600 dark:text-[#FF8F86]">{errorMessage}</p>}
 
                 <button type="submit" className="mt-4 w-full rounded-lg bg-yellow-300 px-4 py-3 font-semibold text-black transition hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:bg-[#F7C744] disabled:cursor-not-allowed disabled:opacity-60" disabled={loading}>
                     {loading ? "Creating account..." : "Create owner account"}
                 </button>
 
-                <p className="mt-4 text-center text-sm text-black dark:text-[#F1F0ED]">
+                <p className="mt-4 text-center text-sm font-medium text-black dark:text-[#F1F0ED]">
                     Already have an account? <Link to="/login" className="font-medium">Login</Link>
                 </p>
             </form>

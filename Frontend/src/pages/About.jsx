@@ -38,7 +38,7 @@ const About = () => {
               <br />
               <span className="relative inline-block">
                 made
-                <span className="absolute -bottom-1 left-0 -z-0 h-3 w-full bg-purple-700 sm:h-4" />
+                <span className="absolute -bottom-1 left-0 -z-0 h-3 w-full bg-yellow-300 sm:h-4" />
               </span>{" "}
               <span className="relative">clearer.</span>
             </h1>
@@ -86,7 +86,7 @@ const About = () => {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">Our point of view</p>
             <h2 className="mt-4 max-w-md font-serif text-4xl leading-tight tracking-tight sm:text-5xl">
-              Good management starts with the <span className="underline decoration-purple-700 decoration-4 underline-offset-4">small details.</span>
+              Good management starts with the <span className="underline decoration-yellow-300 decoration-4 underline-offset-4">small details.</span>
             </h2>
             <p className="mt-5 max-w-md text-sm leading-7 text-neutral-600 dark:text-neutral-300 sm:text-base">
               A lease, a due date, a maintenance note, a payment record: each detail matters. RentGuard is built around making those details easier to find and simpler to manage.
@@ -95,10 +95,10 @@ const About = () => {
 
           <div className="border-t border-black/15 dark:border-white/15">
             {principles.map(({ number, title, description, icon: Icon }) => (
-              <article key={number} className="group grid gap-3 rounded-xl border-b border-black/15 px-3 py-6 transition-all duration-300 hover:translate-x-1 hover:bg-purple-300/10 hover:px-5 dark:border-white/15 sm:grid-cols-[56px_1fr] sm:gap-5 sm:py-7">
+              <article key={number} className="group grid gap-3 rounded-xl border-b border-black/15 px-3 py-6 transition-all duration-300 hover:translate-x-1 hover:bg-yellow-300/10 hover:px-5 dark:border-white/15 sm:grid-cols-[56px_1fr] sm:gap-5 sm:py-7">
                 <div className="flex items-center justify-between sm:block">
                   <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">{number}</span>
-                  <Icon size={20} className="text-neutral-500 transition-colors duration-300 group-hover:text-purple-500 sm:hidden" />
+                  <Icon size={20} className="text-neutral-500 transition-colors duration-300 group-hover:text-yellow-300 sm:hidden" />
                 </div>
                 <div>
                   <div className="flex items-center justify-between gap-4">

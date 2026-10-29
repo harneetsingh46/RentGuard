@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
+import toast from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
 
 const validateLogin = (values) => {
@@ -22,6 +23,9 @@ const validateLogin = (values) => {
     return errors;
 };
 
+// Fixed id: repeated errors replace the toast instead of stacking
+const showError = (message) => toast.error(message, { id: "login-error" });
+
 export const Login = () => {
     const navigate = useNavigate();
     const { login } = useAuth();
@@ -31,13 +35,14 @@ export const Login = () => {
     const [fieldErrors, setFieldErrors] = useState({});
     const [submitted, setSubmitted] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
+    const [credentialsInvalid, setCredentialsInvalid] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         const updatedData = { ...loginData, [name]: value };
         setLoginData(updatedData);
         setErrorMessage("");
+        setCredentialsInvalid(false);
 
         if (submitted) {
             setFieldErrors(validateLogin(updatedData));
@@ -49,22 +54,30 @@ export const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitted(true);
+        setCredentialsInvalid(false);
+
         const errors = validateLogin(loginData);
         setFieldErrors(errors);
 
         if (Object.values(errors).some(Boolean)) {
+            const message = errors.email || errors.password;
             setErrorMessage("Please correct the highlighted fields.");
+            showError(message);
             return;
         }
 
         try {
             setErrorMessage("");
             setLoading(true);
+
             const user = await login({
                 email: loginData.email.trim(),
                 password: loginData.password,
             });
+
             setLoginData({ email: "", password: "" });
+            toast.dismiss("login-error");
+            toast.success("Signed in successfully!");
 
             if (user.role === "owner") {
                 navigate("/owner/dashboard");
@@ -72,27 +85,41 @@ export const Login = () => {
                 navigate("/tenant/dashboard");
             } else {
                 setErrorMessage("Invalid user role.");
+                showError("Invalid user role.");
             }
         } catch (err) {
-            setErrorMessage(
+            const message =
                 err?.response?.data?.message ||
-                err.message ||
-                "Failed to sign in. Check your credentials."
-            );
+                err?.response?.data?.error ||
+                (err?.request && !err?.response
+                    ? "Cannot reach the server. Please try again."
+                    : err?.message) ||
+                "Failed to sign in. Check your credentials.";
+
+            if (err?.response?.status === 401) {
+                setCredentialsInvalid(true);
+            }
+
+            setErrorMessage(message);
+            showError(message);
         } finally {
             setLoading(false);
         }
     };
 
-    const inputClass = (name) =>
-        `w-full min-w-0 rounded-xs border border-black bg-[#f4f6f9] px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-gray-500 focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 dark:border-[#343434] dark:bg-[#242424] dark:text-[#f5f5f5] dark:placeholder:text-[#aaa] dark:focus:border-yellow-400 dark:focus:ring-yellow-400/15 ${
-            fieldErrors[name] ? "border-red-500 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500" : ""
-        }`;
+    const inputClass = (name) => {
+        const hasError = Boolean(fieldErrors[name]) || credentialsInvalid;
+
+        return `w-full min-w-0 rounded-xs border bg-[#f4f6f9] px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-gray-500 focus:ring-2 dark:bg-[#242424] dark:text-[#f5f5f5] dark:placeholder:text-[#aaa] ${hasError
+                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500"
+                : "border-black focus:border-slate-400 focus:ring-slate-900/10 dark:border-[#343434] dark:focus:border-yellow-400 dark:focus:ring-yellow-400/15"
+            }`;
+    };
 
     return (
         <main className="h-[calc(100dvh-146px)] min-h-0 w-full overflow-hidden bg-white p-0 text-black dark:bg-[#111111] dark:text-white">
             <div className="grid h-full min-h-0 w-full grid-cols-1 overflow-hidden lg:grid-cols-[1.03fr_0.97fr]">
-                {/* Left visual panel: keep your existing background image URL here. */}
+                {/* Left visual panel */}
                 <section
                     className="relative hidden h-full min-h-0 overflow-hidden bg-black bg-cover bg-center lg:block"
                     style={{ backgroundImage: "url('/login.jpg')" }}
@@ -141,7 +168,7 @@ export const Login = () => {
                                     value={loginData.email}
                                     required
                                     autoComplete="email"
-                                    aria-invalid={Boolean(fieldErrors.email)}
+                                    aria-invalid={Boolean(fieldErrors.email) || credentialsInvalid}
                                     aria-describedby={fieldErrors.email ? "email-error" : undefined}
                                     placeholder="Enter your email"
                                     className={inputClass("email")}
@@ -165,10 +192,9 @@ export const Login = () => {
                                         onChange={handleChange}
                                         value={loginData.password}
                                         required
-                                        minLength={6}
                                         maxLength={128}
                                         autoComplete="current-password"
-                                        aria-invalid={Boolean(fieldErrors.password)}
+                                        aria-invalid={Boolean(fieldErrors.password) || credentialsInvalid}
                                         aria-describedby={fieldErrors.password ? "password-error" : undefined}
                                         placeholder="Enter your password"
                                         className={`${inputClass("password")} pr-12`}

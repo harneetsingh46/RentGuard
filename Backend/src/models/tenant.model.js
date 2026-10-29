@@ -29,7 +29,7 @@ const tenantSchema = new mongoose.Schema(
     aadhaarNumber: {
       type: String,
       required: true,
-      unique: true,
+      trim: true,
     },
     isActive: {
       type: Boolean,
@@ -49,6 +49,15 @@ const tenantSchema = new mongoose.Schema(
     },
   },
   { timestamps: true },
+);
+
+// Lookups (non-unique)
+tenantSchema.index({ aadhaarNumber: 1, property: 1 });
+
+// One ACTIVE tenancy per user; moved-out records don't conflict
+tenantSchema.index(
+  { user: 1 },
+  { unique: true, partialFilterExpression: { isActive: true } },
 );
 
 export const Tenant = mongoose.model("Tenant", tenantSchema);
