@@ -148,7 +148,7 @@ const OwnerDashboard = () => {
   ];
 
   return (
-    <div className="w-full min-w-0 bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
+    <div className="w-full min-w-0 bg-[#f7f5f0] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
       {/* Main content */}
       <main className="w-full min-w-0">
         {/* Dashboard content */}

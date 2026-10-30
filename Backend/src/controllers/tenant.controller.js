@@ -464,6 +464,60 @@ export const getMyProfile = async (req, res, next) => {
   }
 };
 
+// GET TENANT DASHBOARD
+export const getTenantDashboard = async (req, res) => {
+  try {
+    // Only tenants can access this dashboard
+    if (req.user.role !== "tenant") {
+      return res.status(403).json({
+        message: "Only tenants can access this dashboard!",
+      });
+    }
+
+    // Find the logged-in tenant's active tenancy
+    const tenant = await Tenant.findOne({
+      user: req.user._id,
+      isActive: true,
+    })
+      .populate("property")
+      .populate("unit");
+
+    if (!tenant) {
+      return res.status(404).json({
+        message: "No active tenancy found!",
+      });
+    }
+
+    // Send the dashboard information
+    return res.status(200).json({
+      message: "Tenant dashboard fetched successfully!",
+      data: {
+        tenant: {
+          id: tenant._id,
+          fullName: tenant.fullName,
+          address: tenant.address,
+          profilePicture: tenant.profilePicture,
+        },
+
+        property: tenant.property,
+
+        unit: tenant.unit,
+
+        account: {
+          username: req.user.username,
+          email: req.user.email,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Tenant dashboard error:", error);
+
+    return res.status(500).json({
+      message: "Failed to load tenant dashboard!",
+    });
+  }
+};
+
 // TENANT LOGOUT
 
 export const tenantLogout = async (req, res, next) => {

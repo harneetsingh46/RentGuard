@@ -10,6 +10,7 @@ import {
   updateTenant,
   getTenantHistory,
   uploadProfilePicture,
+  getTenantDashboard,
 } from "../controllers/tenant.controller.js";
 import { uploadImage } from "../config/multer.js";
 import { protect } from "../utils/protect.js";
@@ -30,6 +31,9 @@ router.patch("/:propertyId/tenants/:tenantId/move-out", protect, moveOutTenant);
 
 
 router.get("/me", protect, getMyProfile);
+
+router.get("/dashboard", protect, getTenantDashboard);
+
 router.post("/me/profile-picture",protect,uploadImage.single("image"),uploadProfilePicture,);
 
 router.post("/logout", protect, tenantLogout);

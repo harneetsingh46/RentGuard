@@ -15,11 +15,13 @@ import Tenant from "../src/pages/Owner/Tenant";
 import Rent from "../src/pages/Owner/Rent";
 import TenantRent from "./pages/Tenant/TenantRent";
 import Documents from "../src/pages/Owner/Documents";
+import OwnerProfile from "../src/pages/Owner/OwnerProfile";
 import TenantDocument from "./pages/Tenant/TenantDocument";
 import TenantLayout from "./common/TenantLayout";
 import TenantProfile from "./pages/Tenant/TenantProfile";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import Maintenance from "./pages/Tenant/Maintenance";
 
 const router = createBrowserRouter([
   // Public pages: Navbar + page + Footer
@@ -85,6 +87,10 @@ const router = createBrowserRouter([
             path: "/owner/documents/:propertyId",
             element: <Documents />
           },
+          {
+            path: "/owner/profile",
+            element: <OwnerProfile />
+          },
         ],
       },
     ],
@@ -116,6 +122,10 @@ const router = createBrowserRouter([
           {
             path: "/tenant/profile",
             element: <TenantProfile />
+          },
+          {
+            path: "/tenant/maintenance",
+            element: <Maintenance />
           }
         ],
       }

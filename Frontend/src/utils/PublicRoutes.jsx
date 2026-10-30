@@ -5,7 +5,7 @@ const PublicRoutes = () => {
     const { isAuthenticated, loading, user } = useAuth();
 
     if (loading) {
-        return <p className="w-2xl mx-6 items-center m-9 text-center p-9 rounded font-medium">Loading...</p>;
+        return <p className="flex justify-center items-center mt-65 mb-68 mx-170 rounded font-medium">Loading...</p>;
     }
 
     if (isAuthenticated || user) {
