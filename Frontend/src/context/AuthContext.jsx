@@ -5,14 +5,31 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true); // only for the initial /auth/me check
+    const [loading, setLoading] = useState(true);
 
-    const login = async (loginData) => {
-        const response = await apiClient.post("/auth/login", loginData);
-        setUser(response.data.data);
-        return response.data.data;
+    // Request OTP
+    const requestOtp = async (contact) => {
+        const response = await apiClient.post("/auth/request-otp", {
+            contact,
+        });
+
+        return response.data;
     };
 
+    // Verify OTP and login
+    const verifyOtp = async (contact, otp) => {
+        const response = await apiClient.post("/auth/verify-otp", {
+            contact,
+            otp,
+        });
+
+        const loggedInUser = response.data.data;
+        setUser(loggedInUser);
+
+        return loggedInUser;
+    };
+
+    // Get currently logged-in user
     const getUser = async () => {
         try {
             const response = await apiClient.get("/auth/me");
@@ -21,6 +38,16 @@ export const AuthProvider = ({ children }) => {
             setUser(null);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Logout
+    const logout = async () => {
+        try {
+            await apiClient.post("/auth/logout");
+            setUser(null);
+        } catch (error) {
+            throw error;
         }
     };
 
@@ -33,12 +60,18 @@ export const AuthProvider = ({ children }) => {
     const value = {
         user,
         setUser,
-        login,
+        requestOtp,
+        verifyOtp,
+        logout,
         loading,
         isAuthenticated,
     };
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider value={value}>
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
 export const useAuth = () => useContext(AuthContext);

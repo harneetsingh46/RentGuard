@@ -5,7 +5,6 @@ import apiClient from "../../ApiClient/interceptor.js";
 const initialFormData = {
     username: "",
     email: "",
-    password: "",
     phone: "",
 };
 
@@ -29,13 +28,6 @@ const validateSignup = (values) => {
         errors.email = "Enter a valid email address.";
     }
 
-    if (!values.password) {
-        errors.password = "Password is required.";
-    } else if (values.password.length < 6) {
-        errors.password = "Password must be at least 6 characters.";
-    } else if (values.password.length > 128) {
-        errors.password = "Password cannot exceed 128 characters.";
-    }
 
     // Accept common Indian formats: 9876543210, +91 9876543210, or 919876543210.
     if (!values.phone.trim()) {
@@ -76,7 +68,7 @@ const Signup = () => {
         try {
             setLoading(true);
             setErrorMessage("");
-            await apiClient.post("/auth/register", {
+            await apiClient.post("/user/register", {
                 ...values,
                 username: values.username.trim(),
                 email: values.email.trim(),

@@ -1,0 +1,20 @@
+
+export const OTP_CONFIG = {
+  LENGTH: 6,
+  EXPIRY_MINUTES: 5,
+  MAX_ATTEMPTS: 5,
+  RESEND_WAIT_SECONDS: 10,
+};
+
+export const OTP_RATE_LIMIT = {
+  PER_CONTACT_PER_HOUR: 20,
+  PER_IP_PER_HOUR: 30,
+  VERIFY_PER_IP_PER_HOUR: 30,
+};
+
+export const SESSION_CONFIG = {
+  OWNER_EXPIRY: "1d",
+  TENANT_EXPIRY: "7d",
+};
+
+export const OTP_CHANNEL = "console";

@@ -1,195 +1,561 @@
+
+import { createHmac, randomInt, timingSafeEqual } from "crypto";
+
 import { User } from "../models/user.model.js";
-import bcrypt from "bcryptjs";
+import { Otp } from "../models/otp.model.js";
 import genToken from "../utils/genToken.js";
 
+import { OTP_CONFIG, OTP_CHANNEL } from "../config/policy.js";
+
+// --------------------------------------------------
+// HELPERS
+// --------------------------------------------------
+
+// Normalize email or phone
+const normalizeContact = (contact) => {
+  return contact.trim().toLowerCase();
+};
+
+// Check whether contact is email or phone
+const getContactType = (contact) => {
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(contact);
+  const isPhone = /^\d{10}$/.test(contact);
+
+  if (isEmail) return "email";
+  if (isPhone) return "phone";
+
+  return null;
+};
+
+// Generate HMAC hash of OTP
+const hashOtp = (otp) => {
+  if (!process.env.OTP_SECRET_KEY) {
+    throw new Error("OTP_SECRET_KEY is not configured");
+  }
+
+  return createHmac("sha256", process.env.OTP_SECRET_KEY)
+    .update(otp)
+    .digest("hex");
+};
+
+// Compare OTP hashes safely
+const compareOtp = (enteredOtp, storedHash) => {
+  const enteredHash = Buffer.from(hashOtp(enteredOtp), "hex");
+  const savedHash = Buffer.from(storedHash, "hex");
+
+  return (
+    enteredHash.length === savedHash.length &&
+    timingSafeEqual(enteredHash, savedHash)
+  );
+};
+
+// Cookie settings
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict",
+  path: "/",
+  maxAge: 24 * 60 * 60 * 1000,
+};
+
+// Cookie clearing settings
+const clearCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict",
+  path: "/",
+};
+
+// --------------------------------------------------
 // REGISTER OWNER
+// --------------------------------------------------
 
 export const register = async (req, res) => {
   try {
-    const { username, email, password, phone } = req.body;
+    const { username, email, phone } = req.body;
 
-    if (!username || !email || !password || !phone) {
+    // Validate required fields
+    if (!username || !email || !phone) {
       return res.status(400).json({
-        message: "Username, email, phone and password are required",
+        message: "Username, email and phone are required",
       });
     }
 
+    // Validate data types
+    if (
+      typeof username !== "string" ||
+      typeof email !== "string" ||
+      typeof phone !== "string"
+    ) {
+      return res.status(400).json({
+        message: "Invalid registration details",
+      });
+    }
+
+    const normalizedUsername = username.trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPhone = phone.trim();
+
+    // Username validation
+    if (
+      normalizedUsername.length < 3 ||
+      normalizedUsername.length > 30
+    ) {
+      return res.status(400).json({
+        message: "Username must be between 3 and 30 characters",
+      });
+    }
+
+    // Email validation
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail)
+    ) {
+      return res.status(400).json({
+        message: "Please enter a valid email address",
+      });
+    }
+
+    // Phone validation
+    if (!/^\d{10}$/.test(normalizedPhone)) {
+      return res.status(400).json({
+        message: "Phone number must contain 10 digits",
+      });
+    }
+
+    // Check duplicate username, email or phone
     const existingUser = await User.findOne({
-      $or: [{ username }, { email }],
+      $or: [
+        { username: normalizedUsername },
+        { email: normalizedEmail },
+        { phone: normalizedPhone },
+      ],
     });
 
     if (existingUser) {
       return res.status(409).json({
-        message: "Username or email already exists",
+        message: "Username, email or phone already exists",
       });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
+    // Create owner account
     const user = await User.create({
-      username,
-      email,
-      password: hashedPassword,
+      username: normalizedUsername,
+      email: normalizedEmail,
+      phone: normalizedPhone,
       role: "owner",
-      phone,
       isActive: true,
+      tokenVersion: 0,
     });
 
+    // Registration does not automatically log in
     return res.status(201).json({
-      message: "Owner registered successfully",
+      message: "Owner registered successfully. Please login using OTP.",
       user: {
-        id: user._id,
+        _id: user._id,
         username: user.username,
         email: user.email,
+        phone: user.phone,
         role: user.role,
-        phone:user.phone
       },
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "Username, email or phone already exists",
+      });
+    }
+
+    console.error("Owner registration error:", error);
+
     return res.status(500).json({
       message: "Server error",
-      error: error.message,
     });
   }
 };
 
-// LOGIN OWNER OR TENANT
+// --------------------------------------------------
+// REQUEST OTP
+// --------------------------------------------------
 
-export const login = async (req, res, next) => {
+export const requestOtp = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { contact } = req.body;
 
-    if (!email || !password) {
+    if (!contact || typeof contact !== "string") {
       return res.status(400).json({
-        message: "email and password are required",
+        message: "Email or phone number is required",
       });
     }
 
+    const normalizedContact = normalizeContact(contact);
+    const contactType = getContactType(normalizedContact);
+
+    if (!contactType) {
+      return res.status(400).json({
+        message: "Please enter a valid email or 10-digit phone number",
+      });
+    }
+
+    // Find owner by email or phone
     const user = await User.findOne({
-        email: email.toLowerCase().trim()  
+      [contactType]: normalizedContact,
     });
 
-    if (!user) {
-      return res.status(401).json({
-        message: "Invalid email or password",
+    // Same response for existing and non-existing accounts
+    const responseMessage =
+      "If an active owner account exists, an OTP will be sent.";
+
+    if (!user || !user.isActive || user.role !== "owner") {
+      return res.status(200).json({
+        message: responseMessage,
       });
     }
 
-    // Check account status
-    if (!user.isActive) {
-      return res.status(403).json({
-        message: "Your account is inactive",
-      });
-    }
+    // Generate OTP using configured length
+    const otpLength = OTP_CONFIG.LENGTH;
 
-    // Check password
-    const isPasswordCorrect = await bcrypt.compare(
-      password,
-      user.password,
+    const minOtp = 10 ** (otpLength - 1);
+    const maxOtp = 10 ** otpLength;
+
+    const otp = randomInt(minOtp, maxOtp).toString();
+
+    // Hash OTP
+    const hashedOtp = hashOtp(otp);
+
+    // Calculate expiry
+    const expiresAt = new Date(
+      Date.now() + OTP_CONFIG.EXPIRY_MINUTES * 60 * 1000
     );
 
-    if (!isPasswordCorrect) {
-      return res.status(401).json({
-        message: "Invalid email or password",
+    // Create or replace existing OTP
+    try {
+      await Otp.findOneAndUpdate(
+        { contact: normalizedContact },
+        {
+          $set: {
+            hash: hashedOtp,
+            attempts: 0,
+            expiresAt,
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+          runValidators: true,
+          setDefaultsOnInsert: true,
+        }
+      );
+    } catch (error) {
+      // Handle concurrent requests creating the same contact
+      if (error.code !== 11000) {
+        throw error;
+      }
+
+      await Otp.updateOne(
+        { contact: normalizedContact },
+        {
+          $set: {
+            hash: hashedOtp,
+            attempts: 0,
+            expiresAt,
+          },
+        }
+      );
+    }
+
+    // Development OTP delivery
+    if (OTP_CHANNEL === "console") {
+      console.log(`RentGuard OTP for ${normalizedContact}: ${otp}`);
+    }
+
+    return res.status(200).json({
+      message: responseMessage,
+    });
+  } catch (error) {
+    console.error("Request OTP error:", error);
+
+    return res.status(500).json({
+      message: "Unable to process OTP request",
+    });
+  }
+};
+
+// --------------------------------------------------
+// VERIFY OTP AND LOGIN OWNER
+// --------------------------------------------------
+
+export const verifyOtp = async (req, res) => {
+  try {
+    const { contact, otp } = req.body;
+
+    // Validate contact
+    if (!contact || typeof contact !== "string") {
+      return res.status(400).json({
+        message: "Email or phone is required",
       });
     }
+
+    // Validate OTP
+    if (
+      typeof otp !== "string" ||
+      otp.length !== OTP_CONFIG.LENGTH ||
+      !/^\d+$/.test(otp)
+    ) {
+      return res.status(400).json({
+        message: `OTP must contain ${OTP_CONFIG.LENGTH} digits`,
+      });
+    }
+
+    const normalizedContact = normalizeContact(contact);
+    const contactType = getContactType(normalizedContact);
+
+    if (!contactType) {
+      return res.status(400).json({
+        message: "Please enter a valid email or phone number",
+      });
+    }
+
+    // Find OTP record
+    const otpRecord = await Otp.findOne({
+      contact: normalizedContact,
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({
+        message: "Invalid or expired OTP",
+      });
+    }
+
+    const now = new Date();
+
+    // Check expiry
+    if (otpRecord.expiresAt <= now) {
+      await Otp.deleteOne({
+        _id: otpRecord._id,
+      });
+
+      return res.status(400).json({
+        message: "OTP has expired. Please request a new OTP.",
+      });
+    }
+
+    // Check maximum attempts
+    if (otpRecord.attempts >= OTP_CONFIG.MAX_ATTEMPTS) {
+      await Otp.deleteOne({
+        _id: otpRecord._id,
+      });
+
+      return res.status(400).json({
+        message: "Too many incorrect attempts. Please request a new OTP.",
+      });
+    }
+
+    // Calculate entered OTP hash
+    const enteredHash = hashOtp(otp);
+
+    const enteredHashBuffer = Buffer.from(enteredHash, "hex");
+    const savedHashBuffer = Buffer.from(otpRecord.hash, "hex");
+
+    const isOtpCorrect =
+      enteredHashBuffer.length === savedHashBuffer.length &&
+      timingSafeEqual(enteredHashBuffer, savedHashBuffer);
+
+    // Handle incorrect OTP
+    if (!isOtpCorrect) {
+      // Increment attempts atomically
+      const updateResult = await Otp.updateOne(
+        {
+          _id: otpRecord._id,
+          hash: otpRecord.hash,
+          attempts: { $lt: OTP_CONFIG.MAX_ATTEMPTS },
+          expiresAt: { $gt: now },
+        },
+        {
+          $inc: { attempts: 1 },
+        }
+      );
+
+      // Record may have been consumed or replaced
+      if (updateResult.modifiedCount === 0) {
+        return res.status(400).json({
+          message: "Invalid or expired OTP",
+        });
+      }
+
+      const updatedOtp = await Otp.findById(otpRecord._id);
+
+      // Delete OTP after maximum attempts
+      if (
+        !updatedOtp ||
+        updatedOtp.attempts >= OTP_CONFIG.MAX_ATTEMPTS
+      ) {
+        await Otp.deleteOne({
+          _id: otpRecord._id,
+          attempts: { $gte: OTP_CONFIG.MAX_ATTEMPTS },
+        });
+
+        return res.status(400).json({
+          message: "Too many incorrect attempts. Please request a new OTP.",
+        });
+      }
+
+      return res.status(400).json({
+        message: "Invalid OTP",
+        remainingAttempts:
+          OTP_CONFIG.MAX_ATTEMPTS - updatedOtp.attempts,
+      });
+    }
+
+    // Find owner
+    const user = await User.findOne({
+      [contactType]: normalizedContact,
+    });
+
+    if (!user || !user.isActive || user.role !== "owner") {
+      return res.status(401).json({
+        message: "Unable to login. Please contact support.",
+      });
+    }
+
+    // Atomically consume OTP.
+    // Only one simultaneous request can successfully delete this record.
+    const consumedOtp = await Otp.findOneAndDelete({
+      _id: otpRecord._id,
+      hash: otpRecord.hash,
+      attempts: { $lt: OTP_CONFIG.MAX_ATTEMPTS },
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!consumedOtp) {
+      return res.status(400).json({
+        message: "OTP is invalid, expired or already used.",
+      });
+    }
+
+    // Set default token version if missing
+    if (user.tokenVersion === undefined || user.tokenVersion === null) {
+      user.tokenVersion = 0;
+    }
+
+    // Mark first successful OTP login
+    if (!user.verifiedAt) {
+      user.verifiedAt = new Date();
+    }
+
+    await user.save();
 
     // Generate JWT
-    const token = genToken(
-      user._id,
-      user.username,
-      user.email,
-      user.role,
-    );
+    const token = genToken(user);
 
-    // Store JWT in HTTP-only cookie
     return res
       .status(200)
-      .cookie("token", token, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "strict",
-        maxAge: 24 * 60 * 60 * 1000,
-      })
+      .cookie("token", token, cookieOptions)
       .json({
         message: "Login successful",
         data: {
           _id: user._id,
           username: user.username,
           email: user.email,
+          phone: user.phone,
           role: user.role,
         },
       });
   } catch (error) {
+    console.error("Verify OTP error:", error);
+
     return res.status(500).json({
-      message: error.message,
+      message: "OTP verification failed",
     });
   }
 };
 
-// GET CURRENT USER
+// --------------------------------------------------
+// GET CURRENT OWNER
+// --------------------------------------------------
 
-export const getUser = async (req, res, next) => {
+export const getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select("-password");
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
+    const user = req.user;
 
     return res.status(200).json({
-      message: "User details fetched successfully",
+      message: "Owner details fetched successfully",
       data: {
         _id: user._id,
         username: user.username,
         email: user.email,
+        phone: user.phone,
         role: user.role,
-        phone:user.phone,
         isActive: user.isActive,
+        verifiedAt: user.verifiedAt,
       },
     });
   } catch (error) {
+    console.error("Get owner error:", error);
+
     return res.status(500).json({
-      message: error.message,
+      message: "Unable to fetch owner details",
     });
   }
 };
 
-// LOGOUT
+// --------------------------------------------------
+// LOGOUT CURRENT DEVICE
+// --------------------------------------------------
 
-export const logout = async (req, res, next) => {
+export const logout = async (req, res) => {
   try {
     return res
-      .clearCookie("token")
+      .clearCookie("token", clearCookieOptions)
       .status(200)
       .json({
         message: "Logout successful",
       });
   } catch (error) {
+    console.error("Logout error:", error);
+
     return res.status(500).json({
-      message: error.message,
+      message: "Logout failed",
     });
   }
 };
 
-// UPDATE CURRENT USER PROFILE AND PASSWORD
+// --------------------------------------------------
+// LOGOUT ALL DEVICES
+// --------------------------------------------------
+
+export const logoutAllDevices = async (req, res) => {
+  try {
+    await User.findByIdAndUpdate(req.user._id, {
+      $inc: { tokenVersion: 1 },
+    });
+
+    return res
+      .clearCookie("token", clearCookieOptions)
+      .status(200)
+      .json({
+        message: "Logged out from all devices successfully",
+      });
+  } catch (error) {
+    console.error("Logout all devices error:", error);
+
+    return res.status(500).json({
+      message: "Unable to logout from all devices",
+    });
+  }
+};
+
+// --------------------------------------------------
+// UPDATE OWNER PROFILE
+// --------------------------------------------------
 
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.user._id;
-    const {
-      username,
-      email,
-      phone,
-      currentPassword,
-      newPassword,
-    } = req.body;
+    const { username, email, phone } = req.body;
 
     const updates = {};
 
-    // UPDATE USERNAME
+    // Username update
     if (username !== undefined) {
       if (typeof username !== "string" || !username.trim()) {
         return res.status(400).json({
@@ -197,18 +563,21 @@ export const updateProfile = async (req, res) => {
         });
       }
 
-      const trimmedUsername = username.trim();
+      const normalizedUsername = username.trim().toLowerCase();
 
-      if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+      if (
+        normalizedUsername.length < 3 ||
+        normalizedUsername.length > 30
+      ) {
         return res.status(400).json({
           message: "Username must be between 3 and 30 characters",
         });
       }
 
-      updates.username = trimmedUsername.toLowerCase();
+      updates.username = normalizedUsername;
     }
 
-    // UPDATE EMAIL
+    // Contact changes require a separate verification flow
     if (email !== undefined) {
       if (typeof email !== "string" || !email.trim()) {
         return res.status(400).json({
@@ -224,10 +593,13 @@ export const updateProfile = async (req, res) => {
         });
       }
 
-      updates.email = normalizedEmail;
+      if (normalizedEmail !== req.user.email) {
+        return res.status(400).json({
+          message: "Email changes require OTP verification. This feature is not available yet.",
+        });
+      }
     }
 
-    // UPDATE PHONE
     if (phone !== undefined) {
       if (typeof phone !== "string" || !phone.trim()) {
         return res.status(400).json({
@@ -235,103 +607,52 @@ export const updateProfile = async (req, res) => {
         });
       }
 
-      updates.phone = phone.trim();
+      const normalizedPhone = phone.trim();
+
+      if (!/^\d{10}$/.test(normalizedPhone)) {
+        return res.status(400).json({
+          message: "Phone number must contain 10 digits",
+        });
+      }
+
+      if (normalizedPhone !== req.user.phone) {
+        return res.status(400).json({
+          message: "Phone changes require OTP verification. This feature is not available yet.",
+        });
+      }
     }
 
-    // CHANGE PASSWORD
-    if (currentPassword !== undefined || newPassword !== undefined) {
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({
-          message: "Current password and new password are required",
-        });
-      }
-
-      if (typeof newPassword !== "string" || newPassword.length < 6) {
-        return res.status(400).json({
-          message: "New password must be at least 6 characters long",
-        });
-      }
-
-      if (newPassword.length > 128) {
-        return res.status(400).json({
-          message: "New password cannot exceed 128 characters",
-        });
-      }
-
-      // Fetch the user, including their hashed password
-      const user = await User.findById(userId);
-
-      if (!user) {
-        return res.status(404).json({
-          message: "User not found",
-        });
-      }
-
-      // Verify current password
-      const isPasswordCorrect = await bcrypt.compare(
-        currentPassword,
-        user.password
-      );
-
-      if (!isPasswordCorrect) {
-        return res.status(400).json({
-          message: "Current password is incorrect",
-        });
-      }
-
-      // Hash the new password before saving
-      user.password = await bcrypt.hash(newPassword, 10);
-      await user.save();
-    }
-
-    // CHECK WHETHER THERE IS ANYTHING TO UPDATE
-    if (Object.keys(updates).length === 0 &&
-        currentPassword === undefined &&
-        newPassword === undefined) {
+    if (Object.keys(updates).length === 0) {
       return res.status(400).json({
         message: "Please provide at least one field to update",
       });
     }
 
-    // CHECK FOR DUPLICATE USERNAME OR EMAIL
-    const duplicateConditions = [];
-
+    // Check duplicate username
     if (updates.username) {
-      duplicateConditions.push({ username: updates.username });
-    }
-
-    if (updates.email) {
-      duplicateConditions.push({ email: updates.email });
-    }
-
-    if (duplicateConditions.length > 0) {
       const existingUser = await User.findOne({
+        username: updates.username,
         _id: { $ne: userId },
-        $or: duplicateConditions,
       });
 
       if (existingUser) {
         return res.status(409).json({
-          message: "Username or email already exists",
+          message: "Username already exists",
         });
       }
     }
 
-    // UPDATE PROFILE FIELDS
-    let updatedUser;
-
-    if (Object.keys(updates).length > 0) {
-      updatedUser = await User.findByIdAndUpdate(
-        userId,
-        { $set: updates },
-        {
-          new: true,
-          runValidators: true,
-        }
-      ).select("-password");
-    } else {
-      updatedUser = await User.findById(userId).select("-password");
-    }
+    // Update owner profile
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: updates,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
     if (!updatedUser) {
       return res.status(404).json({
@@ -353,7 +674,7 @@ export const updateProfile = async (req, res) => {
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
-        message: "Username or email already exists",
+        message: "Username already exists",
       });
     }
 

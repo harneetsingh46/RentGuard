@@ -11,10 +11,10 @@ const Navbar = () => {
   const closeMenu = () => setIsMenuOpen(false);
 
   const navLinkClass = () =>
-    `relative text-sm shadow-2xl p-2 bg-none rounded font-semibold transition-colors duration-200 text-black dark:text-white hover:bg-yellow-300 dark:hover:bg-yellow-300 dark:hover:text-black`
+    `relative text-sm p-2 rounded bg-white/0 font-semibold transition-colors duration-200 text-black dark:text-white hover:bg-yellow-300 dark:hover:bg-yellow-300 dark:hover:text-black `
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/10 font-['Inter','Segoe_UI',sans-serif] shadow-md transition-colors duration-300 dark:border-neutral-800 dark:bg-neutral-950 dark:shadow-2xl backdrop-blur-xs">
+    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/10 backdrop-blur-xs font-['Inter','Segoe_UI',sans-serif] shadow-md transition-colors duration-300 dark:border-neutral-800 dark:bg-neutral-950  dark:shadow-2xl ">
       <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between px-4 py-4 sm:px-6 md:px-10">
         {/* Logo */}
         <Link
