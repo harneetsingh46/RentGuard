@@ -5,29 +5,27 @@ import { Otp } from "../models/otp.model.js";
 import { Tenant } from "../models/tenant.model.js";
 import genToken from "../utils/genToken.js";
 
-import { OTP_CONFIG, OTP_CHANNEL } from "../config/policy.js";
+import { OTP_CONFIG } from "../config/policy.js";
+import { sendOtpEmail } from "../utils/email.js";
 
-// --------------------------------------------------
 // HELPERS
-// --------------------------------------------------
 
 // Normalize email or phone
+
 const normalizeContact = (contact) => {
   return contact.trim().toLowerCase();
 };
 
 // Check whether contact is email or phone
+
 const getContactType = (contact) => {
   const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(contact);
-  const isPhone = /^\d{10}$/.test(contact);
 
-  if (isEmail) return "email";
-  if (isPhone) return "phone";
-
-  return null;
+  return isEmail ? "email" : null;
 };
 
 // Generate HMAC hash of OTP
+
 const hashOtp = (otp) => {
   if (!process.env.OTP_SECRET_KEY) {
     throw new Error("OTP_SECRET_KEY is not configured");
@@ -39,6 +37,7 @@ const hashOtp = (otp) => {
 };
 
 // Compare OTP hashes safely
+
 const compareOtp = (enteredOtp, storedHash) => {
   const enteredHash = Buffer.from(hashOtp(enteredOtp), "hex");
   const savedHash = Buffer.from(storedHash, "hex");
@@ -50,6 +49,7 @@ const compareOtp = (enteredOtp, storedHash) => {
 };
 
 // Cookie settings
+
 const getCookieOptions = (role) => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -59,6 +59,7 @@ const getCookieOptions = (role) => ({
 });
 
 // Cookie clearing settings
+
 const clearCookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
@@ -66,15 +67,14 @@ const clearCookieOptions = {
   path: "/",
 };
 
-// --------------------------------------------------
 // REGISTER OWNER
-// --------------------------------------------------
 
 export const register = async (req, res) => {
   try {
     const { username, email, phone } = req.body;
 
     // Validate required fields
+
     if (!username || !email || !phone) {
       return res.status(400).json({
         message: "Username, email and phone are required",
@@ -82,6 +82,7 @@ export const register = async (req, res) => {
     }
 
     // Validate data types
+
     if (
       typeof username !== "string" ||
       typeof email !== "string" ||
@@ -97,6 +98,7 @@ export const register = async (req, res) => {
     const normalizedPhone = phone.trim();
 
     // Username validation
+
     if (normalizedUsername.length < 3 || normalizedUsername.length > 30) {
       return res.status(400).json({
         message: "Username must be between 3 and 30 characters",
@@ -104,6 +106,7 @@ export const register = async (req, res) => {
     }
 
     // Email validation
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail)) {
       return res.status(400).json({
         message: "Please enter a valid email address",
@@ -111,6 +114,7 @@ export const register = async (req, res) => {
     }
 
     // Phone validation
+
     if (!/^\d{10}$/.test(normalizedPhone)) {
       return res.status(400).json({
         message: "Phone number must contain 10 digits",
@@ -118,6 +122,7 @@ export const register = async (req, res) => {
     }
 
     // Check duplicate username, email or phone
+
     const existingUser = await User.findOne({
       $or: [
         { username: normalizedUsername },
@@ -133,6 +138,7 @@ export const register = async (req, res) => {
     }
 
     // Create owner account
+
     const user = await User.create({
       username: normalizedUsername,
       email: normalizedEmail,
@@ -143,6 +149,7 @@ export const register = async (req, res) => {
     });
 
     // Registration does not automatically log in
+
     return res.status(201).json({
       message: "Owner registered successfully. Please login using OTP.",
       user: {
@@ -168,9 +175,7 @@ export const register = async (req, res) => {
   }
 };
 
-// --------------------------------------------------
 // REQUEST OTP
-// --------------------------------------------------
 
 export const requestOtp = async (req, res) => {
   try {
@@ -178,7 +183,7 @@ export const requestOtp = async (req, res) => {
 
     if (!contact || typeof contact !== "string") {
       return res.status(400).json({
-        message: "Email or phone number is required",
+        message: "Email address is required.",
       });
     }
 
@@ -187,39 +192,35 @@ export const requestOtp = async (req, res) => {
 
     if (!contactType) {
       return res.status(400).json({
-        message: "Please enter a valid email or 10-digit phone number",
+        message: "Please enter a valid email address.",
       });
     }
 
-    // Search both collections
+    // Find active owner and tenant accounts
     const [owner, tenants] = await Promise.all([
       User.findOne({
-        [contactType]: normalizedContact,
+        email: normalizedContact,
         role: "owner",
         isActive: true,
       }),
 
       Tenant.find({
-        [contactType]: normalizedContact,
+        email: normalizedContact,
         isActive: true,
       }),
     ]);
 
-    console.log("Owner found:", !!owner);
-    console.log("Tenants found:", tenants.length);
-    console.log("Contact type:", contactType);
-    console.log("Normalized contact:", normalizedContact);
+    const responseMessage =
+      "If an active account exists, an OTP will be sent.";
 
-    const responseMessage = "If an active account exists, an OTP will be sent.";
-
-    // Don't reveal whether an account exists
+    // Do not reveal whether an account exists
     if (!owner && tenants.length === 0) {
       return res.status(200).json({
         message: responseMessage,
       });
     }
 
-    // Generate OTP
+    // Generate six-digit OTP
     const otp = randomInt(
       10 ** (OTP_CONFIG.LENGTH - 1),
       10 ** OTP_CONFIG.LENGTH,
@@ -264,8 +265,21 @@ export const requestOtp = async (req, res) => {
       );
     }
 
-    if (OTP_CHANNEL === "console") {
-      console.log(`RentGuard OTP for ${normalizedContact}: ${otp}`);
+    // Send OTP through email
+    try {
+      await sendOtpEmail(normalizedContact, otp);
+    } catch (emailError) {
+      console.error("OTP delivery failed:", emailError);
+
+      // Remove the undelivered OTP
+      await Otp.deleteOne({
+        contact: normalizedContact,
+        hash: hashedOtp,
+      });
+
+      return res.status(503).json({
+        message: "Unable to send OTP email. Please try again later.",
+      });
     }
 
     return res.status(200).json({
@@ -275,13 +289,12 @@ export const requestOtp = async (req, res) => {
     console.error("Request OTP error:", error);
 
     return res.status(500).json({
-      message: "Unable to process OTP request",
+      message: "Unable to process OTP request.",
     });
   }
 };
-// --------------------------------------------------
+
 // VERIFY OTP AND LOGIN OWNER
-// --------------------------------------------------
 
 export const verifyOtp = async (req, res) => {
   try {
@@ -325,6 +338,7 @@ export const verifyOtp = async (req, res) => {
     }
 
     // Find OTP record
+
     const otpRecord = await Otp.findOne({
       contact: normalizedContact,
     });
@@ -354,6 +368,7 @@ export const verifyOtp = async (req, res) => {
     }
 
     // Compare OTP safely
+
     const isOtpCorrect = compareOtp(otp, otpRecord.hash);
 
     if (!isOtpCorrect) {
@@ -395,6 +410,7 @@ export const verifyOtp = async (req, res) => {
     }
 
     // Find matching active accounts
+
     const [owner, tenants] = await Promise.all([
       User.findOne({
         [contactType]: normalizedContact,
@@ -437,6 +453,7 @@ export const verifyOtp = async (req, res) => {
     }
 
     // If multiple accounts match, ask user to select one
+
     if (!role && accounts.length > 1) {
       return res.status(200).json({
         message: "Please select an account",
@@ -543,9 +560,7 @@ export const verifyOtp = async (req, res) => {
   }
 };
 
-// --------------------------------------------------
 // GET CURRENT OWNER
-// --------------------------------------------------
 
 export const getUser = async (req, res) => {
   try {
@@ -593,9 +608,7 @@ export const logout = async (req, res) => {
   }
 };
 
-// --------------------------------------------------
 // UPDATE OWNER PROFILE
-// --------------------------------------------------
 
 export const updateProfile = async (req, res) => {
   try {

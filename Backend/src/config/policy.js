@@ -17,4 +17,3 @@ export const SESSION_CONFIG = {
   TENANT_EXPIRY: "7d",
 };
 
-export const OTP_CHANNEL = "console";

@@ -22,6 +22,8 @@ const emptyForm = () => ({
   amount: "",
   month: String(new Date().getMonth() + 1),
   year: String(new Date().getFullYear()),
+  startDate: "",
+  endDate: "",
   dueDate: "",
 });
 
@@ -222,6 +224,8 @@ const Bill = () => {
       amount: String(bill.amount ?? ""),
       month: String(bill.month ?? new Date().getMonth() + 1),
       year: String(bill.year ?? new Date().getFullYear()),
+      startDate: bill.startDate ? new Date(bill.startDate).toISOString().slice(0, 10) : "",
+      endDate: bill.endDate ? new Date(bill.endDate).toISOString().slice(0, 10) : "",
       dueDate: bill.dueDate ? new Date(bill.dueDate).toISOString().slice(0, 10) : "",
     });
     setError("");
@@ -248,6 +252,8 @@ const Bill = () => {
       form.amount === "" ||
       !form.month ||
       !form.year ||
+      !form.startDate ||
+      !form.endDate ||
       !form.dueDate
     ) {
       setError("Please complete all required fields.");
@@ -257,6 +263,13 @@ const Bill = () => {
     const amount = Number(form.amount);
     const month = Number(form.month);
     const year = Number(form.year);
+    const startDate = new Date(`${form.startDate}T00:00:00`);
+    const endDate = new Date(`${form.endDate}T00:00:00`);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate < startDate) {
+      setError("End date must be on or after the start date.");
+      return;
+    }
 
     if (!Number.isFinite(amount) || amount <= 0) {
       setError("Enter a valid amount greater than zero.");
@@ -279,6 +292,8 @@ const Bill = () => {
       amount,
       month,
       year,
+      startDate: form.startDate,
+      endDate: form.endDate,
       dueDate: form.dueDate,
     };
 
@@ -347,7 +362,7 @@ const Bill = () => {
           </div>
         </div>
 
-        {/* {error && !showModal && (
+        {error && !showModal && (
           <div
             role="alert"
             className="mb-5 flex items-start justify-between gap-3 rounded-xs border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
@@ -357,7 +372,7 @@ const Bill = () => {
               &times;
             </button>
           </div>
-        )} */}
+        )}
 
         <div className="mb-6 rounded-xs border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-stone-300">
           Payment information (paid amount, outstanding balance and payment
@@ -442,6 +457,8 @@ const Bill = () => {
                   <div className="mt-3 flex items-end justify-between gap-3 border-t border-stone-200 pt-3 dark:border-neutral-800">
                     <div className="text-xs text-stone-500">
                       <p>{formatMonth(bill.month, bill.year)}</p>
+                      <p>Start: {formatDate(bill.startDate)}</p>
+                      <p>End: {formatDate(bill.endDate)}</p>
                       <p>Due {formatDate(bill.dueDate)}</p>
                     </div>
                     <div className="text-right">
@@ -460,7 +477,9 @@ const Bill = () => {
                     <th className="px-5 py-4 font-medium">Category</th>
                     <th className="px-5 py-4 font-medium">Tenant</th>
                     <th className="px-5 py-4 font-medium">Unit</th>
-                    <th className="px-5 py-4 font-medium">Billing Period</th>
+                    <th className="px-5 py-4 font-medium">Billing Month</th>
+                    <th className="px-5 py-4 font-medium">Start Date</th>
+                    <th className="px-5 py-4 font-medium">End Date</th>
                     <th className="px-5 py-4 font-medium">Amount</th>
                     <th className="px-5 py-4 font-medium">Due Date</th>
                     <th className="px-5 py-4 font-medium">Action</th>
@@ -477,6 +496,8 @@ const Bill = () => {
                       </td>
                       <td className="px-5 py-4">{bill.unit?.unitName || "—"}</td>
                       <td className="px-5 py-4">{formatMonth(bill.month, bill.year)}</td>
+                      <td className="px-5 py-4">{formatDate(bill.startDate)}</td>
+                      <td className="px-5 py-4">{formatDate(bill.endDate)}</td>
                       <td className="px-5 py-4 font-medium">{currency(bill.amount)}</td>
                       <td className="px-5 py-4">{formatDate(bill.dueDate)}</td>
                       <td className="px-5 py-4">
@@ -752,6 +773,36 @@ const Bill = () => {
                       required
                       value={form.year}
                       onChange={(event) => updateForm("year", event.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="bill-start-date" className="mb-1 block text-sm font-medium">
+                      Bill start date
+                    </label>
+                    <input
+                      id="bill-start-date"
+                      type="date"
+                      required
+                      value={form.startDate}
+                      onChange={(event) => updateForm("startDate", event.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="bill-end-date" className="mb-1 block text-sm font-medium">
+                      Bill end date
+                    </label>
+                    <input
+                      id="bill-end-date"
+                      type="date"
+                      required
+                      min={form.startDate || undefined}
+                      value={form.endDate}
+                      onChange={(event) => updateForm("endDate", event.target.value)}
                       className={inputClass}
                     />
                   </div>

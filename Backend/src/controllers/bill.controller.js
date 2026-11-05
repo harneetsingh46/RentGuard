@@ -6,9 +6,12 @@ import { Tenant } from "../models/tenant.model.js";
 
 const allowedCategories = ["rent", "electricity", "water", "other"];
 
-// Verify property belongs to the logged-in owner
+const isValidDate = (value) => {
+  return value && !Number.isNaN(new Date(value).getTime());
+};
+
 const getOwnedProperty = async (propertyId, ownerId) => {
-  if (!mongoose.isValidObjectId(propertyId)) {
+  if (!mongoose.Types.ObjectId.isValid(propertyId)) {
     return null;
   }
 
@@ -18,40 +21,65 @@ const getOwnedProperty = async (propertyId, ownerId) => {
   });
 };
 
-// Create Bill
+const tenantDetails = "fullName email phone";
+
+const populateBill = (query) => {
+  return query
+    .populate("unit", "unitName rent")
+    .populate("tenant", tenantDetails);
+};
+
+// Validate bill period dates
+const validateBillDates = (startDate, endDate) => {
+  if (!isValidDate(startDate) || !isValidDate(endDate)) {
+    return "Valid bill start date and end date are required.";
+  }
+
+  if (new Date(endDate) < new Date(startDate)) {
+    return "End date cannot be before start date.";
+  }
+
+  return null;
+};
+
+// CREATE BILL
 export const createBill = async (req, res) => {
   try {
     if (req.authRole !== "owner") {
       return res.status(403).json({
+        success: false,
         message: "Only owners can create bills.",
       });
     }
 
     const { propertyId, unitId, tenantId } = req.params;
-    const { billName, category, amount, month, year, dueDate } = req.body;
+    const {
+      category,
+      billName,
+      amount,
+      month,
+      year,
+      startDate,
+      endDate,
+      dueDate,
+    } = req.body;
 
     if (
-      !Number.isInteger(Number(month)) ||
-      Number(month) < 1 ||
-      Number(month) > 12 ||
-      !Number.isInteger(Number(year)) ||
-      Number(year) < 2000 ||
-      !dueDate ||
-      Number.isNaN(new Date(dueDate).getTime())
+      !mongoose.Types.ObjectId.isValid(unitId) ||
+      !mongoose.Types.ObjectId.isValid(tenantId)
     ) {
       return res.status(400).json({
-        message: "Please provide a valid billing month, year and due date.",
+        success: false,
+        message: "Invalid unit or tenant ID.",
       });
     }
 
-    const property = await Property.findOne({
-      _id: propertyId,
-      owner: req.user._id,
-    });
+    const property = await getOwnedProperty(propertyId, req.user._id);
 
     if (!property) {
       return res.status(404).json({
-        message: "Property not found or access denied.",
+        success: false,
+        message: "Property not found.",
       });
     }
 
@@ -62,6 +90,7 @@ export const createBill = async (req, res) => {
 
     if (!unit) {
       return res.status(404).json({
+        success: false,
         message: "Unit not found in this property.",
       });
     }
@@ -72,41 +101,26 @@ export const createBill = async (req, res) => {
       property: property._id,
       unit: unit._id,
       isActive: true,
-    }).populate("unit", "unitName rent")
+    });
 
     if (!tenant) {
       return res.status(404).json({
-        message: "Active tenant not found in this unit.",
+        success: false,
+        message: "Active tenant not found for this unit.",
       });
     }
 
-    if (
-      !mongoose.isValidObjectId(propertyId) ||
-      !mongoose.isValidObjectId(unitId) ||
-      !mongoose.isValidObjectId(tenantId)
-    ) {
+    if (!allowedCategories.includes(category)) {
       return res.status(400).json({
-        message: "Invalid property, unit or tenant ID.",
-      });
-    }
-
-    if (
-      typeof billName !== "string" ||
-      !billName.trim() ||
-      typeof category !== "string" ||
-      amount === undefined ||
-      amount === null
-    ) {
-      return res.status(400).json({
-        message: "Bill name, category and amount are required.",
-      });
-    }
-
-    const normalizedCategory = category.toLowerCase().trim();
-
-    if (!allowedCategories.includes(normalizedCategory)) {
-      return res.status(400).json({
+        success: false,
         message: "Invalid bill category.",
+      });
+    }
+
+    if (!billName?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Bill name is required.",
       });
     }
 
@@ -114,7 +128,40 @@ export const createBill = async (req, res) => {
 
     if (!Number.isFinite(billAmount) || billAmount <= 0) {
       return res.status(400).json({
-        message: "Please enter a valid bill amount.",
+        success: false,
+        message: "Enter a valid bill amount.",
+      });
+    }
+
+    const billMonth = Number(month);
+    const billYear = Number(year);
+
+    if (
+      !Number.isInteger(billMonth) ||
+      billMonth < 1 ||
+      billMonth > 12 ||
+      !Number.isInteger(billYear) ||
+      billYear < 2000
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Enter a valid bill month and year.",
+      });
+    }
+
+    const dateError = validateBillDates(startDate, endDate);
+
+    if (dateError) {
+      return res.status(400).json({
+        success: false,
+        message: dateError,
+      });
+    }
+
+    if (!isValidDate(dueDate)) {
+      return res.status(400).json({
+        success: false,
+        message: "A valid due date is required.",
       });
     }
 
@@ -122,41 +169,52 @@ export const createBill = async (req, res) => {
       property: property._id,
       unit: unit._id,
       tenant: tenant._id,
+      category,
       billName: billName.trim(),
-      category: normalizedCategory,
       amount: billAmount,
-      month: Number(month),
-      year: Number(year),
+      month: billMonth,
+      year: billYear,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
       dueDate: new Date(dueDate),
     });
 
+    const populatedBill = await populateBill(Bill.findById(bill._id));
+
     return res.status(201).json({
+      success: true,
       message: "Bill created successfully.",
-      data: bill,
+      data: populatedBill,
     });
   } catch (error) {
+    console.error("Create bill error:", error);
+
     return res.status(500).json({
-      message: error.message,
+      success: false,
+      message: "Failed to create bill.",
     });
   }
 };
 
-// Get all Bills for a Property
+// GET ALL BILLS FOR A PROPERTY
 export const getBills = async (req, res) => {
   try {
     if (req.authRole !== "owner") {
       return res.status(403).json({
-        message: "Only owners can access bills.",
+        success: false,
+        message: "Only owners can view these bills.",
       });
     }
 
     const { propertyId } = req.params;
+    const { unitId, tenantId } = req.query;
 
     const property = await getOwnedProperty(propertyId, req.user._id);
 
     if (!property) {
       return res.status(404).json({
-        message: "Property not found or access denied.",
+        success: false,
+        message: "Property not found.",
       });
     }
 
@@ -164,111 +222,126 @@ export const getBills = async (req, res) => {
       property: property._id,
     };
 
-    if (req.query.unitId) {
-      if (!mongoose.isValidObjectId(req.query.unitId)) {
+    if (unitId) {
+      if (!mongoose.Types.ObjectId.isValid(unitId)) {
         return res.status(400).json({
+          success: false,
           message: "Invalid unit ID.",
         });
       }
 
-      filter.unit = req.query.unitId;
+      filter.unit = unitId;
     }
 
-    if (req.query.tenantId) {
-      if (!mongoose.isValidObjectId(req.query.tenantId)) {
+    if (tenantId) {
+      if (!mongoose.Types.ObjectId.isValid(tenantId)) {
         return res.status(400).json({
+          success: false,
           message: "Invalid tenant ID.",
         });
       }
 
-      filter.tenant = req.query.tenantId;
+      filter.tenant = tenantId;
     }
 
-    const bills = await Bill.find(filter)
-      .populate("unit", "unitName")
-      .populate("tenant", "fullName email phone")
-      .sort({ createdAt: -1 });
+    const bills = await populateBill(Bill.find(filter).sort({ createdAt: -1 }));
 
     return res.status(200).json({
-      message: "Bills fetched successfully.",
+      success: true,
+      count: bills.length,
       data: bills,
     });
   } catch (error) {
+    console.error("Get bills error:", error);
+
     return res.status(500).json({
-      message: error.message,
+      success: false,
+      message: "Failed to fetch bills.",
     });
   }
 };
 
-// Get One Bill
+// GET SINGLE BILL
 export const getBillById = async (req, res) => {
   try {
     if (req.authRole !== "owner") {
       return res.status(403).json({
-        message: "Only owners can access bills.",
+        success: false,
+        message: "Only owners can view this bill.",
       });
     }
 
     const { propertyId, billId } = req.params;
 
-    const property = await getOwnedProperty(propertyId, req.user._id);
-
-    if (!property) {
-      return res.status(404).json({
-        message: "Property not found or access denied.",
-      });
-    }
-
-    if (!mongoose.isValidObjectId(billId)) {
+    if (!mongoose.Types.ObjectId.isValid(billId)) {
       return res.status(400).json({
+        success: false,
         message: "Invalid bill ID.",
       });
     }
 
-    const bill = await Bill.findOne({
-      _id: billId,
-      property: property._id,
-    });
+    const property = await getOwnedProperty(propertyId, req.user._id);
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: "Property not found.",
+      });
+    }
+
+    const bill = await populateBill(
+      Bill.findOne({
+        _id: billId,
+        property: property._id,
+      }),
+    );
 
     if (!bill) {
       return res.status(404).json({
+        success: false,
         message: "Bill not found.",
       });
     }
 
     return res.status(200).json({
-      message: "Bill fetched successfully.",
+      success: true,
       data: bill,
     });
   } catch (error) {
+    console.error("Get bill error:", error);
+
     return res.status(500).json({
-      message: error.message,
+      success: false,
+      message: "Failed to fetch bill.",
     });
   }
 };
 
+// UPDATE BILL
 export const updateBill = async (req, res) => {
   try {
     if (req.authRole !== "owner") {
       return res.status(403).json({
+        success: false,
         message: "Only owners can update bills.",
       });
     }
 
     const { propertyId, billId } = req.params;
-    const { billName, category, amount, month, year, dueDate } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(billId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid bill ID.",
+      });
+    }
 
     const property = await getOwnedProperty(propertyId, req.user._id);
 
     if (!property) {
       return res.status(404).json({
-        message: "Property not found or access denied.",
-      });
-    }
-
-    if (!mongoose.isValidObjectId(billId)) {
-      return res.status(400).json({
-        message: "Invalid bill ID.",
+        success: false,
+        message: "Property not found.",
       });
     }
 
@@ -279,47 +352,51 @@ export const updateBill = async (req, res) => {
 
     if (!bill) {
       return res.status(404).json({
+        success: false,
         message: "Bill not found.",
       });
     }
 
-    // Update bill name
+    const {
+      billName,
+      category,
+      amount,
+      month,
+      year,
+      startDate,
+      endDate,
+      dueDate,
+    } = req.body;
+
     if (billName !== undefined) {
       if (typeof billName !== "string" || !billName.trim()) {
         return res.status(400).json({
-          message: "Bill name cannot be empty.",
+          success: false,
+          message: "Bill name is required.",
         });
       }
 
       bill.billName = billName.trim();
     }
 
-    // Update category
     if (category !== undefined) {
-      if (typeof category !== "string") {
+      if (!allowedCategories.includes(category)) {
         return res.status(400).json({
+          success: false,
           message: "Invalid bill category.",
         });
       }
 
-      const normalizedCategory = category.toLowerCase().trim();
-
-      if (!allowedCategories.includes(normalizedCategory)) {
-        return res.status(400).json({
-          message: "Invalid bill category.",
-        });
-      }
-
-      bill.category = normalizedCategory;
+      bill.category = category;
     }
 
-    // Update amount
     if (amount !== undefined) {
       const billAmount = Number(amount);
 
       if (!Number.isFinite(billAmount) || billAmount <= 0) {
         return res.status(400).json({
-          message: "Please enter a valid bill amount.",
+          success: false,
+          message: "Enter a valid bill amount.",
         });
       }
 
@@ -327,50 +404,74 @@ export const updateBill = async (req, res) => {
     }
 
     if (month !== undefined) {
-      const value = Number(month);
+      const billMonth = Number(month);
 
-      if (!Number.isInteger(value) || value < 1 || value > 12) {
+      if (!Number.isInteger(billMonth) || billMonth < 1 || billMonth > 12) {
         return res.status(400).json({
-          message: "Invalid billing month.",
+          success: false,
+          message: "Enter a valid bill month.",
         });
       }
 
-      bill.month = value;
+      bill.month = billMonth;
     }
 
     if (year !== undefined) {
-      const value = Number(year);
+      const billYear = Number(year);
 
-      if (!Number.isInteger(value) || value < 2000) {
+      if (!Number.isInteger(billYear) || billYear < 2000) {
         return res.status(400).json({
-          message: "Invalid billing year.",
+          success: false,
+          message: "Enter a valid bill year.",
         });
       }
 
-      bill.year = value;
+      bill.year = billYear;
+    }
+
+    if (startDate !== undefined) {
+      bill.startDate = startDate;
+    }
+
+    if (endDate !== undefined) {
+      bill.endDate = endDate;
     }
 
     if (dueDate !== undefined) {
-      const value = new Date(dueDate);
-
-      if (!dueDate || Number.isNaN(value.getTime())) {
+      if (!isValidDate(dueDate)) {
         return res.status(400).json({
-          message: "Invalid due date.",
+          success: false,
+          message: "Enter a valid due date.",
         });
       }
 
-      bill.dueDate = value;
+      bill.dueDate = dueDate;
+    }
+
+    const dateError = validateBillDates(bill.startDate, bill.endDate);
+
+    if (dateError) {
+      return res.status(400).json({
+        success: false,
+        message: dateError,
+      });
     }
 
     await bill.save();
 
+    const updatedBill = await populateBill(Bill.findById(bill._id));
+
     return res.status(200).json({
+      success: true,
       message: "Bill updated successfully.",
-      data: bill,
+      data: updatedBill,
     });
   } catch (error) {
+    console.error("Update bill error:", error);
+
     return res.status(500).json({
-      message: error.message,
+      success: false,
+      message: "Failed to update bill.",
     });
   }
 };

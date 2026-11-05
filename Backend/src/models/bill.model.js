@@ -21,8 +21,6 @@ const billSchema = new mongoose.Schema(
       type: String,
       enum: ["rent", "electricity", "water", "other"],
       required: true,
-      lowercase: true,
-      trim: true,
     },
     billName: {
       type: String,
@@ -45,12 +43,34 @@ const billSchema = new mongoose.Schema(
       required: true,
       min: 2000,
     },
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
+      type: Date,
+      required: true,
+      validate: {
+        validator(value) {
+          return !this.startDate || value >= this.startDate;
+        },
+        message: "End date cannot be before start date.",
+      },
+    },
     dueDate: {
       type: Date,
       required: true,
     },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
+
+billSchema.pre("validate", function () {
+  if (this.startDate && this.endDate && this.endDate < this.startDate) {
+    this.invalidate("endDate", "End date cannot be before start date.");
+  }
+});
 
 export const Bill = mongoose.model("Bill", billSchema);
