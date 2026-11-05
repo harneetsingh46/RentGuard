@@ -1,5 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import apiClient from "../../ApiClient/interceptor.js";
 import {
@@ -57,6 +56,7 @@ const Documents = () => {
 
   const [loadingTenants, setLoadingTenants] = useState(true);
   const [documents, setDocuments] = useState([]);
+  const documentRequestId = useRef(0);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
 
   const [documentName, setDocumentName] = useState("");
@@ -119,8 +119,11 @@ const Documents = () => {
   }, []);
 
   const fetchDocuments = useCallback(async (tenantId) => {
+    const requestId = ++documentRequestId.current;
+
     if (!isValidMongoId(tenantId)) {
       setDocuments([]);
+      setLoadingDocuments(false);
       return;
     }
 
@@ -131,14 +134,22 @@ const Documents = () => {
       const response = await apiClient.get(
         `/document/tenants/${tenantId}`
       );
-      setDocuments(response.data?.data || []);
+
+      // Ignore a response if another tenant's request started afterwards.
+      if (requestId === documentRequestId.current) {
+        setDocuments(response.data?.data || []);
+      }
     } catch (err) {
+      if (requestId !== documentRequestId.current) return;
+
       setDocuments([]);
       const message = err.response?.data?.message || "Failed to load tenant documents.";
       setError(message);
       toast.error(message);
     } finally {
-      setLoadingDocuments(false);
+      if (requestId === documentRequestId.current) {
+        setLoadingDocuments(false);
+      }
     }
   }, []);
 
@@ -383,8 +394,8 @@ const Documents = () => {
 
     const searchableText = [
       tenant.fullName,
-      tenant.user?.username,
-      tenant.user?.email,
+      tenant.fullName,
+      tenant.email,
       tenant.email,
       tenant.propertyName,
       tenant.propertyAddress,
@@ -475,7 +486,7 @@ const Documents = () => {
         </header>
 
         {/* Error message */}
-        {error && (
+        {/* {error && (
           <div
             role="alert"
             className="mb-4 flex items-start justify-between gap-3 rounded-xs border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
@@ -491,7 +502,7 @@ const Documents = () => {
               <X size={16} />
             </button>
           </div>
-        )}
+        )} */}
 
         {/* Success message */}
         {success && (
@@ -547,11 +558,11 @@ const Documents = () => {
                       event.preventDefault();
                       const tenant = filteredTenants[0];
                       setSelectedTenantId(tenant._id);
-                      setTenantSearch(tenant.fullName || tenant.user?.username || "Unnamed tenant");
+                      setTenantSearch(tenant.fullName || "Unnamed tenant");
                       setShowTenantSuggestions(false);
                     }
                   }}
-                  placeholder={loadingTenants ? "Loading tenants..." : "Search tenant by name, email, property, or unit..."}
+                  placeholder={loadingTenants ? "Loading tenants..." : "Search tenant by name, email, phone, property, or unit..."}
                   disabled={loadingTenants || tenants.length === 0}
                   autoComplete="off"
                   className={`${inputClass} pl-9`}
@@ -575,16 +586,16 @@ const Documents = () => {
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => {
                             setSelectedTenantId(tenant._id);
-                            setTenantSearch(tenant.fullName || tenant.user?.username || "Unnamed tenant");
+                            setTenantSearch(tenant.fullName || "Unnamed tenant");
                             setShowTenantSuggestions(false);
                           }}
                           className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left text-sm hover:bg-yellow-50 focus:bg-yellow-50 focus:outline-none dark:hover:bg-neutral-800 dark:focus:bg-neutral-800"
                         >
                           <span className="font-medium text-stone-900 dark:text-stone-100">
-                            {tenant.fullName || tenant.user?.username || "Unnamed tenant"}
+                            {tenant.fullName || "Unnamed tenant"}
                           </span>
                           <span className="text-xs text-stone-500 dark:text-stone-400">
-                            {[tenant.user?.email || tenant.email, tenant.propertyName, tenant.unit?.unitName].filter(Boolean).join(" · ")}
+                            {[tenant.email || tenant.phone, tenant.propertyName, tenant.unit?.unitName].filter(Boolean).join(" · ")}
                           </span>
                         </button>
                       ))
@@ -616,7 +627,7 @@ const Documents = () => {
             <p className="mt-3 break-words text-sm text-stone-500 dark:text-stone-400">
               Selected:{" "}
               <span className="font-medium text-stone-800 dark:text-stone-200">
-                {selectedTenant.fullName || selectedTenant.user?.username || "Tenant"}
+                {selectedTenant.fullName || "Tenant"}
               </span>
               {selectedTenant.propertyName ? ` · ${selectedTenant.propertyName}` : ""}
             </p>
@@ -676,6 +687,7 @@ const Documents = () => {
                       }
                       placeholder="e.g. Rental Agreement"
                       maxLength={100}
+                      required
                       className={inputClass}
                     />
                   </div>
@@ -718,6 +730,7 @@ const Documents = () => {
                       onChange={(event) =>
                         setFile(event.target.files?.[0] || null)
                       }
+                      required
                       className={`${inputClass} file:mr-3 file:rounded-xs file:border-0 file:bg-yellow-300 file:px-2 file:py-1 file:font-medium file:text-black hover:file:bg-yellow-400`}
                     />
                   </div>

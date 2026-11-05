@@ -6,7 +6,7 @@ import {
   updateProfile,
 } from "../controllers/user.controller.js";
 
-import { protect } from "../utils/protect.js";
+import { isOwner, protect } from "../utils/protect.js";
 
 const router = express.Router();
 
@@ -15,6 +15,6 @@ router.post("/register", register);
 
 // Protected owner routes
 router.get("/get-user", protect, getUser);
-router.put("/update-profile", protect, updateProfile);
+router.put("/update-profile", protect,isOwner, updateProfile);
 
 export default router;

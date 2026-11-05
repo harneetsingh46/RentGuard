@@ -1,8 +1,8 @@
-
 import { createHmac, randomInt, timingSafeEqual } from "crypto";
-
+import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { Otp } from "../models/otp.model.js";
+import { Tenant } from "../models/tenant.model.js";
 import genToken from "../utils/genToken.js";
 
 import { OTP_CONFIG, OTP_CHANNEL } from "../config/policy.js";
@@ -50,13 +50,13 @@ const compareOtp = (enteredOtp, storedHash) => {
 };
 
 // Cookie settings
-const cookieOptions = {
+const getCookieOptions = (role) => ({
   httpOnly: true,
   secure: process.env.NODE_ENV === "production",
   sameSite: "strict",
   path: "/",
-  maxAge: 24 * 60 * 60 * 1000,
-};
+  maxAge: role === "tenant" ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
+});
 
 // Cookie clearing settings
 const clearCookieOptions = {
@@ -97,19 +97,14 @@ export const register = async (req, res) => {
     const normalizedPhone = phone.trim();
 
     // Username validation
-    if (
-      normalizedUsername.length < 3 ||
-      normalizedUsername.length > 30
-    ) {
+    if (normalizedUsername.length < 3 || normalizedUsername.length > 30) {
       return res.status(400).json({
         message: "Username must be between 3 and 30 characters",
       });
     }
 
     // Email validation
-    if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail)
-    ) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail)) {
       return res.status(400).json({
         message: "Please enter a valid email address",
       });
@@ -196,38 +191,47 @@ export const requestOtp = async (req, res) => {
       });
     }
 
-    // Find owner by email or phone
-    const user = await User.findOne({
-      [contactType]: normalizedContact,
-    });
+    // Search both collections
+    const [owner, tenants] = await Promise.all([
+      User.findOne({
+        [contactType]: normalizedContact,
+        role: "owner",
+        isActive: true,
+      }),
 
-    // Same response for existing and non-existing accounts
-    const responseMessage =
-      "If an active owner account exists, an OTP will be sent.";
+      Tenant.find({
+        [contactType]: normalizedContact,
+        isActive: true,
+      }),
+    ]);
 
-    if (!user || !user.isActive || user.role !== "owner") {
+    console.log("Owner found:", !!owner);
+    console.log("Tenants found:", tenants.length);
+    console.log("Contact type:", contactType);
+    console.log("Normalized contact:", normalizedContact);
+
+    const responseMessage = "If an active account exists, an OTP will be sent.";
+
+    // Don't reveal whether an account exists
+    if (!owner && tenants.length === 0) {
       return res.status(200).json({
         message: responseMessage,
       });
     }
 
-    // Generate OTP using configured length
-    const otpLength = OTP_CONFIG.LENGTH;
+    // Generate OTP
+    const otp = randomInt(
+      10 ** (OTP_CONFIG.LENGTH - 1),
+      10 ** OTP_CONFIG.LENGTH,
+    ).toString();
 
-    const minOtp = 10 ** (otpLength - 1);
-    const maxOtp = 10 ** otpLength;
-
-    const otp = randomInt(minOtp, maxOtp).toString();
-
-    // Hash OTP
     const hashedOtp = hashOtp(otp);
 
-    // Calculate expiry
     const expiresAt = new Date(
-      Date.now() + OTP_CONFIG.EXPIRY_MINUTES * 60 * 1000
+      Date.now() + OTP_CONFIG.EXPIRY_MINUTES * 60 * 1000,
     );
 
-    // Create or replace existing OTP
+    // Create or replace OTP
     try {
       await Otp.findOneAndUpdate(
         { contact: normalizedContact },
@@ -243,13 +247,10 @@ export const requestOtp = async (req, res) => {
           new: true,
           runValidators: true,
           setDefaultsOnInsert: true,
-        }
+        },
       );
     } catch (error) {
-      // Handle concurrent requests creating the same contact
-      if (error.code !== 11000) {
-        throw error;
-      }
+      if (error.code !== 11000) throw error;
 
       await Otp.updateOne(
         { contact: normalizedContact },
@@ -259,11 +260,10 @@ export const requestOtp = async (req, res) => {
             attempts: 0,
             expiresAt,
           },
-        }
+        },
       );
     }
 
-    // Development OTP delivery
     if (OTP_CHANNEL === "console") {
       console.log(`RentGuard OTP for ${normalizedContact}: ${otp}`);
     }
@@ -279,23 +279,32 @@ export const requestOtp = async (req, res) => {
     });
   }
 };
-
 // --------------------------------------------------
 // VERIFY OTP AND LOGIN OWNER
 // --------------------------------------------------
 
 export const verifyOtp = async (req, res) => {
   try {
-    const { contact, otp } = req.body;
+    const { contact, otp, role, accountId } = req.body;
 
-    // Validate contact
     if (!contact || typeof contact !== "string") {
       return res.status(400).json({
         message: "Email or phone is required",
       });
     }
 
-    // Validate OTP
+    if (role && !["owner", "tenant"].includes(role)) {
+      return res.status(400).json({
+        message: "Invalid account role",
+      });
+    }
+
+    if (accountId && !mongoose.Types.ObjectId.isValid(accountId)) {
+      return res.status(400).json({
+        message: "Invalid account selection",
+      });
+    }
+
     if (
       typeof otp !== "string" ||
       otp.length !== OTP_CONFIG.LENGTH ||
@@ -328,41 +337,26 @@ export const verifyOtp = async (req, res) => {
 
     const now = new Date();
 
-    // Check expiry
     if (otpRecord.expiresAt <= now) {
-      await Otp.deleteOne({
-        _id: otpRecord._id,
-      });
+      await Otp.deleteOne({ _id: otpRecord._id });
 
       return res.status(400).json({
         message: "OTP has expired. Please request a new OTP.",
       });
     }
 
-    // Check maximum attempts
     if (otpRecord.attempts >= OTP_CONFIG.MAX_ATTEMPTS) {
-      await Otp.deleteOne({
-        _id: otpRecord._id,
-      });
+      await Otp.deleteOne({ _id: otpRecord._id });
 
       return res.status(400).json({
         message: "Too many incorrect attempts. Please request a new OTP.",
       });
     }
 
-    // Calculate entered OTP hash
-    const enteredHash = hashOtp(otp);
+    // Compare OTP safely
+    const isOtpCorrect = compareOtp(otp, otpRecord.hash);
 
-    const enteredHashBuffer = Buffer.from(enteredHash, "hex");
-    const savedHashBuffer = Buffer.from(otpRecord.hash, "hex");
-
-    const isOtpCorrect =
-      enteredHashBuffer.length === savedHashBuffer.length &&
-      timingSafeEqual(enteredHashBuffer, savedHashBuffer);
-
-    // Handle incorrect OTP
     if (!isOtpCorrect) {
-      // Increment attempts atomically
       const updateResult = await Otp.updateOne(
         {
           _id: otpRecord._id,
@@ -372,10 +366,9 @@ export const verifyOtp = async (req, res) => {
         },
         {
           $inc: { attempts: 1 },
-        }
+        },
       );
 
-      // Record may have been consumed or replaced
       if (updateResult.modifiedCount === 0) {
         return res.status(400).json({
           message: "Invalid or expired OTP",
@@ -384,11 +377,7 @@ export const verifyOtp = async (req, res) => {
 
       const updatedOtp = await Otp.findById(otpRecord._id);
 
-      // Delete OTP after maximum attempts
-      if (
-        !updatedOtp ||
-        updatedOtp.attempts >= OTP_CONFIG.MAX_ATTEMPTS
-      ) {
+      if (!updatedOtp || updatedOtp.attempts >= OTP_CONFIG.MAX_ATTEMPTS) {
         await Otp.deleteOne({
           _id: otpRecord._id,
           attempts: { $gte: OTP_CONFIG.MAX_ATTEMPTS },
@@ -401,24 +390,101 @@ export const verifyOtp = async (req, res) => {
 
       return res.status(400).json({
         message: "Invalid OTP",
-        remainingAttempts:
-          OTP_CONFIG.MAX_ATTEMPTS - updatedOtp.attempts,
+        remainingAttempts: OTP_CONFIG.MAX_ATTEMPTS - updatedOtp.attempts,
       });
     }
 
-    // Find owner
-    const user = await User.findOne({
-      [contactType]: normalizedContact,
+    // Find matching active accounts
+    const [owner, tenants] = await Promise.all([
+      User.findOne({
+        [contactType]: normalizedContact,
+        role: "owner",
+        isActive: true,
+      }),
+
+      Tenant.find({
+        [contactType]: normalizedContact,
+        isActive: true,
+      }),
+    ]);
+
+    const accounts = [];
+
+    if (owner) {
+      accounts.push({
+        accountId: owner._id.toString(),
+        role: "owner",
+        displayName: owner.username,
+        account: owner,
+      });
+    }
+
+    tenants.forEach((tenant) => {
+      accounts.push({
+        accountId: tenant._id.toString(),
+        role: "tenant",
+        displayName: tenant.fullName,
+        account: tenant,
+      });
     });
 
-    if (!user || !user.isActive || user.role !== "owner") {
+    if (accounts.length === 0) {
+      await Otp.deleteOne({ _id: otpRecord._id });
+
       return res.status(401).json({
-        message: "Unable to login. Please contact support.",
+        message: "No active account found. Please contact support.",
       });
     }
 
-    // Atomically consume OTP.
-    // Only one simultaneous request can successfully delete this record.
+    // If multiple accounts match, ask user to select one
+    if (!role && accounts.length > 1) {
+      return res.status(200).json({
+        message: "Please select an account",
+        requiresAccountSelection: true,
+        accounts: accounts.map(({ accountId, role, displayName }) => ({
+          accountId,
+          role,
+          displayName,
+        })),
+      });
+    }
+
+    const roleAccounts = role
+      ? accounts.filter((item) => item.role === role)
+      : accounts;
+
+    if (roleAccounts.length === 0) {
+      return res.status(400).json({
+        message: "Invalid account selection",
+      });
+    }
+
+    if (!accountId && roleAccounts.length > 1) {
+      return res.status(200).json({
+        message: "Please select a tenancy",
+        requiresAccountSelection: true,
+        accounts: roleAccounts.map(({ accountId, role, displayName }) => ({
+          accountId,
+          role,
+          displayName,
+        })),
+      });
+    }
+
+    const selectedAccount = accountId
+      ? roleAccounts.find((item) => item.accountId === accountId)
+      : roleAccounts[0];
+
+    if (!selectedAccount) {
+      return res.status(400).json({
+        message: "Invalid account selection",
+      });
+    }
+
+    const account = selectedAccount.account;
+    const selectedRole = selectedAccount.role;
+
+    // Consume OTP atomically
     const consumedOtp = await Otp.findOneAndDelete({
       _id: otpRecord._id,
       hash: otpRecord.hash,
@@ -432,32 +498,40 @@ export const verifyOtp = async (req, res) => {
       });
     }
 
-    // Set default token version if missing
-    if (user.tokenVersion === undefined || user.tokenVersion === null) {
-      user.tokenVersion = 0;
+    // Set token version if missing
+    if (account.tokenVersion === undefined || account.tokenVersion === null) {
+      account.tokenVersion = 0;
     }
 
-    // Mark first successful OTP login
-    if (!user.verifiedAt) {
-      user.verifiedAt = new Date();
+    // Mark account contact as verified
+    if (selectedRole === "owner") {
+      if (!account.verifiedAt) {
+        account.verifiedAt = new Date();
+      }
+    } else {
+      account.contactVerified = true;
     }
 
-    await user.save();
+    await account.save();
 
     // Generate JWT
-    const token = genToken(user);
+    const token = genToken({
+      ...account.toObject(),
+      role: selectedRole,
+    });
 
     return res
       .status(200)
-      .cookie("token", token, cookieOptions)
+      .cookie("token", token, getCookieOptions(selectedRole))
       .json({
         message: "Login successful",
         data: {
-          _id: user._id,
-          username: user.username,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
+          _id: account._id,
+          username: account.username || account.fullName,
+          fullName: account.fullName,
+          email: account.email,
+          phone: account.phone,
+          role: selectedRole,
         },
       });
   } catch (error) {
@@ -476,70 +550,45 @@ export const verifyOtp = async (req, res) => {
 export const getUser = async (req, res) => {
   try {
     const user = req.user;
+    const role = req.authRole;
 
     return res.status(200).json({
-      message: "Owner details fetched successfully",
+      message: "Account details fetched successfully",
       data: {
         _id: user._id,
-        username: user.username,
+        username: user.username || user.fullName,
+        fullName: user.fullName,
         email: user.email,
         phone: user.phone,
-        role: user.role,
+        role,
         isActive: user.isActive,
-        verifiedAt: user.verifiedAt,
+        ...(role === "owner"
+          ? { verifiedAt: user.verifiedAt }
+          : { contactVerified: user.contactVerified }),
       },
     });
   } catch (error) {
-    console.error("Get owner error:", error);
+    console.error("Get account error:", error);
 
     return res.status(500).json({
-      message: "Unable to fetch owner details",
+      message: "Unable to fetch account details",
     });
   }
 };
-
 // --------------------------------------------------
 // LOGOUT CURRENT DEVICE
 // --------------------------------------------------
 
 export const logout = async (req, res) => {
   try {
-    return res
-      .clearCookie("token", clearCookieOptions)
-      .status(200)
-      .json({
-        message: "Logout successful",
-      });
+    return res.clearCookie("token", clearCookieOptions).status(200).json({
+      message: "Logout successful",
+    });
   } catch (error) {
     console.error("Logout error:", error);
 
     return res.status(500).json({
       message: "Logout failed",
-    });
-  }
-};
-
-// --------------------------------------------------
-// LOGOUT ALL DEVICES
-// --------------------------------------------------
-
-export const logoutAllDevices = async (req, res) => {
-  try {
-    await User.findByIdAndUpdate(req.user._id, {
-      $inc: { tokenVersion: 1 },
-    });
-
-    return res
-      .clearCookie("token", clearCookieOptions)
-      .status(200)
-      .json({
-        message: "Logged out from all devices successfully",
-      });
-  } catch (error) {
-    console.error("Logout all devices error:", error);
-
-    return res.status(500).json({
-      message: "Unable to logout from all devices",
     });
   }
 };
@@ -565,10 +614,7 @@ export const updateProfile = async (req, res) => {
 
       const normalizedUsername = username.trim().toLowerCase();
 
-      if (
-        normalizedUsername.length < 3 ||
-        normalizedUsername.length > 30
-      ) {
+      if (normalizedUsername.length < 3 || normalizedUsername.length > 30) {
         return res.status(400).json({
           message: "Username must be between 3 and 30 characters",
         });
@@ -595,7 +641,8 @@ export const updateProfile = async (req, res) => {
 
       if (normalizedEmail !== req.user.email) {
         return res.status(400).json({
-          message: "Email changes require OTP verification. This feature is not available yet.",
+          message:
+            "Email changes require OTP verification. This feature is not available yet.",
         });
       }
     }
@@ -617,7 +664,8 @@ export const updateProfile = async (req, res) => {
 
       if (normalizedPhone !== req.user.phone) {
         return res.status(400).json({
-          message: "Phone changes require OTP verification. This feature is not available yet.",
+          message:
+            "Phone changes require OTP verification. This feature is not available yet.",
         });
       }
     }
@@ -651,7 +699,7 @@ export const updateProfile = async (req, res) => {
       {
         new: true,
         runValidators: true,
-      }
+      },
     );
 
     if (!updatedUser) {

@@ -1,141 +1,51 @@
+
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import apiClient from "../../ApiClient/interceptor";
 
 const OwnerProfile = () => {
-  const [profile, setProfile] = useState({
-    fullName: "Rahul Sharma",
-    username: "rahulsharma",
-    email: "rahul.sharma@example.com",
-    phone: "9876543210",
-  });
+  const { user, setUser } = useAuth();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState(profile);
-  const [picturePreview, setPicturePreview] = useState("");
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
 
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+  const [formData, setFormData] = useState({
+    username: "",
   });
 
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync form data with authenticated user
   useEffect(() => {
-    return () => {
-      if (picturePreview) {
-        URL.revokeObjectURL(picturePreview);
-      }
-    };
-  }, [picturePreview]);
+    if (user) {
+      setFormData({
+        username: user.username || "",
+      });
+    }
+  }, [user]);
 
   const inputClass =
-    "mt-2 w-full rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-[#171717] outline-none transition focus:border-[#f9c83d] focus:ring-2 focus:ring-[#f9c83d]/20 dark:border-neutral-700 dark:bg-[#1d1d1d] dark:text-[#F1F0ED]";
+    "mt-2 w-full min-w-0 rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-[#171717] outline-none transition focus:border-[#f9c83d] focus:ring-2 focus:ring-[#f9c83d]/20 dark:border-neutral-700 dark:bg-[#1d1d1d] dark:text-[#F1F0ED]";
 
   const labelClass =
     "text-sm font-medium text-neutral-700 dark:text-neutral-300";
 
-  const openModal = () => {
-    setFormData({ ...profile });
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-    });
-    setError("");
-    setMessage("");
-    setIsModalOpen(true);
-  };
+  // Profile details
+  const displayName = user?.fullName || user?.username || "Owner";
+  const username = user?.username || "";
+  const email = user?.email || "Not available";
+  const phone = user?.phone || "Not available";
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setError("");
-  };
+  // Check whether username has changed
+  const normalizedUsername = formData.username.trim().toLowerCase();
 
-  const handleProfileChange = (e) => {
-    const { name, value } = e.target;
+  const hasUsernameChanged =
+    normalizedUsername !== (user?.username || "").toLowerCase();
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-
-    setPasswordData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handlePictureChange = (e) => {
-    const file = e.target.files?.[0];
-
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setError("Please select a valid image.");
-      e.target.value = "";
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError("Profile picture must be smaller than 5 MB.");
-      e.target.value = "";
-      return;
-    }
-
-    const preview = URL.createObjectURL(file);
-
-    setPicturePreview((previousPreview) => {
-      if (previousPreview) {
-        URL.revokeObjectURL(previousPreview);
-      }
-      return preview;
-    });
-
-    setError("");
-    setMessage("");
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setError("");
-    setMessage("");
-
-    const { currentPassword, newPassword, confirmPassword } = passwordData;
-
-    const wantsPasswordChange =
-      currentPassword || newPassword || confirmPassword;
-
-    if (wantsPasswordChange) {
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        setError("Fill in all three password fields to change your password.");
-        return;
-      }
-
-      if (newPassword.length < 8) {
-        setError("Your new password must contain at least 8 characters.");
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        setError("Your new password and confirmation do not match.");
-        return;
-      }
-    }
-
-    setProfile({ ...formData });
-    setMessage("Profile details saved in this demo.");
-    setIsModalOpen(false);
-
-    // Backend integration is required to persist profile changes,
-    // upload the picture, or actually change the account password.
-  };
-
-  const initials = profile.fullName
+  // Profile initials
+  const initials = displayName
     .trim()
     .split(/\s+/)
     .filter(Boolean)
@@ -144,9 +54,109 @@ const OwnerProfile = () => {
     .join("")
     .toUpperCase();
 
+  // Open modal
+  const openModal = () => {
+    setFormData({
+      username: user?.username || "",
+    });
+
+    setError("");
+    setMessage("");
+    setIsModalOpen(true);
+  };
+
+  // Close modal
+  const closeModal = () => {
+    if (isSaving) return;
+
+    setIsModalOpen(false);
+    setError("");
+  };
+
+  // Handle input changes
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    setError("");
+    setMessage("");
+  };
+
+  // Update profile
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    setError("");
+    setMessage("");
+
+    const updatedUsername = formData.username.trim().toLowerCase();
+
+    if (!updatedUsername) {
+      setError("Username cannot be empty.");
+      return;
+    }
+
+    if (
+      updatedUsername.length < 3 ||
+      updatedUsername.length > 30
+    ) {
+      setError("Username must be between 3 and 30 characters.");
+      return;
+    }
+
+    // No API request if nothing changed
+    if (!hasUsernameChanged) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+
+      const response = await apiClient.put("/user/update-profile", {
+        username: updatedUsername,
+      });
+
+      const updatedUser = response.data.data;
+
+      // Update global authentication state
+      setUser((prev) => ({
+        ...prev,
+        ...updatedUser,
+      }));
+
+      setMessage("Profile updated successfully.");
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Profile update error:", error);
+
+      setError(
+        error.response?.data?.message ||
+          "Unable to update your profile. Please try again."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Loading state
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f5f0] dark:bg-[#101010]">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          Loading profile...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f5f0] px-4 py-8 text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED] sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
+
         {/* Page Header */}
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
@@ -174,30 +184,25 @@ const OwnerProfile = () => {
 
         {/* Profile Card */}
         <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-[#171717]">
+
           {/* Profile Overview */}
           <div className="flex flex-col justify-between gap-6 border-b border-neutral-100 p-6 dark:border-neutral-800 sm:flex-row sm:items-center sm:p-8">
             <div className="flex items-center gap-5">
               <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-neutral-200 bg-[#f7f5f0] text-2xl font-semibold text-neutral-600 dark:border-neutral-700 dark:bg-[#242424] dark:text-neutral-300">
-                {picturePreview ? (
-                  <img
-                    src={picturePreview}
-                    alt="Owner profile"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  initials
-                )}
+                {initials}
               </div>
 
               <div className="min-w-0">
-                <h2 className="text-xl font-semibold">{profile.fullName}</h2>
+                <h2 className="text-xl font-semibold">
+                  {displayName}
+                </h2>
 
                 <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                   Owner Account
                 </p>
 
                 <p className="mt-1 break-all text-sm text-neutral-500 dark:text-neutral-400">
-                  {profile.email}
+                  {email}
                 </p>
               </div>
             </div>
@@ -215,7 +220,9 @@ const OwnerProfile = () => {
           {/* Personal Details */}
           <div className="p-6 sm:p-8">
             <div className="mb-6">
-              <h3 className="text-base font-semibold">Personal Details</h3>
+              <h3 className="text-base font-semibold">
+                Personal Details
+              </h3>
 
               <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                 Your registered contact and account information.
@@ -223,40 +230,42 @@ const OwnerProfile = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-x-12 gap-y-7 sm:grid-cols-2">
+
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Full Name
                 </p>
-                <p className="mt-2 font-medium">{profile.fullName}</p>
+                <p className="mt-2 font-medium">{displayName}</p>
               </div>
 
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Username
                 </p>
-                <p className="mt-2 font-medium">@{profile.username}</p>
+                <p className="mt-2 font-medium">@{username}</p>
               </div>
 
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Email Address
                 </p>
-                <p className="mt-2 break-all font-medium">{profile.email}</p>
+                <p className="mt-2 break-all font-medium">{email}</p>
               </div>
 
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Phone Number
                 </p>
-                <p className="mt-2 font-medium">{profile.phone}</p>
+                <p className="mt-2 font-medium">{phone}</p>
               </div>
+
             </div>
           </div>
 
           {/* Footer Note */}
           <div className="border-t border-neutral-100 bg-neutral-50 px-6 py-4 dark:border-neutral-800 dark:bg-[#1d1d1d] sm:px-8">
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              Keep your personal information secure and up to date.
+              Email and phone changes require OTP verification.
             </p>
           </div>
         </section>
@@ -282,17 +291,20 @@ const OwnerProfile = () => {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget) closeModal();
+            if (e.target === e.currentTarget) {
+              closeModal();
+            }
           }}
         >
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="profile-modal-title"
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-[#171717]"
+            className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-[#171717]"
           >
+
             {/* Modal Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-100 bg-white p-6 dark:border-neutral-800 dark:bg-[#171717] sm:p-7">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-100 bg-white px-6 py-5 dark:border-neutral-800 dark:bg-[#171717] sm:px-8">
               <div>
                 <h2
                   id="profile-modal-title"
@@ -302,79 +314,44 @@ const OwnerProfile = () => {
                 </h2>
 
                 <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                  Edit your personal details and account security.
+                  Update your account username.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={closeModal}
+                disabled={isSaving}
                 aria-label="Close modal"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-neutral-500 transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-neutral-500 transition hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800"
               >
                 ×
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8 p-6 sm:p-7">
-              {/* Profile Picture */}
-              <div>
-                <h3 className="font-semibold">Profile Picture</h3>
-
-                <div className="mt-4 flex flex-wrap items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[#f7f5f0] font-semibold text-neutral-600 dark:bg-[#242424] dark:text-neutral-300">
-                    {picturePreview ? (
-                      <img
-                        src={picturePreview}
-                        alt="Profile preview"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      initials
-                    )}
-                  </div>
-
-                  <label className="cursor-pointer rounded-lg border border-neutral-200 px-4 py-2.5 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800">
-                    Choose Image
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      onChange={handlePictureChange}
-                      className="hidden"
-                    />
-                  </label>
-
-                  <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Max 5 MB
-                  </span>
-                </div>
-              </div>
+            {/* Form */}
+            <form
+              onSubmit={handleSubmit}
+              className="space-y-7 p-6 sm:p-8"
+            >
 
               {/* Personal Information */}
               <div>
-                <h3 className="font-semibold">Personal Information</h3>
+                <h3 className="text-base font-semibold text-neutral-800 dark:text-neutral-100">
+                  Personal Information
+                </h3>
 
-                <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="fullName" className={labelClass}>
-                      Full Name
-                    </label>
-                    <input
-                      id="fullName"
-                      name="fullName"
-                      type="text"
-                      value={formData.fullName}
-                      onChange={handleProfileChange}
-                      className={inputClass}
-                      required
-                      maxLength={100}
-                    />
-                  </div>
+                <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-start">
 
-                  <div>
-                    <label htmlFor="username" className={labelClass}>
+                  {/* Username */}
+                  <div className="w-full min-w-0 flex-1">
+                    <label
+                      htmlFor="username"
+                      className={labelClass}
+                    >
                       Username
                     </label>
+
                     <input
                       id="username"
                       name="username"
@@ -383,102 +360,58 @@ const OwnerProfile = () => {
                       onChange={handleProfileChange}
                       className={inputClass}
                       required
+                      minLength={3}
                       maxLength={30}
+                      autoComplete="username"
                     />
                   </div>
 
-                  <div>
-                    <label htmlFor="email" className={labelClass}>
+                  {/* Email */}
+                  <div className="w-full min-w-0 flex-1">
+                    <label
+                      htmlFor="email"
+                      className={labelClass}
+                    >
                       Email Address
                     </label>
+
                     <input
                       id="email"
-                      name="email"
                       type="email"
-                      value={formData.email}
-                      onChange={handleProfileChange}
-                      className={inputClass}
-                      required
+                      value={email}
+                      className={`${inputClass} cursor-not-allowed opacity-70`}
+                      readOnly
                     />
                   </div>
 
-                  <div>
-                    <label htmlFor="phone" className={labelClass}>
+                  {/* Phone */}
+                  <div className="w-full min-w-0 flex-1">
+                    <label
+                      htmlFor="phone"
+                      className={labelClass}
+                    >
                       Phone Number
                     </label>
+
                     <input
                       id="phone"
-                      name="phone"
                       type="tel"
-                      value={formData.phone}
-                      onChange={handleProfileChange}
-                      className={inputClass}
-                      required
-                      maxLength={15}
+                      value={phone}
+                      className={`${inputClass} cursor-not-allowed opacity-70`}
+                      readOnly
                     />
                   </div>
+
                 </div>
               </div>
 
-              {/* Password Update */}
-              <div className="border-t border-neutral-100 pt-6 dark:border-neutral-800">
-                <h3 className="font-semibold">Update Password</h3>
-
-                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                  Leave these fields empty if you don't want to change your
-                  password.
+              {/* Information Note */}
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-[#1d1d1d]">
+                <p className="text-sm text-neutral-600 dark:text-neutral-300">
+                  Email and phone number cannot currently be changed.
+                  A separate OTP verification process will be required
+                  to update either contact.
                 </p>
-
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <label htmlFor="currentPassword" className={labelClass}>
-                      Current Password
-                    </label>
-                    <input
-                      id="currentPassword"
-                      name="currentPassword"
-                      type="password"
-                      autoComplete="current-password"
-                      value={passwordData.currentPassword}
-                      onChange={handlePasswordChange}
-                      className={inputClass}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <div>
-                      <label htmlFor="newPassword" className={labelClass}>
-                        New Password
-                      </label>
-                      <input
-                        id="newPassword"
-                        name="newPassword"
-                        type="password"
-                        autoComplete="new-password"
-                        minLength={8}
-                        value={passwordData.newPassword}
-                        onChange={handlePasswordChange}
-                        className={inputClass}
-                      />
-                    </div>
-
-                    <div>
-                      <label htmlFor="confirmPassword" className={labelClass}>
-                        Confirm New Password
-                      </label>
-                      <input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password"
-                        autoComplete="new-password"
-                        minLength={8}
-                        value={passwordData.confirmPassword}
-                        onChange={handlePasswordChange}
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* Error Message */}
@@ -493,20 +426,24 @@ const OwnerProfile = () => {
 
               {/* Modal Actions */}
               <div className="flex flex-col-reverse gap-3 border-t border-neutral-100 pt-5 dark:border-neutral-800 sm:flex-row sm:justify-end">
+
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-lg border border-neutral-200 px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                  disabled={isSaving}
+                  className="rounded-lg border border-neutral-200 px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e]"
+                  disabled={isSaving || !hasUsernameChanged}
+                  className="rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Save Changes
+                  {isSaving ? "Saving..." : "Save Changes"}
                 </button>
+
               </div>
             </form>
           </div>

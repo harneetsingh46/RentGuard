@@ -1,5 +1,5 @@
 import { Property } from "../models/property.model.js";
-
+import mongoose from "mongoose";
 // CREATE PROPERTY
 
 export const createProperty = async (req, res, next) => {
@@ -7,7 +7,7 @@ export const createProperty = async (req, res, next) => {
     const { propertyName, address } = req.body;
 
     // Only owner can create property
-    if (req.user.role !== "owner") {
+    if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owner can create a property!",
       });
@@ -19,22 +19,19 @@ export const createProperty = async (req, res, next) => {
       });
     }
 
+    const normalizedName = propertyName.trim();
+    const normalizedAddress = address.trim();
+
     // Check duplicate property for same owner
     const existingProperty = await Property.findOne({
       owner: req.user._id,
-      address,
+      address: normalizedAddress,
     });
-
-    if (existingProperty) {
-      return res.status(409).json({
-        message: "Property already exists at this address!",
-      });
-    }
 
     const property = await Property.create({
       owner: req.user._id,
-      propertyName,
-      address,
+      propertyName: normalizedName,
+      address: normalizedAddress,
     });
 
     return res.status(201).json({
@@ -53,18 +50,13 @@ export const createProperty = async (req, res, next) => {
 export const getProperty = async (req, res, next) => {
   try {
     // Only owner can access properties
-    if (req.user.role !== "owner") {
+    if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owner can access properties!",
       });
     }
 
-    const {
-      search,
-      pages = 1,
-      limit = 10,
-      sort = "newest",
-    } = req.query;
+    const { search, pages = 1, limit = 10, sort = "newest" } = req.query;
 
     const owner = req.user._id;
 
@@ -154,8 +146,14 @@ export const getOne = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "Invalid property ID!",
+      });
+    }
+
     // Only owner can access
-    if (req.user.role !== "owner") {
+    if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owner can access property details!",
       });
@@ -190,8 +188,14 @@ export const updateProperty = async (req, res, next) => {
     const { propertyName, address } = req.body;
     const { id } = req.params;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "Invalid property ID!",
+      });
+    }
+
     // Only owner can update
-    if (req.user.role !== "owner") {
+    if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owner can update a property!",
       });
@@ -236,8 +240,14 @@ export const deleteProperty = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        message: "Invalid property ID!",
+      });
+    }
+
     // Only owner can delete
-    if (req.user.role !== "owner") {
+    if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owner can delete a property!",
       });

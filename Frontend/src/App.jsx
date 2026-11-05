@@ -12,7 +12,7 @@ import OwnerLayout from "./common/OwnerLayout";
 import Hero from "../src/pages/Hero";
 import Property from "../src/pages/Owner/Property";
 import Tenant from "../src/pages/Owner/Tenant";
-import Rent from "../src/pages/Owner/Rent";
+import Bill from "../src/pages/Owner/Bill";
 import TenantRent from "./pages/Tenant/TenantRent";
 import Documents from "../src/pages/Owner/Documents";
 import OwnerProfile from "../src/pages/Owner/OwnerProfile";
@@ -76,8 +76,8 @@ const router = createBrowserRouter([
             element: <Tenant />,
           },
           {
-            path: "/owner/rent",
-            element: <Rent />,
+            path: "/owner/bill",
+            element: <Bill />,
           },
           {
             path: "/owner/documents",

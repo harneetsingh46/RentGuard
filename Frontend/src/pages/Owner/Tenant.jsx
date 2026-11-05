@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import apiClient from '../../ApiClient/interceptor.js'
 import { useToast } from "../../common/ToastProvider"
-import toast from "react-hot-toast";
 import ConfirmModal from "../../common/ConfirmModal"
 import { Pencil, LogOut, Search, Upload, X, FileText, FileImage, LoaderCircle } from "lucide-react"
 
@@ -26,7 +25,6 @@ const Tenant = () => {
   const [editForm, setEditForm] = useState({
     fullName: '',
     address: '',
-    aadhaarNumber: '',
   })
   const [saving, setSaving] = useState(false)
 
@@ -97,7 +95,6 @@ const Tenant = () => {
     setEditForm({
       fullName: tenant.fullName || '',
       address: tenant.address || '',
-      aadhaarNumber: tenant.aadhaarNumber || '',
     })
     setError('')
     setSuccess('')
@@ -124,12 +121,8 @@ const Tenant = () => {
 
     if (!selectedTenant) return
 
-    if (
-      !editForm.fullName.trim() ||
-      !editForm.address.trim() ||
-      !/^\d{12}$/.test(editForm.aadhaarNumber)
-    ) {
-      setError('Enter the tenant name, address, and a valid 12-digit Aadhaar number.')
+    if (!editForm.fullName.trim() || !editForm.address.trim()) {
+      setError('Enter the tenant name and address.')
       return
     }
 
@@ -143,17 +136,16 @@ const Tenant = () => {
         {
           fullName: editForm.fullName.trim(),
           address: editForm.address.trim(),
-          aadhaarNumber: editForm.aadhaarNumber,
         }
       )
 
       setEditModalOpen(false)
       setSelectedTenant(null)
       setSuccess('Tenant updated successfully.')
-      showToast('Tenant updated successfully.', 'success'); toast.success('Tenant updated successfully.');
+      showToast('Tenant updated successfully.', 'success')
       await getTenants()
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to update tenant.', 'error'); toast.error(err.response?.data?.message || 'Failed to update tenant.');
+      showToast(err.response?.data?.message || 'Failed to update tenant.', 'error')
       setError(
         err.response?.data?.message || 'Failed to update tenant.'
       )
@@ -174,10 +166,10 @@ const Tenant = () => {
         `/property/${tenantToMove.property}/tenants/${tenantToMove._id}/move-out`
       )
       setConfirmTenant(null)
-      showToast(`${tenantToMove.fullName} has been moved out successfully.`, "success"); toast.success(`${tenantToMove.fullName} has been moved out successfully.`);
+      showToast(`${tenantToMove.fullName} has been moved out successfully.`, "success")
       await getTenants()
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to move out tenant.', 'error'); toast.error(err.response?.data?.message || 'Failed to move out tenant.');
+      showToast(err.response?.data?.message || 'Failed to move out tenant.', 'error')
     } finally {
       setConfirmLoading(false)
     }
@@ -192,9 +184,8 @@ const Tenant = () => {
     return displayedTenants.filter((tenant) => {
       const searchable = [
         tenant.fullName,
-        tenant.user?.username,
-        tenant.user?.email,
         tenant.email,
+        tenant.phone,
         tenant.propertyName,
         tenant.unit?.unitName,
         tenant.address,
@@ -209,9 +200,8 @@ const Tenant = () => {
     return displayedTenants.filter((tenant) => {
       const searchable = [
         tenant.fullName,
-        tenant.user?.username,
-        tenant.user?.email,
         tenant.email,
+        tenant.phone,
         tenant.propertyName,
         tenant.unit?.unitName,
         tenant.address,
@@ -221,7 +211,7 @@ const Tenant = () => {
   }, [displayedTenants, tenantSearch])
 
   const selectSearchTenant = (tenant) => {
-    setTenantSearch(tenant.fullName || tenant.user?.username || '')
+    setTenantSearch(tenant.fullName || '')
     setSearchDropdownOpen(false)
   }
 
@@ -279,13 +269,11 @@ const Tenant = () => {
       setUploadError('')
       await apiClient.post(`/document/tenants/${uploadTenant._id}`, formData)
       showToast('Document uploaded successfully.', 'success')
-      toast.success('Document uploaded successfully.')
       closeUploadModalAfterSuccess()
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to upload the document.'
       setUploadError(message)
       showToast(message, 'error')
-      toast.error(message)
     } finally {
       setUploadingDocument(false)
     }
@@ -315,9 +303,9 @@ const Tenant = () => {
         Tenant Management
       </h1>
 
-      {error && (
+      {/* {error && (
         <p className="mb-4 text-sm text-red-500">{error}</p>
-      )}
+      )} */}
 
       {success && (
         <p className="mb-4 text-sm text-green-600 dark:text-green-400">
@@ -346,7 +334,7 @@ const Tenant = () => {
                 selectSearchTenant(matchingTenants[0])
               }
             }}
-            placeholder="Search tenant by name, email, property, or unit..."
+            placeholder="Search tenant by name, email, phone, property, or unit..."
             className="w-full rounded-xs border border-gray-300 bg-white py-3 pl-10 pr-10 text-sm text-gray-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 dark:border-stone-700 dark:bg-[#1b1b1b] dark:text-white"
             autoComplete="off"
           />
@@ -360,9 +348,9 @@ const Tenant = () => {
                 onClick={() => selectSearchTenant(tenant)}
                 className="flex w-full flex-col items-start px-4 py-3 text-left hover:bg-yellow-50 focus:bg-yellow-50 focus:outline-none dark:hover:bg-stone-800 dark:focus:bg-stone-800"
               >
-                <span className="font-medium text-gray-900 dark:text-white">{tenant.fullName || tenant.user?.username || 'Unnamed tenant'}</span>
+                <span className="font-medium text-gray-900 dark:text-white">{tenant.fullName || 'Unnamed tenant'}</span>
                 <span className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                  {[tenant.propertyName, tenant.unit?.unitName, tenant.user?.email || tenant.email].filter(Boolean).join(' · ')}
+                  {[tenant.propertyName, tenant.unit?.unitName, tenant.email || tenant.phone].filter(Boolean).join(' · ')}
                 </span>
               </button>
             )) : (
@@ -634,7 +622,7 @@ const Tenant = () => {
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-yellow-300 text-black"><Upload size={19} /></span>
                 <div className="min-w-0">
                   <h2 id="upload-tenant-document-title" className="text-lg font-semibold text-gray-900 dark:text-white">Upload Document</h2>
-                  <p className="truncate text-sm text-gray-500 dark:text-gray-400">For {uploadTenant.fullName || uploadTenant.user?.username || 'Selected tenant'}</p>
+                  <p className="truncate text-sm text-gray-500 dark:text-gray-400">For {uploadTenant.fullName || 'Selected tenant'}</p>
                 </div>
               </div>
               <button type="button" onClick={closeUploadModal} disabled={uploadingDocument} aria-label="Close upload modal" className="rounded-xs p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-stone-800"><X size={19} /></button>
@@ -746,23 +734,6 @@ const Tenant = () => {
                   onChange={handleEditChange}
                   required
                   rows={3}
-                  className="w-full rounded-xs border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-yellow-400 dark:border-stone-700 dark:bg-stone-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Aadhaar Number
-                </label>
-                <input
-                  name="aadhaarNumber"
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]{12}"
-                  maxLength={12}
-                  value={editForm.aadhaarNumber}
-                  onChange={handleEditChange}
-                  required
                   className="w-full rounded-xs border border-gray-300 bg-white px-3 py-2 text-gray-900 outline-none focus:border-yellow-400 dark:border-stone-700 dark:bg-stone-900 dark:text-white"
                 />
               </div>

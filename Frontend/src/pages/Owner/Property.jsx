@@ -1,8 +1,7 @@
 
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import apiClient from "../../ApiClient/interceptor.js"
-import { Pencil, Trash2, X, AlertTriangle, Files } from "lucide-react";
+import { Pencil, Trash2, X, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 
 const emptyProperty = {
@@ -20,10 +19,9 @@ const emptyTenant = {
     fullName: "",
     address: "",
     aadhaarNumber: "",
-    username: "",
     email: "",
-    password: "",
-}
+    phone: "",
+};
 
 const Property = () => {
     // Property state
@@ -528,9 +526,8 @@ const Property = () => {
             fullName: tenant.fullName.trim(),
             address: tenant.address.trim(),
             aadhaarNumber: tenant.aadhaarNumber.trim(),
-            username: tenant.username.trim(),
             email: tenant.email.trim().toLowerCase(),
-            password: tenant.password,
+            phone: tenant.phone.trim(),
         };
 
         const errors = {};
@@ -541,18 +538,13 @@ const Property = () => {
             errors.fullName = "Full name cannot be empty";
         }
 
-        if (!formData.username) errors.username = "Username is required.";
-        else if (!/^[a-zA-Z0-9_]{3,30}$/.test(formData.username)) {
-            errors.username = "Username must be 3–30 characters using letters, numbers, or underscores.";
-        }
-
         if (!formData.address) errors.address = "Address is required.";
         else if (formData.address.length < 5 || formData.address.length > 250) {
             errors.address = "Address must be between 5 and 250 characters.";
         }
 
         if (!formData.aadhaarNumber) errors.aadhaarNumber = "Aadhaar number is required.";
-        else if (formData.aadhaarNumber.length !== 12) {
+        else if (!/^\d{12}$/.test(formData.aadhaarNumber)) {
             errors.aadhaarNumber = "Aadhaar number must contain exactly 12 digits.";
         }
 
@@ -561,9 +553,9 @@ const Property = () => {
             errors.email = "Enter a valid email address, such as name@example.com.";
         }
 
-        if (!formData.password) errors.password = "Password is required.";
-        else if (formData.password.length < 6 || formData.password.length > 128) {
-            errors.password = "Password must be between 6";
+        if (!formData.phone) errors.phone = "Phone number is required.";
+        else if (!/^[6-9]\d{9}$/.test(formData.phone)) {
+            errors.phone = "Enter a valid 10-digit Indian mobile number.";
         }
 
         setTenantFieldErrors(errors);
@@ -597,7 +589,7 @@ const Property = () => {
     return (
         <div className="w-full bg-[#f2f2f1] p-4 dark:bg-[#101010] md:p-8 pb-12" >
             {/* Page Header */}
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center" onClick={deselectProperty}>
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
                 <div className="m-2">
                     <h1 className="my-4 text-3xl font-semibold text-gray-900 dark:text-white md:text-4xl">
                         Good homes. Better managed.
@@ -647,7 +639,7 @@ const Property = () => {
                         <button
                             type="button"
                             onClick={openAddForm}
-                            className="mt-5 rounded-lg bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400"
+                            className="mt-5 rounded-sm bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400"
                         >
                             + Add Your First Property
                         </button>
@@ -1206,36 +1198,6 @@ const Property = () => {
                                 )}
                             </div>
 
-                            <div className="mb-5">
-                                <label
-                                    htmlFor="username"
-                                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
-                                >
-                                    Username
-                                </label>
-
-                                <input
-                                    id="username"
-                                    name="username"
-                                    type="text"
-                                    value={tenant.username}
-                                    onChange={handleTenantChange}
-                                    placeholder="Enter tenant's username"
-                                    minLength={3}
-                                    maxLength={30}
-                                    pattern="[a-zA-Z0-9_]{3,30}"
-                                    autoComplete="username"
-                                    required
-                                    disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:focus:ring-yellow-400/20"
-                                />
-                                {tenantFieldErrors.username && (
-                                    <p className="mt-1 text-sm text-red-600" role="alert">
-                                        {tenantFieldErrors.username}
-                                    </p>
-                                )}
-                            </div>
-
                             <div className="mb-6">
                                 <label
                                     htmlFor="address"
@@ -1331,34 +1293,36 @@ const Property = () => {
 
                             <div className="mb-6">
                                 <label
-                                    htmlFor="password"
+                                    htmlFor="phone"
                                     className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
                                 >
-                                    Password
+                                    Phone Number
                                 </label>
 
                                 <input
-                                    id="password"
-                                    name="password"
-                                    type="password"
-                                    value={tenant.password}
-                                    onChange={handleTenantChange}
-                                    placeholder="Enter tenant's password"
-                                    minLength={8}
-                                    maxLength={128}
-                                    autoComplete="new-password"
+                                    id="phone"
+                                    name="phone"
+                                    type="tel"
+                                    inputMode="numeric"
+                                    value={tenant.phone}
+                                    onChange={(e) => {
+                                        const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
+                                        setTenant((current) => ({ ...current, phone: digitsOnly }));
+                                        setTenantFieldErrors((current) => ({ ...current, phone: "" }));
+                                    }}
+                                    placeholder="Enter 10-digit mobile number"
+                                    maxLength={10}
+                                    autoComplete="tel-national"
                                     required
                                     disabled={submitting}
                                     className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
-                                {tenantFieldErrors.password && (
+                                {tenantFieldErrors.phone && (
                                     <p className="mt-1 text-sm text-red-600" role="alert">
-                                        {tenantFieldErrors.password}
+                                        {tenantFieldErrors.phone}
                                     </p>
                                 )}
                             </div>
-
-
 
                             <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
                                 <button
@@ -1425,8 +1389,8 @@ const Property = () => {
                             <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
                                 {[
                                     ["Full Name", tenantDetails.fullName],
-                                    ["Username", tenantDetails.user?.username || tenantDetails.username],
-                                    ["Email", tenantDetails.user?.email || tenantDetails.email],
+                                    ["Email", tenantDetails.email],
+                                    ["Phone", tenantDetails.phone],
                                     ["Address", tenantDetails.address],
                                     ["Aadhaar Number", tenantDetails.aadhaarNumber],
                                     ["Unit", tenantDetails.unit?.unitName],

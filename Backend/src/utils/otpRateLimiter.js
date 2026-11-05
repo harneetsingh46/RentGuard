@@ -49,7 +49,7 @@ export const otpContactCooldownLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: {
-    message: "Please wait 60 seconds before requesting another OTP.",
+    message: "Please wait 10 seconds before requesting another OTP.",
   },
 });
 

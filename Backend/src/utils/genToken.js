@@ -12,7 +12,10 @@ const genToken = (user) => {
     },
     process.env.JWT_SECRET_KEY,
     {
-      expiresIn: SESSION_CONFIG.OWNER_EXPIRY,
+      expiresIn:
+        user.role === "tenant"
+          ? SESSION_CONFIG.TENANT_EXPIRY
+          : SESSION_CONFIG.OWNER_EXPIRY,
     },
   );
 };

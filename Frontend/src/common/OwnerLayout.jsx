@@ -42,8 +42,8 @@ const OwnerLayout = () => {
       icon: Users,
     },
     {
-      label: "Rent & Transactions",
-      path: "/owner/rent",
+      label: "Bills & Transactions",
+      path: "/owner/bill",
       icon: Wallet,
     },
     {

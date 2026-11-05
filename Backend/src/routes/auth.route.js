@@ -5,7 +5,6 @@ import {
   verifyOtp,
   getUser,
   logout,
-  logoutAllDevices,
 } from "../controllers/user.controller.js";
 
 import {
@@ -37,6 +36,5 @@ router.post(
 // Protected owner routes
 router.get("/me", protect, getUser);
 router.post("/logout", protect, logout);
-router.post("/logout-all", protect, logoutAllDevices);
 
 export default router;

@@ -9,7 +9,7 @@ import propertyRouter from "./src/routes/property.route.js";
 import unitRouter from "./src/routes/unit.route.js";
 import tenantRouter from "./src/routes/tenant.route.js";
 import authRouter from "./src/routes/auth.route.js";
-import rentRouter from "./src/routes/rent.route.js";
+import billRouter from "./src/routes/bill.route.js";
 import paymentRouter from "./src/routes/payment.route.js";
 import dashboardRouter from "./src/routes/dashboard.route.js"
 import documentRouter from "./src/routes/propertyDocument.routes.js"
@@ -44,7 +44,7 @@ app.use("/property/", unitRouter);
 app.use("/property/", tenantRouter);
 app.use("/tenant/", tenantRouter);
 app.use("/auth/", authRouter);
-app.use("/rent/", rentRouter);
+app.use("/bill/", billRouter);
 app.use("/payment/", paymentRouter);
 app.use("/dashboard/",dashboardRouter);
 app.use("/document/",documentRouter)

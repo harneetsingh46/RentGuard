@@ -1,6 +1,6 @@
 import { Unit } from "../models/unit.model.js";
 import { Property } from "../models/property.model.js";
-
+import mongoose from "mongoose";
 // CREATE UNIT
 
 export const createUnit = async (req, res, next) => {
@@ -8,8 +8,16 @@ export const createUnit = async (req, res, next) => {
     const { propertyId } = req.params;
     const { unitName, unitType, rent } = req.body;
 
+    if (!mongoose.isValidObjectId(propertyId)) {
+      return res.status(400).json({
+        message: "Invalid property ID!",
+      });
+    }
+
+    const normalizedUnitName = unitName.trim();
+
     // Only owner can create units
-    if (req.user.role !== "owner") {
+    if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owner can create a unit!",
       });
@@ -23,9 +31,9 @@ export const createUnit = async (req, res, next) => {
     }
 
     // Rent must be positive
-    if (Number(rent) <= 0) {
+    if (!Number.isFinite(Number(rent)) || Number(rent) <= 0) {
       return res.status(400).json({
-        message: "Rent must be greater than zero!",
+        message: "Rent must be a valid number greater than zero!",
       });
     }
 
@@ -83,8 +91,14 @@ export const getUnits = async (req, res, next) => {
   try {
     const { propertyId } = req.params;
 
+    if (!mongoose.isValidObjectId(propertyId)) {
+      return res.status(400).json({
+        message: "Invalid property ID!",
+      });
+    }
+
     // Only owner can access units
-    if (req.user.role !== "owner") {
+    if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owner can access units!",
       });
@@ -133,8 +147,17 @@ export const getUnit = async (req, res, next) => {
   try {
     const { propertyId, unitId } = req.params;
 
+    if (
+      !mongoose.isValidObjectId(propertyId) ||
+      !mongoose.isValidObjectId(unitId)
+    ) {
+      return res.status(400).json({
+        message: "Invalid property or unit ID!",
+      });
+    }
+
     // Only owner can access unit
-    if (req.user.role !== "owner") {
+    if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owner can access unit details!",
       });
@@ -185,15 +208,19 @@ export const updateUnit = async (req, res, next) => {
   try {
     const { propertyId, unitId } = req.params;
 
-    const {
-      unitName,
-      unitType,
-      rent,
-      status,
-    } = req.body;
+    const { unitName, unitType, rent, status } = req.body;
+
+    if (
+      !mongoose.isValidObjectId(propertyId) ||
+      !mongoose.isValidObjectId(unitId)
+    ) {
+      return res.status(400).json({
+        message: "Invalid property or unit ID!",
+      });
+    }
 
     // Only owner can update
-    if (req.user.role !== "owner") {
+    if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owner can update a unit!",
       });
@@ -281,8 +308,17 @@ export const deleteUnit = async (req, res, next) => {
   try {
     const { propertyId, unitId } = req.params;
 
+    if (
+      !mongoose.isValidObjectId(propertyId) ||
+      !mongoose.isValidObjectId(unitId)
+    ) {
+      return res.status(400).json({
+        message: "Invalid property or unit ID!",
+      });
+    }
+
     // Only owner can delete
-    if (req.user.role !== "owner") {
+    if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owner can delete a unit!",
       });
