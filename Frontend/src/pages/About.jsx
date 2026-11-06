@@ -3,19 +3,19 @@ import { ArrowDownRight, ArrowUpRight, Building2, CheckCircle2, ShieldCheck, Wal
 
 const principles = [
   {
-    number: "01",
+    number: "1",
     title: "Clarity over complexity",
     description: "Rental details, documents, and payment records should be easy to understand—not buried in spreadsheets or messages.",
     icon: CheckCircle2,
   },
   {
-    number: "02",
+    number: "2",
     title: "Trust by design",
     description: "Keep important rental information organized so owners and tenants can make decisions with confidence.",
     icon: ShieldCheck,
   },
   {
-    number: "03",
+    number: "3",
     title: "One connected place",
     description: "Bring property, tenant, and rent workflows together in one considered, practical workspace.",
     icon: Building2,
