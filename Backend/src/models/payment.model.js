@@ -6,6 +6,7 @@ const paymentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Order",
       required: true,
+      unique: true,
     },
 
     tenant: {
@@ -53,8 +54,14 @@ const paymentSchema = new mongoose.Schema(
       enum: ["created", "paid", "failed"],
       default: "created",
     },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 );
+
+paymentSchema.index({ tenant: 1, createdAt: -1 });
 
 export const Payment = mongoose.model("Payment", paymentSchema);

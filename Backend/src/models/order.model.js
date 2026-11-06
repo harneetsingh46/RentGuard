@@ -20,21 +20,27 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
 
-    items: [
-      {
-        bill: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Bill",
-          required: true,
+    items: {
+      type: [
+        {
+          bill: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Bill",
+            required: true,
+          },
+          amount: {
+            type: Number,
+            required: true,
+            min: 0.01,
+          },
         },
-
-        amount: {
-          type: Number,
-          required: true,
-          min: 0.01,
-        },
+      ],
+      required: true,
+      validate: {
+        validator: (items) => items.length > 0,
+        message: "An Order must contain at least one Bill.",
       },
-    ],
+    },
 
     totalAmount: {
       type: Number,
@@ -57,11 +63,16 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    expiresAt: {
+      type: Date,
+      required: true,
+    },
   },
   { timestamps: true },
 );
 
 orderSchema.index({ tenant: 1, createdAt: -1 });
 orderSchema.index({ "items.bill": 1 });
+orderSchema.index({ status: 1, expiresAt: 1 });
 
 export const Order = mongoose.model("Order", orderSchema);

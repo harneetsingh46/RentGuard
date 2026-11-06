@@ -32,7 +32,7 @@ const TenantLayout = () => {
     },
     {
       label: "Bills & Transactions",
-      path: "/tenant/bill",
+      path: "/tenant/bills",
       icon: Wallet,
     },
     {

@@ -14,18 +14,11 @@ import paymentRouter from "./src/routes/payment.route.js";
 import dashboardRouter from "./src/routes/dashboard.route.js"
 import documentRouter from "./src/routes/propertyDocument.routes.js"
 import orderRouter from "./src/routes/order.route.js";
-import { razorpayWebhook } from "./src/controllers/payment.controller.js";
+// import { razorpayWebhook } from "./src/controllers/payment.controller.js";
 
 //config
 const app = express();
 dotenv.config();
-
-//web-hook
-app.post(
-  "/payment/webhook",
-  express.raw({ type: "application/json" }),
-  razorpayWebhook,
-);
 
 //middleware
 app.use(express.json());
@@ -36,6 +29,13 @@ app.use(
     credentials: true,
   }),
 );
+
+//web-hook
+// app.post(
+//   "/payment/webhook",
+//   express.raw({ type: "application/json" }),
+//   razorpayWebhook,
+// );
 
 //routes
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));

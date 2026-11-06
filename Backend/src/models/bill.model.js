@@ -68,6 +68,13 @@ const billSchema = new mongoose.Schema(
       enum: ["unpaid", "reserved", "paid"],
       default: "unpaid",
     },
+
+    reservedByOrder: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      default: null,
+    },
+        
     paidAt: {
       type: Date,
       default: null,

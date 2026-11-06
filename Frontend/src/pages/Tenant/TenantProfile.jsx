@@ -51,7 +51,7 @@ const TenantProfile = () => {
   };
 
   const inputClass =
-    "mt-2 w-full rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-[#171717] outline-none transition focus:border-[#f9c83d] focus:ring-2 focus:ring-[#f9c83d]/20 dark:border-neutral-700 dark:bg-[#1d1d1d] dark:text-[#F1F0ED]";
+    "mt-2 w-full rounded-sm border border-neutral-200 bg-white px-4 py-3 text-sm text-[#171717] outline-none transition focus:border-[#f9c83d] focus:ring-2 focus:ring-[#f9c83d]/20 dark:border-neutral-700 dark:bg-[#1d1d1d] dark:text-[#F1F0ED]";
 
   const labelClass =
     "text-sm font-medium text-neutral-700 dark:text-neutral-300";
@@ -211,7 +211,7 @@ const TenantProfile = () => {
         <p className="text-sm text-red-600">{error}</p>
         <button
           onClick={fetchProfile}
-          className="rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black"
+          className="rounded-sm bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black"
         >
           Try again
         </button>
@@ -239,7 +239,7 @@ const TenantProfile = () => {
 
           <Link
             to="/tenant/dashboard"
-            className="inline-flex w-fit items-center gap-2 rounded-lg border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-[#171717] dark:hover:bg-neutral-800"
+            className="inline-flex w-fit items-center gap-2 rounded-sm border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-[#171717] dark:hover:bg-neutral-800"
           >
             ← Back to Dashboard
           </Link>
@@ -276,7 +276,7 @@ const TenantProfile = () => {
             <button
               type="button"
               onClick={openModal}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e]"
+              className="inline-flex items-center justify-center gap-2 rounded-sm bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e]"
             >
               ✎ Update Profile
             </button>
@@ -350,7 +350,7 @@ const TenantProfile = () => {
         {message && (
           <p
             role="status"
-            className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-300"
+            className="mt-4 rounded-sm border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-300"
           >
             {message}
           </p>
@@ -359,7 +359,7 @@ const TenantProfile = () => {
         {error && profile && (
           <p
             role="alert"
-            className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
+            className="mt-4 rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
           >
             {error}
           </p>
@@ -426,7 +426,7 @@ const TenantProfile = () => {
                     )}
                   </div>
 
-                  <label className="cursor-pointer rounded-lg border border-neutral-200 px-4 py-2.5 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800">
+                  <label className="cursor-pointer rounded-sm border border-neutral-200 px-4 py-2.5 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800">
                     Choose Image
                     <input
                       type="file"
@@ -440,7 +440,7 @@ const TenantProfile = () => {
                     type="button"
                     onClick={handlePictureUpload}
                     disabled={!profilePicture || uploading}
-                    className="rounded-lg bg-[#f9c83d] px-4 py-2.5 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-sm bg-[#f9c83d] px-4 py-2.5 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {uploading ? "Uploading..." : "Upload Picture"}
                   </button>
@@ -527,7 +527,7 @@ const TenantProfile = () => {
               {error && (
                 <p
                   role="alert"
-                  className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
+                  className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
                 >
                   {error}
                 </p>
@@ -538,7 +538,7 @@ const TenantProfile = () => {
                   type="button"
                   onClick={closeModal}
                   disabled={saving || uploading}
-                  className="rounded-lg border border-neutral-200 px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                  className="rounded-sm border border-neutral-200 px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
                 >
                   Cancel
                 </button>
@@ -546,7 +546,7 @@ const TenantProfile = () => {
                 <button
                   type="submit"
                   disabled={saving || uploading}
-                  className="rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-sm bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save Changes"}
                 </button>
