@@ -35,7 +35,7 @@ export const sendOtpEmail = async (email, otp) => {
           <p>Do not share this code with anyone.</p>
         </div>
       `,
-    };
+    }
 
     const result = await transporter.sendMail(mailOptions);
 
