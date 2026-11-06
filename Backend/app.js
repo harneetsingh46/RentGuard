@@ -13,6 +13,7 @@ import billRouter from "./src/routes/bill.route.js";
 import paymentRouter from "./src/routes/payment.route.js";
 import dashboardRouter from "./src/routes/dashboard.route.js"
 import documentRouter from "./src/routes/propertyDocument.routes.js"
+import orderRouter from "./src/routes/order.route.js";
 import { razorpayWebhook } from "./src/controllers/payment.controller.js";
 
 //config
@@ -47,6 +48,7 @@ app.use("/auth/", authRouter);
 app.use("/bill/", billRouter);
 app.use("/payment/", paymentRouter);
 app.use("/dashboard/",dashboardRouter);
-app.use("/document/",documentRouter)
+app.use("/document/",documentRouter);
+app.use("/order", orderRouter);
 
 export default app;

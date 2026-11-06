@@ -32,7 +32,7 @@ const TenantLayout = () => {
     },
     {
       label: "Bills & Transactions",
-      path: "/tenant/rent",
+      path: "/tenant/bill",
       icon: Wallet,
     },
     {
@@ -104,7 +104,7 @@ const TenantLayout = () => {
     <div className="flex h-screen h-dvh w-full min-w-0 flex-col overflow-hidden bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
 
       {/* ================= NAVBAR ================= */}
-      <header className="relative z-50 flex h-16 w-full flex-none items-center justify-between gap-2 border-b border-black/10 bg-white px-3 dark:border-[#373737] dark:bg-[#1B1B1B] sm:h-20 sm:px-5 md:px-8 lg:px-10">
+      <header className="relative z-50 flex h-16 w-full shrink-0 items-center justify-between gap-2 border-b border-black/10 bg-white px-3 dark:border-[#373737] dark:bg-[#1B1B1B] sm:h-20 sm:px-5 md:px-8 lg:px-10">
 
         {/* Menu Button + Logo */}
         <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-3">
@@ -157,9 +157,8 @@ const TenantLayout = () => {
 
             <ChevronDown
               size={15}
-              className={`shrink-0 transition-transform duration-200 ${
-                isActionsOpen ? "rotate-180" : ""
-              }`}
+              className={`shrink-0 transition-transform duration-200 ${isActionsOpen ? "rotate-180" : ""
+                }`}
             />
           </button>
 
@@ -214,9 +213,8 @@ const TenantLayout = () => {
       <aside
         id="tenant-sidebar"
         aria-label="Tenant navigation"
-        className={`fixed bottom-0 left-0 top-16 z-40 flex w-[min(18rem,85vw)] flex-col overflow-y-auto border-r border-[#E7E3DA] bg-white p-4 transition-transform duration-300 dark:border-[#373737] dark:bg-[#1B1B1B] sm:top-20 sm:p-6 md:top-20 md:w-64 ${
-          isMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0`}
+        className={`fixed bottom-0 left-0 top-16 z-40 flex w-[min(18rem,85vw)] flex-col overflow-y-auto border-r border-[#E7E3DA] bg-white p-4 transition-transform duration-300 dark:border-[#373737] dark:bg-[#1B1B1B] sm:top-20 sm:p-6 md:top-20 md:w-64 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
+          } md:translate-x-0`}
       >
         <nav className="space-y-2">
           {navItems.map((item) => {
@@ -229,10 +227,9 @@ const TenantLayout = () => {
                 end={item.path === "/tenant/dashboard"}
                 onClick={closeMenu}
                 className={({ isActive }) =>
-                  `group flex min-w-0 items-center gap-3 rounded-lg px-3 py-3 text-sm transition-all duration-200 sm:px-4 sm:text-base ${
-                    isActive
-                      ? "bg-yellow-300 font-medium text-black shadow-sm"
-                      : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#292929]"
+                  `group flex min-w-0 items-center gap-3 rounded-lg px-3 py-3 text-sm transition-all duration-200 sm:px-4 sm:text-base ${isActive
+                    ? "bg-yellow-300 font-medium text-black shadow-sm"
+                    : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#292929]"
                   }`
                 }
               >
@@ -256,7 +253,7 @@ const TenantLayout = () => {
       </aside>
 
       {/* ================= PAGE CONTENT ================= */}
-      <main className="mt-16 h-[calc(100dvh-4rem)] min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#f2f2f1] dark:bg-[#101010] sm:mt-20 sm:h-[calc(100dvh-5rem)] md:ml-64">
+      <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#f2f2f1] dark:bg-[#101010] md:ml-64">
         <Outlet />
       </main>
     </div>

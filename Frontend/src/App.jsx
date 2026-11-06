@@ -13,7 +13,7 @@ import Hero from "../src/pages/Hero";
 import Property from "../src/pages/Owner/Property";
 import Tenant from "../src/pages/Owner/Tenant";
 import Bill from "../src/pages/Owner/Bill";
-import TenantRent from "./pages/Tenant/TenantRent";
+import TenantBill from "./pages/Tenant/TenantBill";
 import Documents from "../src/pages/Owner/Documents";
 import OwnerProfile from "../src/pages/Owner/OwnerProfile";
 import TenantDocument from "./pages/Tenant/TenantDocument";
@@ -108,8 +108,8 @@ const router = createBrowserRouter([
             element: <TenantDashboard />,
           },
           {
-            path: "/tenant/rent",
-            element: <TenantRent />,
+            path: "/tenant/bill",
+            element: <TenantBill />,
           },
           {
             path: "/tenant/documents",

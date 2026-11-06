@@ -61,6 +61,17 @@ const billSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+
+    // Payment tracking
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "reserved", "paid"],
+      default: "unpaid",
+    },
+    paidAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

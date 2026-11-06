@@ -2,16 +2,18 @@ import mongoose from "mongoose";
 
 const paymentSchema = new mongoose.Schema(
   {
-    rent: {
+    order: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Rent",
+      ref: "Order",
       required: true,
     },
+
     tenant: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Tenant",
       required: true,
     },
+
     property: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Property",
@@ -27,19 +29,23 @@ const paymentSchema = new mongoose.Schema(
     amount: {
       type: Number,
       required: true,
+      min: 0.01,
     },
 
     razorpayOrderId: {
       type: String,
       required: true,
+      unique: true,
     },
 
     razorpayPaymentId: {
       type: String,
+      default: null,
     },
 
     razorpaySignature: {
       type: String,
+      default: null,
     },
 
     status: {
