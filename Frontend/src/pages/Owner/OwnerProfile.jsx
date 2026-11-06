@@ -154,7 +154,7 @@ const OwnerProfile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f5f0] px-4 py-8 text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED] sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#f2f2f1] px-4 py-8 text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED] sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl">
 
         {/* Page Header */}
@@ -175,7 +175,7 @@ const OwnerProfile = () => {
 
           <Link
             to="/owner/dashboard"
-            className="inline-flex w-fit items-center gap-2 rounded-sm border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-[#171717] dark:hover:bg-neutral-800"
+            className="inline-flex w-fit items-center gap-2 rounded-sm border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-yellow-300 hover:text-black dark:border-neutral-800 dark:bg-[#171717] dark:hover:bg-neutral-800"
           >
             <span aria-hidden="true">←</span>
             Back to Dashboard

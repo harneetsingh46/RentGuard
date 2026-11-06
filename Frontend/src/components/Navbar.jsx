@@ -39,6 +39,10 @@ const Navbar = () => {
             </Link>
           ) : (
             <>
+              <Link to="/" className={navLinkClass("/")}>
+                Home
+              </Link>
+
               <Link to="/about" className={navLinkClass("/about")}>
                 About
               </Link>
@@ -116,8 +120,8 @@ const Navbar = () => {
       <div
         id="mobile-navigation"
         className={`overflow-hidden border-t border-slate-200 bg-white transition-all duration-300 ease-in-out dark:border-neutral-800 dark:bg-neutral-950 md:hidden ${isMenuOpen
-            ? "max-h-96 opacity-100"
-            : "pointer-events-none max-h-0 opacity-0"
+          ? "max-h-96 opacity-100"
+          : "pointer-events-none max-h-0 opacity-0"
           }`}
         aria-hidden={!isMenuOpen}
       >

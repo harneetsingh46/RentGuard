@@ -272,3 +272,64 @@ export const sendPaymentConfirmationEmails = async ({
     return null;
   }
 };
+
+const escapeEmailHtml = (value = "") =>
+  String(value).replace(/[&<>"']/g, (char) => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+
+    return entities[char];
+  });
+
+export const sendContactEmail = async ({
+  name,
+  email,
+  topic,
+  message,
+}) => {
+  const emailUser = process.env.EMAIL_USER?.trim();
+  const emailPass = process.env.EMAIL_PASS?.replace(/\s/g, "");
+
+  if (!emailUser || !emailPass) {
+    throw new Error("Email credentials are not configured.");
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: emailUser,
+      pass: emailPass,
+    },
+  });
+
+  return transporter.sendMail({
+    from: `"RentGuard Contact" <${emailUser}>`,
+    to: "singh2harneet@gmail.com",
+    replyTo: email,
+    subject: `[RentGuard Contact] ${topic}`,
+    text: [
+      `Name: ${name}`,
+      `Email: ${email}`,
+      `Topic: ${topic}`,
+      "",
+      "Message:",
+      message,
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px;">
+        <h2 style="color: #d4a017;">New RentGuard Contact Enquiry</h2>
+        <p><strong>Name:</strong> ${escapeEmailHtml(name)}</p>
+        <p><strong>Email:</strong> ${escapeEmailHtml(email)}</p>
+        <p><strong>Topic:</strong> ${escapeEmailHtml(topic)}</p>
+        <hr />
+        <h3>Message</h3>
+        <p style="white-space: pre-wrap;">${escapeEmailHtml(message)}</p>
+      </div>
+    `,
+  });
+};

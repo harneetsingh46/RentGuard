@@ -171,7 +171,7 @@ const OwnerMaintenance = () => {
         "w-full min-w-0 rounded-xs border border-neutral-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#f9c83d] dark:border-neutral-700 dark:bg-[#101010]";
 
     return (
-        <div className="min-h-screen w-full overflow-x-hidden bg-[#f7f5f0] px-3 py-5 text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED] sm:px-6 sm:py-6 lg:px-8">
+        <div className="min-h-screen w-full overflow-x-hidden bg-[#f2f2f1] px-3 py-5 text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED] sm:px-6 sm:py-6 lg:px-8">
             <div className="mx-auto w-full max-w-7xl">
 
                 {/* Header */}

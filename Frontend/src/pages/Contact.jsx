@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import apiClient from "../ApiClient/interceptor";
 import { ArrowUpRight, CheckCircle2, Mail, MessageSquare, Send } from "lucide-react";
 
 const initialForm = { name: "", email: "", topic: "General enquiry", message: "" };
@@ -8,6 +9,8 @@ const Contact = () => {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [serverError, setServerError] = useState("");
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -16,27 +19,57 @@ const Contact = () => {
     setSubmitted(false);
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
     const nextErrors = {};
-    if (!form.name.trim()) nextErrors.name = "Please enter your name.";
-    if (!form.email.trim()) nextErrors.email = "Please enter your email.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())) nextErrors.email = "Enter a valid email address.";
-    if (!form.message.trim()) nextErrors.message = "Please tell us how we can help.";
+
+    if (!form.name.trim()) {
+      nextErrors.name = "Please enter your name.";
+    }
+
+    if (!form.email.trim()) {
+      nextErrors.email = "Please enter your email.";
+    } else if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim())
+    ) {
+      nextErrors.email = "Enter a valid email address.";
+    }
+
+    if (!form.message.trim()) {
+      nextErrors.message = "Please tell us how we can help.";
+    }
 
     setErrors(nextErrors);
+    setServerError("");
+    setSubmitted(false);
+
     if (Object.keys(nextErrors).length) return;
 
-    // Frontend-only fallback: opens the visitor's email app. Replace with an API call when a contact endpoint exists.
-    const subject = encodeURIComponent(`RentGuard enquiry — ${form.topic}`);
-    const body = encodeURIComponent(`Name: ${form.name.trim()}\nEmail: ${form.email.trim()}\nTopic: ${form.topic}\n\n${form.message.trim()}`);
-    window.location.href = `mailto:support@rentguard.app?subject=${subject}&body=${body}`;
-    setSubmitted(true);
+    try {
+      setSending(true);
+
+      await apiClient.post("/contact", {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        topic: form.topic,
+        message: form.message.trim(),
+      });
+
+      setSubmitted(true);
+      setForm(initialForm);
+    } catch (error) {
+      setServerError(
+        error.response?.data?.message ||
+        "Unable to send your message. Please try again."
+      );
+    } finally {
+      setSending(false);
+    }
   };
 
   const fieldClass = (field) =>
-    `mt-2 w-full rounded-xs border bg-white px-4 py-3.5 text-sm text-black outline-none transition duration-200 placeholder:text-neutral-400 focus:border-black focus:ring-2 focus:ring-yellow-300 dark:border-white/15 dark:bg-neutral-900 dark:text-white dark:placeholder:text-neutral-500 dark:focus:border-yellow-300 ${
-      errors[field] ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-black/15"
+    `mt-2 w-full rounded-xs border bg-white px-4 py-3.5 text-sm text-black outline-none transition duration-200 placeholder:text-neutral-400 focus:border-black focus:ring-2 focus:ring-yellow-300 dark:border-white/15 dark:bg-neutral-900 dark:text-white dark:placeholder:text-neutral-500 dark:focus:border-yellow-300 ${errors[field] ? "border-red-500 focus:border-red-500 focus:ring-red-200" : "border-black/15"
     }`;
 
   return (
@@ -130,18 +163,34 @@ const Contact = () => {
               </div>
 
               {submitted && (
-                <p role="status" className="flex items-start gap-2 rounded-xs border border-yellow-500/40 bg-yellow-300/15 p-3 text-sm">
-                  <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-yellow-600 dark:text-yellow-300" />
-                  Your email app should open with your message ready to send. If it didn’t, email us directly.
+                <p
+                  role="status"
+                  className="flex items-start gap-2 rounded-xs border border-green-500/40 bg-green-300/15 p-3 text-sm"
+                >
+                  <CheckCircle2
+                    size={18}
+                    className="mt-0.5 shrink-0 text-green-600"
+                  />
+                  Your message has been sent successfully! We’ll get back to you soon.
                 </p>
               )}
 
-              <button type="submit" className="group inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-xs bg-yellow-300 px-5 py-3 text-sm font-semibold text-black transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] hover:bg-yellow-200 hover:shadow-[0_12px_26px_rgba(0,0,0,0.12)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900 sm:w-auto">
-                Send message
-                <ArrowUpRight size={17} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+              {serverError && (
+                <p role="alert" className="rounded-xs bg-red-100 p-3 text-sm text-red-700">
+                  {serverError}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={sending}
+                className="group inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-xs bg-yellow-300 px-5 py-3 text-sm font-semibold text-black transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] hover:bg-yellow-200 hover:shadow-[0_12px_26px_rgba(0,0,0,0.12)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+              >
+                {sending ? "Sending..." : "Send message"}
+                {!sending && <ArrowUpRight size={17} />}
               </button>
               <p className="text-xs leading-5 text-neutral-500 dark:text-neutral-400">
-                This form opens your default email app; it does not send data to a server.
+                Your message will be sent securely to the RentGuard support team.
               </p>
             </form>
           </div>
