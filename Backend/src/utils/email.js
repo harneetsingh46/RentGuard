@@ -5,6 +5,9 @@ export const sendOtpEmail = async (email, otp) => {
     const emailUser = process.env.EMAIL_USER?.trim();
     const emailPass = process.env.EMAIL_PASS?.replace(/\s/g, "");
 
+
+    console.log("SEND OTP EMAIL FUNCTION CALLED");
+
     // Check credentials
     console.log("Email configured:", Boolean(emailUser));
     console.log("Password configured:", Boolean(emailPass));
@@ -35,7 +38,7 @@ export const sendOtpEmail = async (email, otp) => {
           <p>Do not share this code with anyone.</p>
         </div>
       `,
-    }
+    };
 
     const result = await transporter.sendMail(mailOptions);
 

@@ -135,7 +135,7 @@ const TenantDashboard = () => {
             </h1>
 
             <p className="mt-3 text-sm text-stone-500 dark:text-[#A5A5A5] sm:text-base">
-              Hi {tenant?.fullName?.split(" ")[0] || account?.username || "there"}.
+              Hi {tenant?.fullName?.split(" ")[0] || "there"}.
               {" "}Manage your rental, simply and securely.
             </p>
           </div>
@@ -186,7 +186,7 @@ const TenantDashboard = () => {
 
               <div className="mt-8">
                 <h2 className="mt-3 max-w-2xl text-3xl font-normal leading-tight tracking-tight text-[#f9c83d] sm:text-5xl lg:text-[58px]">
-                  {tenant?.fullName || account?.username || "Tenant"}
+                  {tenant?.fullName || "Tenant"}
                 </h2>
               </div>
 
@@ -449,7 +449,7 @@ const TenantDashboard = () => {
                   Tenant name
                 </p>
                 <p className="mt-1 break-words text-sm font-medium">
-                  {tenant?.fullName || account?.username || "—"}
+                  {tenant?.fullName || "—"}
                 </p>
               </div>
 
@@ -458,7 +458,7 @@ const TenantDashboard = () => {
                   Email address
                 </p>
                 <p className="mt-1 break-words text-sm font-medium">
-                  {account?.email || "—"}
+                  {tenant?.email || "—"}
                 </p>
               </div>
             </div>

@@ -1,33 +1,54 @@
-import React, { useEffect, useState } from "react";
+
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import apiClient from "../../ApiClient/interceptor";
 
 const TenantProfile = () => {
-  const [profile, setProfile] = useState({
-    fullName: "Rahul Sharma",
-    email: "rahul.sharma@example.com",
-    phone: "9876543210",
-    aadhaar: "123456789012",
+  const [profile, setProfile] = useState(null);
+  const [formData, setFormData] = useState({
+    fullName: "",
+    address: "",
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState(profile);
   const [profilePicture, setProfilePicture] = useState(null);
   const [picturePreview, setPicturePreview] = useState("");
 
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    return () => {
-      if (picturePreview) URL.revokeObjectURL(picturePreview);
-    };
-  }, [picturePreview]);
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const response = await apiClient.get("/tenant/me");
+      const tenant = response.data.data;
+
+      setProfile(tenant);
+      setFormData({
+        fullName: tenant.fullName || "",
+        address: tenant.address || "",
+      });
+
+      setPicturePreview(tenant.profilePicture || "");
+    } catch (err) {
+      console.error("Tenant profile error:", err);
+      setError(
+        err.response?.data?.message ||
+          "Unable to load your profile.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const inputClass =
     "mt-2 w-full rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-[#171717] outline-none transition focus:border-[#f9c83d] focus:ring-2 focus:ring-[#f9c83d]/20 dark:border-neutral-700 dark:bg-[#1d1d1d] dark:text-[#F1F0ED]";
@@ -36,14 +57,12 @@ const TenantProfile = () => {
     "text-sm font-medium text-neutral-700 dark:text-neutral-300";
 
   const openModal = () => {
-    setFormData(profile);
-    setPasswordData({
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
+    setFormData({
+      fullName: profile.fullName || "",
+      address: profile.address || "",
     });
-    setMessage("");
     setError("");
+    setMessage("");
     setIsModalOpen(true);
   };
 
@@ -68,76 +87,107 @@ const TenantProfile = () => {
 
     if (!file.type.startsWith("image/")) {
       setError("Please select a valid image.");
+      e.target.value = "";
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       setError("Profile picture must be smaller than 5 MB.");
+      e.target.value = "";
       return;
     }
 
-    if (picturePreview) URL.revokeObjectURL(picturePreview);
-
-    const preview = URL.createObjectURL(file);
     setProfilePicture(file);
-    setPicturePreview(preview);
+    setPicturePreview(URL.createObjectURL(file));
     setError("");
+    setMessage("");
   };
 
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-
-    setPasswordData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     setError("");
     setMessage("");
 
-    if (!/^\d{12}$/.test(formData.aadhaar)) {
-      setError("Please enter a valid 12-digit Aadhaar number.");
+    if (!formData.fullName.trim() || !formData.address.trim()) {
+      setError("Full name and address are required.");
       return;
     }
 
-    const wantsPasswordChange =
-      passwordData.currentPassword ||
-      passwordData.newPassword ||
-      passwordData.confirmPassword;
+    try {
+      setSaving(true);
 
-    if (wantsPasswordChange) {
-      if (
-        !passwordData.currentPassword ||
-        !passwordData.newPassword ||
-        !passwordData.confirmPassword
-      ) {
-        setError("Fill in all three password fields to change your password.");
-        return;
-      }
+      const response = await apiClient.put("/tenant/me/update", {
+        fullName: formData.fullName.trim(),
+        address: formData.address.trim(),
+      });
 
-      if (passwordData.newPassword.length < 8) {
-        setError("Your new password must contain at least 8 characters.");
-        return;
-      }
+      const updatedTenant = response.data.data;
 
-      if (passwordData.newPassword !== passwordData.confirmPassword) {
-        setError("Your new password and confirmation do not match.");
-        return;
-      }
+      setProfile((prev) => ({
+        ...prev,
+        ...updatedTenant,
+      }));
+
+      setFormData({
+        fullName: updatedTenant.fullName,
+        address: updatedTenant.address,
+      });
+
+      setIsModalOpen(false);
+      setMessage("Profile updated successfully.");
+    } catch (err) {
+      console.error("Profile update error:", err);
+      setError(
+        err.response?.data?.message ||
+          "Unable to update your profile.",
+      );
+    } finally {
+      setSaving(false);
     }
-
-    setProfile(formData);
-    setMessage("Profile details saved in this demo.");
-
-    // Backend integration is needed to persist profile changes,
-    // upload the picture, or actually change the account password.
-    setIsModalOpen(false);
   };
 
-  const initials = profile.fullName
+  const handlePictureUpload = async () => {
+    if (!profilePicture) {
+      setError("Please select an image first.");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setError("");
+      setMessage("");
+
+      const formDataToSend = new FormData();
+      formDataToSend.append("image", profilePicture);
+
+      const response = await apiClient.post(
+        "/tenant/me/profile-picture",
+        formDataToSend,
+      );
+
+      const imageUrl = response.data.data.profilePicture;
+
+      setProfile((prev) => ({
+        ...prev,
+        profilePicture: imageUrl,
+      }));
+
+      setPicturePreview(imageUrl);
+      setProfilePicture(null);
+      setMessage("Profile picture updated successfully.");
+    } catch (err) {
+      console.error("Profile picture upload error:", err);
+      setError(
+        err.response?.data?.message ||
+          "Unable to upload profile picture.",
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const initials = (profile?.fullName || "Tenant")
     .split(" ")
     .filter(Boolean)
     .slice(0, 2)
@@ -145,20 +195,43 @@ const TenantProfile = () => {
     .join("")
     .toUpperCase();
 
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f7f5f0] dark:bg-[#101010]">
+        <p className="text-sm text-neutral-500">
+          Loading your profile...
+        </p>
+      </div>
+    );
+  }
+
+  if (error && !profile) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f7f5f0] p-6 dark:bg-[#101010]">
+        <p className="text-sm text-red-600">{error}</p>
+        <button
+          onClick={fetchProfile}
+          className="rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  const maskedAadhaar = profile?.aadhaarNumber || "";
+
   return (
-    <div className="min-h-screen bg-[#f7f5f0] px-4 py-8 text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED] sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#f7f5f0] px-4 py-8 text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
       <div className="mx-auto max-w-5xl">
-        {/* Header */}
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
               Tenant Portal / Profile
             </p>
-
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               My Profile
             </h1>
-
             <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
               View and manage your personal account information.
             </p>
@@ -168,12 +241,10 @@ const TenantProfile = () => {
             to="/tenant/dashboard"
             className="inline-flex w-fit items-center gap-2 rounded-lg border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-[#171717] dark:hover:bg-neutral-800"
           >
-            <span aria-hidden="true">←</span>
-            Back to Dashboard
+            ← Back to Dashboard
           </Link>
         </div>
 
-        {/* Profile Overview */}
         <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-[#171717]">
           <div className="flex flex-col justify-between gap-6 border-b border-neutral-100 p-6 dark:border-neutral-800 sm:flex-row sm:items-center sm:p-8">
             <div className="flex items-center gap-5">
@@ -189,13 +260,15 @@ const TenantProfile = () => {
                 )}
               </div>
 
-              <div>
-                <h2 className="text-xl font-semibold">{profile.fullName}</h2>
+              <div className="min-w-0">
+                <h2 className="text-xl font-semibold">
+                  {profile?.fullName}
+                </h2>
                 <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                   Tenant Account
                 </p>
-                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                  {profile.email}
+                <p className="mt-1 break-all text-sm text-neutral-500 dark:text-neutral-400">
+                  {profile?.email}
                 </p>
               </div>
             </div>
@@ -205,15 +278,15 @@ const TenantProfile = () => {
               onClick={openModal}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e]"
             >
-              <span aria-hidden="true">✎</span>
-              Update Profile
+              ✎ Update Profile
             </button>
           </div>
 
-          {/* Read-only Details */}
           <div className="p-6 sm:p-8">
             <div className="mb-6">
-              <h3 className="text-base font-semibold">Personal Details</h3>
+              <h3 className="text-base font-semibold">
+                Personal Details
+              </h3>
               <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
                 Your registered contact and identification information.
               </p>
@@ -224,21 +297,27 @@ const TenantProfile = () => {
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Full Name
                 </p>
-                <p className="mt-2 font-medium">{profile.fullName}</p>
+                <p className="mt-2 font-medium">
+                  {profile?.fullName || "—"}
+                </p>
               </div>
 
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Email Address
                 </p>
-                <p className="mt-2 break-all font-medium">{profile.email}</p>
+                <p className="mt-2 break-all font-medium">
+                  {profile?.email || "—"}
+                </p>
               </div>
 
               <div>
                 <p className="text-sm text-neutral-500 dark:text-neutral-400">
                   Phone Number
                 </p>
-                <p className="mt-2 font-medium">{profile.phone}</p>
+                <p className="mt-2 font-medium">
+                  {profile?.phone || "—"}
+                </p>
               </div>
 
               <div>
@@ -246,7 +325,16 @@ const TenantProfile = () => {
                   Aadhaar Number
                 </p>
                 <p className="mt-2 font-medium tracking-wider">
-                  {"•".repeat(8) + profile.aadhaar.slice(-4)}
+                  {maskedAadhaar || "Not available"}
+                </p>
+              </div>
+
+              <div className="sm:col-span-2">
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  Address
+                </p>
+                <p className="mt-2 font-medium">
+                  {profile?.address || "—"}
                 </p>
               </div>
             </div>
@@ -268,17 +356,27 @@ const TenantProfile = () => {
           </p>
         )}
 
+        {error && profile && (
+          <p
+            role="alert"
+            className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
+          >
+            {error}
+          </p>
+        )}
+
         <footer className="py-8 text-center text-xs text-neutral-400 dark:text-neutral-500">
           RentGuard Tenant Portal · My Profile
         </footer>
       </div>
 
-      {/* Update Profile Modal */}
       {isModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget) closeModal();
+            if (e.target === e.currentTarget && !saving && !uploading) {
+              closeModal();
+            }
           }}
         >
           <div
@@ -296,26 +394,26 @@ const TenantProfile = () => {
                   Update Profile
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                  Edit your details and account security.
+                  Update your personal information and profile picture.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={closeModal}
+                disabled={saving || uploading}
                 aria-label="Close modal"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-neutral-500 transition hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-xl text-neutral-500 transition hover:bg-neutral-100 disabled:opacity-50 dark:hover:bg-neutral-800"
               >
                 ×
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8 p-6 sm:p-7">
-              {/* Picture Upload */}
               <div>
                 <h3 className="font-semibold">Profile Picture</h3>
 
-                <div className="mt-4 flex items-center gap-4">
+                <div className="mt-4 flex flex-wrap items-center gap-4">
                   <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[#f7f5f0] font-semibold text-neutral-500 dark:bg-[#242424]">
                     {picturePreview ? (
                       <img
@@ -338,13 +436,21 @@ const TenantProfile = () => {
                     />
                   </label>
 
+                  <button
+                    type="button"
+                    onClick={handlePictureUpload}
+                    disabled={!profilePicture || uploading}
+                    className="rounded-lg bg-[#f9c83d] px-4 py-2.5 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {uploading ? "Uploading..." : "Upload Picture"}
+                  </button>
+
                   <span className="text-xs text-neutral-500">
                     Max 5 MB
                   </span>
                 </div>
               </div>
 
-              {/* Personal Information */}
               <div>
                 <h3 className="font-semibold">Personal Information</h3>
 
@@ -370,12 +476,9 @@ const TenantProfile = () => {
                     </label>
                     <input
                       id="email"
-                      name="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={handleProfileChange}
+                      value={profile?.email || ""}
                       className={inputClass}
-                      required
+                      readOnly
                     />
                   </div>
 
@@ -385,13 +488,9 @@ const TenantProfile = () => {
                     </label>
                     <input
                       id="phone"
-                      name="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={handleProfileChange}
+                      value={profile?.phone || ""}
                       className={inputClass}
-                      required
-                      maxLength={15}
+                      readOnly
                     />
                   </div>
 
@@ -401,89 +500,26 @@ const TenantProfile = () => {
                     </label>
                     <input
                       id="aadhaar"
-                      name="aadhaar"
-                      type="password"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      value={formData.aadhaar}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          aadhaar: e.target.value
-                            .replace(/\D/g, "")
-                            .slice(0, 12),
-                        }))
-                      }
+                      value={maskedAadhaar}
+                      className={inputClass}
+                      readOnly
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label htmlFor="address" className={labelClass}>
+                      Address
+                    </label>
+                    <textarea
+                      id="address"
+                      name="address"
+                      rows={3}
+                      value={formData.address}
+                      onChange={handleProfileChange}
                       className={inputClass}
                       required
-                      maxLength={12}
-                      pattern="[0-9]{12}"
+                      maxLength={500}
                     />
-                  </div>
-                </div>
-              </div>
-
-              {/* Password Update */}
-              <div className="border-t border-neutral-100 pt-6 dark:border-neutral-800">
-                <h3 className="font-semibold">Update Password</h3>
-                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                  Leave these fields empty if you don't want to change your password.
-                </p>
-
-                <div className="mt-4 space-y-4">
-                  <div>
-                    <label
-                      htmlFor="currentPassword"
-                      className={labelClass}
-                    >
-                      Current Password
-                    </label>
-                    <input
-                      id="currentPassword"
-                      name="currentPassword"
-                      type="password"
-                      autoComplete="current-password"
-                      value={passwordData.currentPassword}
-                      onChange={handlePasswordChange}
-                      className={inputClass}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    <div>
-                      <label htmlFor="newPassword" className={labelClass}>
-                        New Password
-                      </label>
-                      <input
-                        id="newPassword"
-                        name="newPassword"
-                        type="password"
-                        autoComplete="new-password"
-                        minLength={8}
-                        value={passwordData.newPassword}
-                        onChange={handlePasswordChange}
-                        className={inputClass}
-                      />
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="confirmPassword"
-                        className={labelClass}
-                      >
-                        Confirm New Password
-                      </label>
-                      <input
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        type="password"
-                        autoComplete="new-password"
-                        minLength={8}
-                        value={passwordData.confirmPassword}
-                        onChange={handlePasswordChange}
-                        className={inputClass}
-                      />
-                    </div>
                   </div>
                 </div>
               </div>
@@ -501,16 +537,18 @@ const TenantProfile = () => {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-lg border border-neutral-200 px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                  disabled={saving || uploading}
+                  className="rounded-lg border border-neutral-200 px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
                 >
                   Cancel
                 </button>
 
                 <button
                   type="submit"
-                  className="rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e] dark:hover:bg-[#edbb2e]"
+                  disabled={saving || uploading}
+                  className="rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Save Changes
+                  {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>

@@ -180,7 +180,8 @@ export const register = async (req, res) => {
 export const requestOtp = async (req, res) => {
   try {
     const { contact } = req.body;
-
+    console.log("REQUEST OTP CONTROLLER STARTED");
+    console.log("ABOUT TO SEND OTP EMAIL");
     if (!contact || typeof contact !== "string") {
       return res.status(400).json({
         message: "Email address is required.",

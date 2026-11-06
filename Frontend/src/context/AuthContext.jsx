@@ -9,6 +9,7 @@ export const AuthProvider = ({ children }) => {
 
     // Request OTP
     const requestOtp = async (contact) => {
+        console.log("Requesting OTP for:", contact);
         const response = await apiClient.post("/auth/request-otp", {
             contact,
         });
