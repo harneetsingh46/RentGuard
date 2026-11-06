@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { Eye, Download, LoaderCircle } from "lucide-react";
 import apiClient from "../../ApiClient/interceptor";
 import toast from "react-hot-toast";
 
@@ -53,10 +55,34 @@ const formatDate = (date) => {
   });
 };
 
+const renderStatusBadge = (status) => {
+  const normalized = status?.toLowerCase() || "unpaid";
+  if (normalized === "paid") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400">
+        Paid
+      </span>
+    );
+  }
+  if (normalized === "reserved") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/60 dark:text-amber-400">
+        In Checkout
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800 dark:bg-rose-950/60 dark:text-rose-400">
+      Unpaid
+    </span>
+  );
+};
+
 const inputClass =
   "w-full rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-yellow-500 dark:border-neutral-700 dark:bg-neutral-950";
 
 const Bill = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState("");
   const [tenants, setTenants] = useState([]);
@@ -71,7 +97,66 @@ const Bill = () => {
   const [editingBill, setEditingBill] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [tenantFilter, setTenantFilter] = useState(searchParams.get("tenantId") || "all");
   const [error, setError] = useState("");
+  const [receiptLoadingId, setReceiptLoadingId] = useState(null);
+  const [receiptActionType, setReceiptActionType] = useState(null);
+
+  // View or download receipt for a paid bill
+  const handleReceiptAction = async (bill, action = "download") => {
+    if (!bill?._id || !selectedProperty || receiptLoadingId) return;
+
+    let blobUrl;
+    try {
+      setReceiptLoadingId(bill._id);
+      setReceiptActionType(action);
+
+      const response = await apiClient.get(
+        `/payment/property/${selectedProperty}/bill/${bill._id}/receipt`,
+        { responseType: "blob" }
+      );
+
+      const pdfBlob = new Blob([response.data], {
+        type: "application/pdf",
+      });
+      blobUrl = window.URL.createObjectURL(pdfBlob);
+
+      if (action === "view") {
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } else {
+        const link = document.createElement("a");
+        link.href = blobUrl;
+        const safeName = (bill.billName || "receipt")
+          .trim()
+          .replace(/[^a-zA-Z0-9_-]/g, "_");
+        link.download = `RentGuard-Receipt-${safeName}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success("Receipt downloaded successfully.");
+      }
+
+      window.setTimeout(() => {
+        if (blobUrl) window.URL.revokeObjectURL(blobUrl);
+      }, 60_000);
+    } catch (err) {
+      console.error("Receipt action error:", err);
+      toast.error(
+        action === "view"
+          ? "Unable to open receipt. Please try again."
+          : "Unable to download receipt. Please try again."
+      );
+    } finally {
+      setReceiptLoadingId(null);
+      setReceiptActionType(null);
+    }
+  };
 
   // Load owner's properties.
   const fetchProperties = async () => {
@@ -82,12 +167,17 @@ const Bill = () => {
       const list = response.data.data || [];
       setProperties(list);
 
+      const targetPropertyId = searchParams.get("propertyId");
       if (list.length) {
-        setSelectedProperty((current) =>
-          list.some((property) => property._id === current)
-            ? current
-            : list[0]._id
-        );
+        if (targetPropertyId && list.some((p) => p._id === targetPropertyId)) {
+          setSelectedProperty(targetPropertyId);
+        } else {
+          setSelectedProperty((current) =>
+            list.some((property) => property._id === current)
+              ? current
+              : list[0]._id
+          );
+        }
       } else {
         setSelectedProperty("");
         setTenants([]);
@@ -154,6 +244,32 @@ const Bill = () => {
     fetchBills(selectedProperty);
   }, [selectedProperty]);
 
+  // Handle URL params for deep-linking (e.g., from Tenant management)
+  useEffect(() => {
+    const urlTenantId = searchParams.get("tenantId");
+    const urlAction = searchParams.get("action");
+
+    if (urlTenantId) {
+      setTenantFilter(urlTenantId);
+    }
+
+    if (urlAction === "create" && urlTenantId && tenants.length > 0) {
+      const targetTenant = tenants.find((t) => String(t._id) === String(urlTenantId));
+      if (targetTenant) {
+        const unitId = targetTenant.unit?._id || targetTenant.unit || "";
+        const unitRent = targetTenant.unit?.rent;
+        setEditingBill(null);
+        setForm({
+          ...emptyForm(),
+          tenantId: targetTenant._id,
+          unitId,
+          amount: String(unitRent ?? ""),
+        });
+        setShowModal(true);
+      }
+    }
+  }, [searchParams, tenants]);
+
   // Build the unit list from active tenants' populated unit references.
   const units = useMemo(() => {
     const unique = new Map();
@@ -171,7 +287,7 @@ const Bill = () => {
             (tenant) =>
               String(tenant.unit?._id || tenant.unit) === String(form.unitId)
           )
-        : [],
+        : tenants,
     [tenants, form.unitId]
   );
 
@@ -180,26 +296,67 @@ const Bill = () => {
     [units, form.unitId]
   );
 
+  // Auto-connect tenant and unit bi-directionally
+  const handleTenantChange = (tenantId) => {
+    const selectedTenant = tenants.find((t) => String(t._id) === String(tenantId));
+    if (selectedTenant) {
+      const unitId = selectedTenant.unit?._id || selectedTenant.unit || "";
+      const unit = units.find((u) => String(u._id) === String(unitId));
+      setForm((current) => ({
+        ...current,
+        tenantId,
+        unitId,
+        amount:
+          current.category === "rent"
+            ? String(unit?.rent ?? current.amount)
+            : current.amount,
+      }));
+    } else {
+      setForm((current) => ({ ...current, tenantId: "" }));
+    }
+  };
+
+  const handleUnitChange = (unitId) => {
+    const unit = units.find((u) => String(u._id) === String(unitId));
+    const tenantInUnit = tenants.find(
+      (t) => String(t.unit?._id || t.unit) === String(unitId)
+    );
+    setForm((current) => ({
+      ...current,
+      unitId,
+      tenantId: tenantInUnit ? tenantInUnit._id : "",
+      amount:
+        current.category === "rent"
+          ? String(unit?.rent ?? current.amount)
+          : current.amount,
+    }));
+  };
+
   const filteredBills = useMemo(
     () =>
-      categoryFilter === "all"
-        ? bills
-        : bills.filter((bill) => bill.category === categoryFilter),
-    [bills, categoryFilter]
+      bills.filter((bill) => {
+        const matchesCategory =
+          categoryFilter === "all" || bill.category === categoryFilter;
+        const billTenantId = bill.tenant?._id || bill.tenant;
+        const matchesTenant =
+          tenantFilter === "all" || String(billTenantId) === String(tenantFilter);
+        return matchesCategory && matchesTenant;
+      }),
+    [bills, categoryFilter, tenantFilter]
   );
 
   const summary = useMemo(
     () => ({
-      count: bills.length,
-      total: bills.reduce((sum, bill) => sum + (Number(bill.amount) || 0), 0),
-      rent: bills
+      count: filteredBills.length,
+      total: filteredBills.reduce((sum, bill) => sum + (Number(bill.amount) || 0), 0),
+      rent: filteredBills
         .filter((bill) => bill.category === "rent")
         .reduce((sum, bill) => sum + (Number(bill.amount) || 0), 0),
-      utilities: bills
+      utilities: filteredBills
         .filter((bill) => ["electricity", "water"].includes(bill.category))
         .reduce((sum, bill) => sum + (Number(bill.amount) || 0), 0),
     }),
-    [bills]
+    [filteredBills]
   );
 
   const updateForm = (field, value) => {
@@ -375,9 +532,7 @@ const Bill = () => {
         )}
 
         <div className="mb-6 rounded-xs border border-stone-200 bg-stone-50 p-4 text-sm text-stone-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-stone-300">
-          Payment information (paid amount, outstanding balance and payment
-          status) will appear here after the tenant payment backend is connected.
-          Tenants will make payments from their own dashboard.
+          Manage tenant billing and track payments. Status updates automatically in real-time when tenants complete payment.
         </div>
 
         <section className="overflow-hidden rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
@@ -390,6 +545,20 @@ const Bill = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <select
+                aria-label="Filter bills by tenant"
+                value={tenantFilter}
+                onChange={(event) => setTenantFilter(event.target.value)}
+                className={inputClass + " sm:w-44"}
+              >
+                <option value="all">All tenants</option>
+                {tenants.map((tenant) => (
+                  <option key={tenant._id} value={tenant._id}>
+                    {tenant.fullName}
+                  </option>
+                ))}
+              </select>
+
               <select
                 aria-label="Filter bills by category"
                 value={categoryFilter}
@@ -452,7 +621,10 @@ const Bill = () => {
                       <p className="break-words font-semibold">{bill.billName}</p>
                       <p className="mt-1 text-xs text-stone-500">{bill.tenant?.fullName || "Tenant"} · {bill.unit?.unitName || "—"}</p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-stone-100 px-2 py-1 text-xs capitalize dark:bg-neutral-800">{bill.category}</span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span className="rounded-full bg-stone-100 px-2 py-1 text-xs capitalize dark:bg-neutral-800">{bill.category}</span>
+                      {renderStatusBadge(bill.paymentStatus)}
+                    </div>
                   </div>
                   <div className="mt-3 flex items-end justify-between gap-3 border-t border-stone-200 pt-3 dark:border-neutral-800">
                     <div className="text-xs text-stone-500">
@@ -463,7 +635,45 @@ const Bill = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">{currency(bill.amount)}</p>
-                      <button type="button" onClick={() => openEditModal(bill)} className="mt-2 rounded-xs border border-stone-300 px-3 py-1.5 text-xs font-medium dark:border-neutral-700">Edit</button>
+                      {bill.paymentStatus === "paid" ? (
+                        <div className="mt-2 flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleReceiptAction(bill, "view")}
+                            disabled={receiptLoadingId === bill._id}
+                            title="View receipt in new tab"
+                            className="inline-flex items-center gap-1 rounded-xs border border-stone-300 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-50 dark:border-neutral-700 dark:text-stone-200"
+                          >
+                            {receiptLoadingId === bill._id && receiptActionType === "view" ? (
+                              <LoaderCircle size={12} className="animate-spin text-stone-600 dark:text-stone-300" />
+                            ) : (
+                              <Eye size={12} />
+                            )}
+                            <span>View</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleReceiptAction(bill, "download")}
+                            disabled={receiptLoadingId === bill._id}
+                            title="Download receipt PDF"
+                            className="inline-flex items-center gap-1 rounded-xs bg-yellow-400 px-2 py-1 text-xs font-medium text-stone-900 hover:bg-yellow-500 disabled:opacity-50"
+                          >
+                            {receiptLoadingId === bill._id && receiptActionType === "download" ? (
+                              <LoaderCircle size={12} className="animate-spin text-black" />
+                            ) : (
+                              <Download size={12} />
+                            )}
+                            <span>Receipt</span>
+                          </button>
+                        </div>
+                      ) : bill.paymentStatus === "reserved" ? (
+                        <span className="mt-2 inline-block text-xs font-medium text-amber-600 dark:text-amber-400" title="Locked while tenant is in checkout">
+                          In Checkout
+                        </span>
+                      ) : (
+                        <button type="button" onClick={() => openEditModal(bill)} className="mt-2 rounded-xs border border-stone-300 px-3 py-1.5 text-xs font-medium dark:border-neutral-700">Edit</button>
+                      )}
                     </div>
                   </div>
                 </article>
@@ -481,6 +691,7 @@ const Bill = () => {
                     <th className="px-5 py-4 font-medium">Start Date</th>
                     <th className="px-5 py-4 font-medium">End Date</th>
                     <th className="px-5 py-4 font-medium">Amount</th>
+                    <th className="px-5 py-4 font-medium">Status</th>
                     <th className="px-5 py-4 font-medium">Due Date</th>
                     <th className="px-5 py-4 font-medium">Action</th>
                   </tr>
@@ -499,15 +710,54 @@ const Bill = () => {
                       <td className="px-5 py-4">{formatDate(bill.startDate)}</td>
                       <td className="px-5 py-4">{formatDate(bill.endDate)}</td>
                       <td className="px-5 py-4 font-medium">{currency(bill.amount)}</td>
+                      <td className="px-5 py-4">{renderStatusBadge(bill.paymentStatus)}</td>
                       <td className="px-5 py-4">{formatDate(bill.dueDate)}</td>
                       <td className="px-5 py-4">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(bill)}
-                          className="rounded-xs border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                        >
-                          Edit
-                        </button>
+                        {bill.paymentStatus === "paid" ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleReceiptAction(bill, "view")}
+                              disabled={receiptLoadingId === bill._id}
+                              title="View receipt in new tab"
+                              className="inline-flex items-center gap-1 rounded-xs border border-stone-300 bg-white px-2.5 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-stone-200 dark:hover:bg-neutral-700"
+                            >
+                              {receiptLoadingId === bill._id && receiptActionType === "view" ? (
+                                <LoaderCircle size={13} className="animate-spin text-stone-600 dark:text-stone-300" />
+                              ) : (
+                                <Eye size={13} />
+                              )}
+                              <span>View</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleReceiptAction(bill, "download")}
+                              disabled={receiptLoadingId === bill._id}
+                              title="Download receipt PDF"
+                              className="inline-flex items-center gap-1 rounded-xs bg-yellow-400 px-2.5 py-1.5 text-xs font-medium text-stone-900 hover:bg-yellow-500 disabled:opacity-50"
+                            >
+                              {receiptLoadingId === bill._id && receiptActionType === "download" ? (
+                                <LoaderCircle size={13} className="animate-spin text-black" />
+                              ) : (
+                                <Download size={13} />
+                              )}
+                              <span>Receipt</span>
+                            </button>
+                          </div>
+                        ) : bill.paymentStatus === "reserved" ? (
+                          <span className="text-xs font-medium text-amber-600 dark:text-amber-400" title="Locked while tenant is in checkout">
+                            In Checkout
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(bill)}
+                            className="rounded-xs border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                          >
+                            Edit
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -593,74 +843,61 @@ const Bill = () => {
                       </select>
                     </div>
 
-                    <div>
-                      <label htmlFor="bill-unit" className="mb-1 block text-sm font-medium">
-                        Unit
-                      </label>
-                      <select
-                        id="bill-unit"
-                        required
-                        value={form.unitId}
-                        disabled={loadingTenants || units.length === 0}
-                        onChange={(event) => {
-                          const unitId = event.target.value;
-                          const unit = units.find(
-                            (item) => String(item._id) === String(unitId)
-                          );
-
-                          setForm((current) => ({
-                            ...current,
-                            unitId,
-                            tenantId: "",
-                            amount:
-                              current.category === "rent"
-                                ? String(unit?.rent ?? "")
-                                : current.amount,
-                          }));
-                        }}
-                        className={inputClass}
-                      >
-                        <option value="">
-                          {loadingTenants ? "Loading units..." : "Select unit"}
-                        </option>
-                        {units.map((unit) => (
-                          <option key={unit._id} value={unit._id}>
-                            {unit.unitName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label htmlFor="bill-tenant" className="mb-1 block text-sm font-medium">
-                        Tenant
-                      </label>
-                      <select
-                        id="bill-tenant"
-                        required
-                        value={form.tenantId}
-                        disabled={!form.unitId || loadingTenants || availableTenants.length === 0}
-                        onChange={(event) => updateForm("tenantId", event.target.value)}
-                        className={inputClass}
-                      >
-                        <option value="">
-                          {!form.unitId
-                            ? "Select a unit first"
-                            : loadingTenants
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label htmlFor="bill-tenant" className="mb-1 block text-sm font-medium">
+                          Tenant
+                        </label>
+                        <select
+                          id="bill-tenant"
+                          required
+                          value={form.tenantId}
+                          disabled={loadingTenants || tenants.length === 0}
+                          onChange={(event) => handleTenantChange(event.target.value)}
+                          className={inputClass}
+                        >
+                          <option value="">
+                            {loadingTenants
                               ? "Loading tenants..."
+                              : tenants.length === 0
+                              ? "No active tenants found"
                               : "Select tenant"}
-                        </option>
-                        {availableTenants.map((tenant) => (
-                          <option key={tenant._id} value={tenant._id}>
-                            {tenant.fullName}
                           </option>
-                        ))}
-                      </select>
-                      {!loadingTenants && form.unitId && availableTenants.length === 0 && (
-                        <p className="mt-1 text-xs text-stone-500">
-                          No active tenant found in this unit.
-                        </p>
-                      )}
+                          {tenants.map((tenant) => (
+                            <option key={tenant._id} value={tenant._id}>
+                              {tenant.fullName} {tenant.unit?.unitName ? `(${tenant.unit.unitName})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        {!loadingTenants && tenants.length === 0 && (
+                          <p className="mt-1 text-xs text-stone-500">
+                            No active tenants in this property.
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label htmlFor="bill-unit" className="mb-1 block text-sm font-medium">
+                          Unit
+                        </label>
+                        <select
+                          id="bill-unit"
+                          required
+                          value={form.unitId}
+                          disabled={loadingTenants || units.length === 0}
+                          onChange={(event) => handleUnitChange(event.target.value)}
+                          className={inputClass}
+                        >
+                          <option value="">
+                            {loadingTenants ? "Loading units..." : "Select unit"}
+                          </option>
+                          {units.map((unit) => (
+                            <option key={unit._id} value={unit._id}>
+                              {unit.unitName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </>
                 )}

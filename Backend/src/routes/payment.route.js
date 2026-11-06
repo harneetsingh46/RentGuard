@@ -3,6 +3,7 @@ import { protect } from "../utils/protect.js";
 
 import {
   createPaymentOrder,
+  downloadBillReceipt,
   downloadMyPaymentReceipt,
   downloadPaymentReceipt,
   getMyPayments,
@@ -22,28 +23,27 @@ router.post("/verify", protect, verifyPayment);
 router.get("/my-payments", protect, getMyPayments);
 
 // Tenant: Download own payment receipt
-// Tenant receipt
 router.get(
   "/my-payments/:paymentId/receipt",
   protect,
   downloadMyPaymentReceipt
 );
 
-// Owner receipt
-router.get(
-  "/property/:propertyId/:paymentId/receipt",
-  protect,
-  downloadPaymentReceipt
-);
-
 // Owner: Get property payments
 router.get("/property/:propertyId", protect, getPropertyPayments);
 
-// Owner: Download payment receipt
+// Owner: Download payment receipt by payment ID
 router.get(
   "/property/:propertyId/:paymentId/receipt",
   protect,
   downloadPaymentReceipt,
+);
+
+// Owner: Download payment receipt by bill ID
+router.get(
+  "/property/:propertyId/bill/:billId/receipt",
+  protect,
+  downloadBillReceipt,
 );
 
 export default router;

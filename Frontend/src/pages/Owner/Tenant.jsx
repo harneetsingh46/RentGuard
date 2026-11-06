@@ -1,11 +1,13 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import apiClient from '../../ApiClient/interceptor.js'
 import { useToast } from "../../common/ToastProvider"
 import ConfirmModal from "../../common/ConfirmModal"
-import { Pencil, LogOut, Search, Upload, X, FileText, FileImage, LoaderCircle } from "lucide-react"
+import { Pencil, LogOut, Search, Upload, X, FileText, FileImage, LoaderCircle, ReceiptText } from "lucide-react"
 
 const Tenant = () => {
+  const navigate = useNavigate()
   const { showToast } = useToast()
   const [tenantSearch, setTenantSearch] = useState('')
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false)
@@ -413,7 +415,7 @@ const Tenant = () => {
           {filteredTenants.map((tenant) => (
             <article
               key={tenant._id}
-              className="min-w-0 rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-4"
+              className="min-w-0 rounded-sm border border-gray-200 bg-white p-3 shadow-sm dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-4"
             >
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
@@ -470,6 +472,16 @@ const Tenant = () => {
                   >
                     <Pencil size={17} />
                     <span className="ml-2 text-sm">Edit</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/owner/bill?propertyId=${tenant.property}&tenantId=${tenant._id}`)}
+                    aria-label={`View bills for ${tenant.fullName}`}
+                    title="View bills"
+                    className="inline-flex min-h-10 items-center justify-center rounded-xs border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                  >
+                    <ReceiptText size={17} />
+                    <span className="ml-2 text-sm">Bills</span>
                   </button>
                   <button
                     type="button"
@@ -573,6 +585,16 @@ const Tenant = () => {
                           className="mx-0 my-1 inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400"
                         >
                           <Pencil size={17} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/owner/bill?propertyId=${tenant.property}&tenantId=${tenant._id}`)}
+                          aria-label={`View bills for ${tenant.fullName}`}
+                          title="View bills"
+                          className="mx-0 my-1 inline-flex m-1 items-center justify-center rounded-xs border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                        >
+                          <ReceiptText size={17} />
                         </button>
 
                         <button

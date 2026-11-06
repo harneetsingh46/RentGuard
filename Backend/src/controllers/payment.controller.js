@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
 import PDFDocument from "pdfkit";
-
+import { User } from "../models/user.model.js";
+import { sendPaymentConfirmationEmails } from "../utils/email.js";
 import { Payment } from "../models/payment.model.js";
 import { Order } from "../models/order.model.js";
 import { Bill } from "../models/bill.model.js";
@@ -423,6 +424,65 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
+    // Send payment confirmation emails after successful database transaction.
+    // Email failures must never undo or fail a verified payment.
+    try {
+      const paymentForEmail = await Payment.findById(updatedPayment._id)
+        .populate("tenant", "fullName email")
+        .populate("unit", "unitName unitType")
+        .populate({
+          path: "order",
+          populate: {
+            path: "items.bill",
+            model: "Bill",
+          },
+        });
+
+      const propertyForEmail = await Property.findById(
+        paymentForEmail.property,
+      );
+
+      const ownerForEmail = propertyForEmail
+        ? await User.findById(propertyForEmail.owner).select("username email")
+        : null;
+
+      if (paymentForEmail && paymentForEmail.tenant) {
+        await sendPaymentConfirmationEmails({
+          tenantEmail: paymentForEmail.tenant.email,
+          tenantName: paymentForEmail.tenant.fullName,
+
+          ownerEmail: ownerForEmail?.email,
+          ownerName: ownerForEmail?.username,
+
+          propertyName: propertyForEmail?.propertyName || "N/A",
+          propertyAddress: propertyForEmail?.address || "N/A",
+          unitName: paymentForEmail.unit?.unitName || "N/A",
+
+          amount: paymentForEmail.amount,
+          paymentId: paymentForEmail.razorpayPaymentId,
+          receiptNumber: `RG-${paymentForEmail._id
+            .toString()
+            .slice(-8)
+            .toUpperCase()}`,
+
+          paidAt: paymentForEmail.paidAt,
+
+          bills: (paymentForEmail.order?.items || [])
+            .filter((item) => item.bill)
+            .map((item) => ({
+              billName: item.bill.billName,
+              category: item.bill.category,
+              amount: item.amount,
+            })),
+        });
+      }
+    } catch (emailError) {
+      console.error(
+        "Unable to prepare payment confirmation emails:",
+        emailError,
+      );
+    }
+
     return res.status(200).json({
       success: true,
       message: "Payment verified successfully.",
@@ -536,7 +596,6 @@ export const getPropertyPayments = async (req, res) => {
   }
 };
 
-
 // SHARED: GENERATE PAYMENT RECEIPT PDF
 const generatePaymentReceipt = (res, payment, property) => {
   const doc = new PDFDocument({
@@ -548,13 +607,10 @@ const generatePaymentReceipt = (res, payment, property) => {
     },
   });
 
-  const receiptNumber = `RG-${payment._id
-    .toString()
-    .slice(-8)
-    .toUpperCase()}`;
+  const receiptNumber = `RG-${payment._id.toString().slice(-8).toUpperCase()}`;
 
   const paymentDate = new Date(
-    payment.paidAt || payment.updatedAt || payment.createdAt
+    payment.paidAt || payment.updatedAt || payment.createdAt,
   );
 
   const formattedDate = paymentDate.toLocaleDateString("en-IN", {
@@ -572,20 +628,14 @@ const generatePaymentReceipt = (res, payment, property) => {
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    `attachment; filename="RentGuard-Receipt-${receiptNumber}.pdf"`
+    `attachment; filename="RentGuard-Receipt-${receiptNumber}.pdf"`,
   );
 
   doc.pipe(res);
 
-  doc
-    .fontSize(24)
-    .fillColor("#171717")
-    .text("RentGuard", { align: "center" });
+  doc.fontSize(24).fillColor("#171717").text("RentGuard", { align: "center" });
 
-  doc
-    .moveDown(0.5)
-    .fontSize(16)
-    .text("PAYMENT RECEIPT", { align: "center" });
+  doc.moveDown(0.5).fontSize(16).text("PAYMENT RECEIPT", { align: "center" });
 
   doc.moveDown(1.5);
 
@@ -630,8 +680,8 @@ const generatePaymentReceipt = (res, payment, property) => {
 
     doc.text(
       `${index + 1}. ${bill.billName} (${bill.category}) - ${formatAmount(
-        item.amount
-      )}`
+        item.amount,
+      )}`,
     );
 
     doc.text(
@@ -639,7 +689,7 @@ const generatePaymentReceipt = (res, payment, property) => {
         bill.dueDate
           ? new Date(bill.dueDate).toLocaleDateString("en-IN")
           : "N/A"
-      }`
+      }`,
     );
   });
 
@@ -668,7 +718,6 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   doc.end();
 };
-
 
 // 5. OWNER: DOWNLOAD PAYMENT RECEIPT
 export const downloadPaymentReceipt = async (req, res) => {
@@ -741,7 +790,6 @@ export const downloadPaymentReceipt = async (req, res) => {
   }
 };
 
-
 // 6. TENANT: DOWNLOAD OWN PAYMENT RECEIPT
 export const downloadMyPaymentReceipt = async (req, res) => {
   try {
@@ -795,6 +843,124 @@ export const downloadMyPaymentReceipt = async (req, res) => {
     return generatePaymentReceipt(res, payment, property);
   } catch (error) {
     console.error("Download tenant receipt error:", error);
+
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate payment receipt.",
+      });
+    }
+
+    res.destroy(error);
+  }
+};
+
+// 7. OWNER: DOWNLOAD RECEIPT BY BILL ID
+export const downloadBillReceipt = async (req, res) => {
+  try {
+    if (req.authRole !== "owner") {
+      return res.status(403).json({
+        success: false,
+        message: "Only owners can download payment receipts.",
+      });
+    }
+
+    const { propertyId, billId } = req.params;
+
+    if (
+      !mongoose.Types.ObjectId.isValid(propertyId) ||
+      !mongoose.Types.ObjectId.isValid(billId)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid property or bill ID.",
+      });
+    }
+
+    const property = await Property.findOne({
+      _id: propertyId,
+      owner: req.user._id,
+    });
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: "Property not found or access denied.",
+      });
+    }
+
+    const bill = await Bill.findOne({
+      _id: billId,
+      property: propertyId,
+    });
+
+    if (!bill) {
+      return res.status(404).json({
+        success: false,
+        message: "Bill not found.",
+      });
+    }
+
+    if (bill.paymentStatus !== "paid") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This bill has not been paid yet. Receipts are only available for paid bills.",
+      });
+    }
+
+    // Find the paid payment associated with this bill
+    let payment = null;
+
+    if (bill.reservedByOrder) {
+      payment = await Payment.findOne({
+        order: bill.reservedByOrder,
+        status: "paid",
+      })
+        .populate("tenant", "fullName email phone")
+        .populate("unit", "unitName unitType")
+        .populate({
+          path: "order",
+          populate: {
+            path: "items.bill",
+            model: "Bill",
+          },
+        });
+    }
+
+    if (!payment) {
+      const order = await Order.findOne({
+        "items.bill": bill._id,
+        status: "paid",
+      });
+
+      if (order) {
+        payment = await Payment.findOne({
+          order: order._id,
+          status: "paid",
+        })
+          .populate("tenant", "fullName email phone")
+          .populate("unit", "unitName unitType")
+          .populate({
+            path: "order",
+            populate: {
+              path: "items.bill",
+              model: "Bill",
+            },
+          });
+      }
+    }
+
+    if (!payment || !payment.order) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment record not found for this bill.",
+      });
+    }
+
+    return generatePaymentReceipt(res, payment, property);
+  } catch (error) {
+    console.error("Download bill receipt error:", error);
 
     if (!res.headersSent) {
       return res.status(500).json({

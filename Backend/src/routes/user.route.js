@@ -7,11 +7,12 @@ import {
 } from "../controllers/user.controller.js";
 
 import { isOwner, protect } from "../utils/protect.js";
+import { registerIpLimiter } from "../utils/otpRateLimiter.js";
 
 const router = express.Router();
 
 // Owner registration
-router.post("/register", register);
+router.post("/register", registerIpLimiter, register);
 
 // Protected owner routes
 router.get("/get-user", protect, getUser);

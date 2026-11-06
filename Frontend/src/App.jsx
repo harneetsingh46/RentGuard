@@ -22,6 +22,7 @@ import TenantProfile from "./pages/Tenant/TenantProfile";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Maintenance from "./pages/Tenant/Maintenance";
+import OwnerMaintenance from "./pages/Owner/OwnerMaintenance";
 
 const router = createBrowserRouter([
   // Public pages: Navbar + page + Footer
@@ -90,6 +91,10 @@ const router = createBrowserRouter([
           {
             path: "/owner/profile",
             element: <OwnerProfile />
+          },
+          {
+            path: "/owner/maintenance",
+            element: <OwnerMaintenance/>
           },
         ],
       },

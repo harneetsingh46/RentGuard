@@ -27,7 +27,7 @@ const OwnerProfile = () => {
   }, [user]);
 
   const inputClass =
-    "mt-2 w-full min-w-0 rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-[#171717] outline-none transition focus:border-[#f9c83d] focus:ring-2 focus:ring-[#f9c83d]/20 dark:border-neutral-700 dark:bg-[#1d1d1d] dark:text-[#F1F0ED]";
+    "mt-2 w-full min-w-0 rounded-sm border border-neutral-200 bg-white px-4 py-3 text-sm text-[#171717] outline-none transition focus:border-[#f9c83d] focus:ring-2 focus:ring-[#f9c83d]/20 dark:border-neutral-700 dark:bg-[#1d1d1d] dark:text-[#F1F0ED]";
 
   const labelClass =
     "text-sm font-medium text-neutral-700 dark:text-neutral-300";
@@ -175,7 +175,7 @@ const OwnerProfile = () => {
 
           <Link
             to="/owner/dashboard"
-            className="inline-flex w-fit items-center gap-2 rounded-lg border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-[#171717] dark:hover:bg-neutral-800"
+            className="inline-flex w-fit items-center gap-2 rounded-sm border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-[#171717] dark:hover:bg-neutral-800"
           >
             <span aria-hidden="true">←</span>
             Back to Dashboard
@@ -210,7 +210,7 @@ const OwnerProfile = () => {
             <button
               type="button"
               onClick={openModal}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e]"
+              className="inline-flex items-center justify-center gap-2 rounded-sm bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e]"
             >
               <span aria-hidden="true">✎</span>
               Update Profile
@@ -274,7 +274,7 @@ const OwnerProfile = () => {
         {message && (
           <p
             role="status"
-            className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-300"
+            className="mt-4 rounded-sm border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-300"
           >
             {message}
           </p>
@@ -406,7 +406,7 @@ const OwnerProfile = () => {
               </div>
 
               {/* Information Note */}
-              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-[#1d1d1d]">
+              <div className="rounded-sm border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-700 dark:bg-[#1d1d1d]">
                 <p className="text-sm text-neutral-600 dark:text-neutral-300">
                   Email and phone number cannot currently be changed.
                   A separate OTP verification process will be required
@@ -418,7 +418,7 @@ const OwnerProfile = () => {
               {error && (
                 <p
                   role="alert"
-                  className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
+                  className="rounded-sm border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-400/20 dark:bg-red-400/10 dark:text-red-300"
                 >
                   {error}
                 </p>
@@ -431,7 +431,7 @@ const OwnerProfile = () => {
                   type="button"
                   onClick={closeModal}
                   disabled={isSaving}
-                  className="rounded-lg border border-neutral-200 px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                  className="rounded-sm border border-neutral-200 px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
                 >
                   Cancel
                 </button>
@@ -439,7 +439,7 @@ const OwnerProfile = () => {
                 <button
                   type="submit"
                   disabled={isSaving || !hasUsernameChanged}
-                  className="rounded-lg bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-sm bg-[#f9c83d] px-5 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSaving ? "Saving..." : "Save Changes"}
                 </button>

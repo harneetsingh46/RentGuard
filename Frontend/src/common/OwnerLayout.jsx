@@ -11,6 +11,7 @@ import {
   X,
   UserRound,
   LogOut,
+  WrenchOff
 } from "lucide-react";
 
 import ThemeToggle from "../components/ThemeToggle";
@@ -50,6 +51,11 @@ const OwnerLayout = () => {
       label: "Documents",
       path: "/owner/documents",
       icon: Files,
+    },
+    {
+      label: "Maintenance",
+      path: "/owner/maintenance",
+      icon: WrenchOff,
     },
   ];
 
@@ -163,9 +169,8 @@ const OwnerLayout = () => {
 
             <ChevronDown
               size={15}
-              className={`shrink-0 transition-transform duration-200 ${
-                isActionsOpen ? "rotate-180" : ""
-              }`}
+              className={`shrink-0 transition-transform duration-200 ${isActionsOpen ? "rotate-180" : ""
+                }`}
             />
           </button>
 
@@ -222,9 +227,8 @@ const OwnerLayout = () => {
         {/* ================= SIDEBAR ================= */}
         <aside
           id="owner-sidebar"
-          className={`fixed bottom-0 left-0 top-16 z-40 flex w-[min(18rem,85vw)] flex-col overflow-y-auto border-r border-[#E7E3DA] bg-white p-4 transition-transform duration-300 dark:border-[#373737] dark:bg-[#1B1B1B] sm:top-20 sm:p-6 md:static md:z-auto md:h-full md:w-56 md:flex-none md:translate-x-0 lg:w-60 xl:w-64 ${
-            isMenuOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+          className={`fixed bottom-0 left-0 top-16 z-40 flex w-[min(18rem,85vw)] flex-col overflow-y-auto border-r border-[#E7E3DA] bg-white p-4 transition-transform duration-300 dark:border-[#373737] dark:bg-[#1B1B1B] sm:top-20 sm:p-6 md:static md:z-auto md:h-full md:w-56 md:flex-none md:translate-x-0 lg:w-60 xl:w-64 ${isMenuOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
         >
           <nav className="space-y-2">
             {navItems.map((item) => {
@@ -242,11 +246,10 @@ const OwnerLayout = () => {
                       (item.path === "/owner/documents" &&
                         location.pathname.startsWith("/owner/documents"));
 
-                    return `group flex min-w-0 items-center gap-3 rounded-lg px-3 py-3 text-sm transition-all duration-200 sm:px-4 sm:text-base ${
-                      isCurrent
+                    return `group flex min-w-0 items-center gap-3 rounded-lg px-3 py-3 text-sm transition-all duration-200 sm:px-4 sm:text-base ${isCurrent
                         ? "bg-yellow-300 font-medium text-black shadow-sm"
                         : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-[#292929]"
-                    }`;
+                      }`;
                   }}
                 >
                   <Icon

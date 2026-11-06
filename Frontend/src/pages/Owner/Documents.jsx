@@ -504,7 +504,7 @@ const Documents = () => {
           </div>
         )} */}
 
-        {/* Success message */}
+        {/* Success message
         {success && (
           <div
             role="status"
@@ -521,7 +521,7 @@ const Documents = () => {
               <X size={16} />
             </button>
           </div>
-        )}
+        )} */}
 
         {/* Tenant selector */}
         <section className="mb-5 rounded-xs border border-stone-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900 sm:p-5">
@@ -1163,7 +1163,7 @@ const Documents = () => {
                 type="button"
                 onClick={confirmDelete}
                 disabled={Boolean(deletingDocumentId)}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-sm bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {deletingDocumentId === documentToDelete._id ? (
                   <>

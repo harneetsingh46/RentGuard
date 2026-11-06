@@ -63,3 +63,14 @@ export const otpVerifyIpLimiter = rateLimit({
     message: "Too many verification attempts. Please try again later.",
   },
 });
+
+// Maximum 10 owner registrations per IP per hour
+export const registerIpLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: OTP_RATE_LIMIT.REGISTER_PER_IP_PER_HOUR,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: {
+    message: "Too many registration attempts. Please try again later.",
+  },
+});

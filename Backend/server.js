@@ -1,8 +1,15 @@
 import app from "./app.js";
 import db from "./src/config/db.js";
+import { startUnverifiedOwnerCleanup } from "./src/utils/cleanupUnverifiedOwners.js";
 
 // Database Connection
-db();
+db()
+  .then(() => {
+    startUnverifiedOwnerCleanup();
+  })
+  .catch((err) => {
+    console.error("Database connection error:", err);
+  });
 
 //Localhost
 app.listen(process.env.PORT, () => {

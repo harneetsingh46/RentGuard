@@ -1,30 +1,29 @@
 import { Property } from "../models/property.model.js";
 import { Unit } from "../models/unit.model.js";
 import { Tenant } from "../models/tenant.model.js";
-import { Rent } from "../models/rent.model.js";
+import { Bill } from "../models/bill.model.js";
 import { Payment } from "../models/payment.model.js";
+import { Maintenance } from "../models/maintenance.model.js";
 
 export const getOwnerDashboard = async (req, res) => {
   try {
-    // 1. Get the logged-in owner's ID
+    if (req.authRole !== "owner") {
+      return res.status(403).json({
+        message: "Only property owners can access this dashboard.",
+      });
+    }
+
     const ownerId = req.user._id;
+    const now = new Date();
 
-    // 2. Get the selected month and year
-    // If they are not provided, use the current month and year
-    const currentDate = new Date();
+    const selectedMonth = req.query.month
+      ? Number(req.query.month)
+      : now.getMonth() + 1;
 
-    let selectedMonth = Number(req.query.month);
-    let selectedYear = Number(req.query.year);
+    const selectedYear = req.query.year
+      ? Number(req.query.year)
+      : now.getFullYear();
 
-    if (!req.query.month) {
-      selectedMonth = currentDate.getMonth() + 1;
-    }
-
-    if (!req.query.year) {
-      selectedYear = currentDate.getFullYear();
-    }
-
-    // 3. Validate the selected month and year
     if (
       !Number.isInteger(selectedMonth) ||
       selectedMonth < 1 ||
@@ -45,134 +44,215 @@ export const getOwnerDashboard = async (req, res) => {
       });
     }
 
-    // 4. Get all properties owned by this owner
+    // Get all properties belonging to this owner
+    const properties = await Property.find({ owner: ownerId })
+      .select("_id propertyName address")
+      .lean();
 
-    const properties = await Property.find({
-      owner: ownerId,
-    }).select("_id");
+    const propertyIds = properties.map((property) => property._id);
 
-    const propertyIds = [];
+    const monthStart = new Date(selectedYear, selectedMonth - 1, 1);
 
-    for (const property of properties) {
-      propertyIds.push(property._id);
-    }
+    const nextMonthStart = new Date(selectedYear, selectedMonth, 1);
 
-    // 5. Calculate property and unit statistics
+    // Fetch dashboard information
+    const [
+      totalUnits,
+      occupiedUnits,
+      availableUnits,
+      maintenanceUnits,
+      activeTenants,
+      bills,
+      collectedPayments,
+      recentPayments,
+      recentTenants,
+      recentBills,
+      totalComplaints,
+      pendingComplaints,
+      inProgressComplaints,
+      resolvedComplaints,
+      rejectedComplaints,
+      recentComplaints,
+    ] = await Promise.all([
+      Unit.countDocuments({
+        property: { $in: propertyIds },
+      }),
 
-    const totalProperties = properties.length;
+      Unit.countDocuments({
+        property: { $in: propertyIds },
+        status: "occupied",
+      }),
 
-    const totalUnits = await Unit.countDocuments({
-      property: { $in: propertyIds },
-    });
+      Unit.countDocuments({
+        property: { $in: propertyIds },
+        status: "available",
+      }),
 
-    const occupiedUnits = await Unit.countDocuments({
-      property: { $in: propertyIds },
-      status: "occupied",
-    });
+      Unit.countDocuments({
+        property: { $in: propertyIds },
+        status: "maintenance",
+      }),
 
-    const availableUnits = await Unit.countDocuments({
-      property: { $in: propertyIds },
-      status: "available",
-    });
+      Tenant.countDocuments({
+        owner: ownerId,
+        isActive: true,
+      }),
 
-    const maintenanceUnits = await Unit.countDocuments({
-      property: { $in: propertyIds },
-      status: "maintenance",
-    });
+      // Bills for selected month
+      Bill.find({
+        property: { $in: propertyIds },
+        month: selectedMonth,
+        year: selectedYear,
+      })
+        .select(
+          "property unit tenant category billName amount month year dueDate paymentStatus paidAt createdAt",
+        )
+        .lean(),
 
-    const activeTenants = await Tenant.countDocuments({
-      property: { $in: propertyIds },
-      isActive: true,
-    });
+      // Payments collected during selected calendar month
+      Payment.find({
+        property: { $in: propertyIds },
+        status: "paid",
+        paidAt: {
+          $gte: monthStart,
+          $lt: nextMonthStart,
+        },
+      })
+        .select("amount")
+        .lean(),
 
-    // 6. Get rent records for the selected month
+      // Latest successful payments
+      Payment.find({
+        property: { $in: propertyIds },
+        status: "paid",
+      })
+        .populate("tenant", "fullName email phone")
+        .populate("property", "propertyName")
+        .populate("unit", "unitName")
+        .populate({
+          path: "order",
+          populate: {
+            path: "items.bill",
+            select: "billName category amount month year",
+          },
+        })
+        .sort({ paidAt: -1, createdAt: -1 })
+        .limit(5)
+        .lean(),
 
-    const rents = await Rent.find({
-      property: { $in: propertyIds },
-      month: selectedMonth,
-      year: selectedYear,
-    });
+      // Latest active tenants
+      Tenant.find({
+        owner: ownerId,
+        isActive: true,
+      })
+        .select("fullName email phone property unit createdAt isActive")
+        .populate("property", "propertyName")
+        .populate("unit", "unitName")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean(),
 
-    // Variables for financial calculations
-    let totalRent = 0;
-    let collectedRent = 0;
-    let pendingRent = 0;
-    let overdueRent = 0;
+      // Latest bills for selected month
+      Bill.find({
+        property: { $in: propertyIds },
+        month: selectedMonth,
+        year: selectedYear,
+      })
+        .populate("tenant", "fullName")
+        .populate("property", "propertyName")
+        .populate("unit", "unitName")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean(),
 
-    // Calculate the totals for the selected month
-    for (const rent of rents) {
-      const rentAmount = Number(rent.amount) || 0;
-      const paidAmount = Number(rent.paidAmount) || 0;
+      // Maintenance statistics
+      Maintenance.countDocuments({
+        owner: ownerId,
+      }),
 
-      // Do not count a negative remaining balance
-      let remainingAmount = rentAmount - paidAmount;
+      Maintenance.countDocuments({
+        owner: ownerId,
+        status: "Pending",
+      }),
 
-      if (remainingAmount < 0) {
-        remainingAmount = 0;
+      Maintenance.countDocuments({
+        owner: ownerId,
+        status: "In Progress",
+      }),
+
+      Maintenance.countDocuments({
+        owner: ownerId,
+        status: "Resolved",
+      }),
+
+      Maintenance.countDocuments({
+        owner: ownerId,
+        status: "Rejected",
+      }),
+
+      // Latest maintenance complaints
+      Maintenance.find({
+        owner: ownerId,
+      })
+        .populate("tenant", "fullName")
+        .populate("property", "propertyName")
+        .populate("unit", "unitName")
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .lean(),
+    ]);
+
+    // Calculate bill amounts
+    let totalBillsAmount = 0;
+    let paidBillsAmount = 0;
+    let outstandingAmount = 0;
+    let overdueAmount = 0;
+
+    let unpaidBills = 0;
+    let reservedBills = 0;
+    let paidBills = 0;
+    let overdueBills = 0;
+
+    for (const bill of bills) {
+      const amount = Number(bill.amount) || 0;
+
+      totalBillsAmount += amount;
+
+      if (bill.paymentStatus === "paid") {
+        paidBills += 1;
+        paidBillsAmount += amount;
+        continue;
       }
 
-      // Total rent for the selected month
-      totalRent = totalRent + rentAmount;
+      outstandingAmount += amount;
 
-      // Amount collected toward this month's rent
-      let amountToCountAsCollected = paidAmount;
-
-      if (amountToCountAsCollected > rentAmount) {
-        amountToCountAsCollected = rentAmount;
+      if (bill.paymentStatus === "reserved") {
+        reservedBills += 1;
+      } else {
+        unpaidBills += 1;
       }
 
-      if (amountToCountAsCollected < 0) {
-        amountToCountAsCollected = 0;
-      }
+      // Check whether unpaid bill is overdue
+      if (bill.dueDate) {
+        const dueDateEnd = new Date(bill.dueDate);
 
-      collectedRent = collectedRent + amountToCountAsCollected;
+        dueDateEnd.setHours(23, 59, 59, 999);
 
-      // Check whether the remaining rent is overdue
-      if (remainingAmount > 0) {
-        const dueDate = new Date(rent.dueDate);
-
-        // Treat the due date as valid through the end of that day
-        dueDate.setHours(23, 59, 59, 999);
-
-        if (dueDate < currentDate) {
-          overdueRent = overdueRent + remainingAmount;
-        } else {
-          pendingRent = pendingRent + remainingAmount;
+        if (dueDateEnd < now) {
+          overdueAmount += amount;
+          overdueBills += 1;
         }
       }
     }
 
-    // 7. Get the five most recent active tenants
+    // Calculate successful payments received this month
+    const collectedThisMonth = collectedPayments.reduce((total, payment) => {
+      return total + (Number(payment.amount) || 0);
+    }, 0);
 
-    const recentTenants = await Tenant.find({
-      property: { $in: propertyIds },
-      isActive: true,
-    })
-      .populate("property", "propertyName")
-      .populate("unit", "unitName")
-      .sort({ createdAt: -1 })
-      .limit(5);
-
-    // 8. Get payments linked to this month's rents
-
-    const rentIds = [];
-
-    for (const rent of rents) {
-      rentIds.push(rent._id);
-    }
-
-    const recentPayments = await Payment.find({
-      property: { $in: propertyIds },
-      rent: { $in: rentIds },
-      status: "paid",
-    })
-      .populate("tenant", "fullName")
-      .populate("property", "propertyName")
-      .populate("unit", "unitName")
-      .sort({ createdAt: -1 })
-      .limit(5);
-
-    // 9. Send the dashboard data
+    // Calculate occupancy percentage
+    const occupancyRate =
+      totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
     return res.status(200).json({
       message: "Owner dashboard fetched successfully",
@@ -184,23 +264,42 @@ export const getOwnerDashboard = async (req, res) => {
         },
 
         overview: {
-          totalProperties,
+          totalProperties: properties.length,
           totalUnits,
           occupiedUnits,
           availableUnits,
           maintenanceUnits,
           activeTenants,
+          occupancyRate,
         },
 
-        rentOverview: {
-          totalRent,
-          collectedRent,
-          pendingRent,
-          overdueRent,
+        billOverview: {
+          totalBills: bills.length,
+          totalBillsAmount,
+          paidBills,
+          paidBillsAmount,
+          unpaidBills,
+          reservedBills,
+          outstandingAmount,
+          overdueBills,
+          overdueAmount,
+          collectedThisMonth,
         },
 
+        maintenanceOverview: {
+          totalComplaints,
+          pendingComplaints,
+          inProgressComplaints,
+          resolvedComplaints,
+          rejectedComplaints,
+          openComplaints: pendingComplaints + inProgressComplaints,
+        },
+
+        properties,
         recentTenants,
         recentPayments,
+        recentBills,
+        recentComplaints,
       },
     });
   } catch (error) {
@@ -210,4 +309,4 @@ export const getOwnerDashboard = async (req, res) => {
       message: "Failed to fetch owner dashboard.",
     });
   }
-}
+};

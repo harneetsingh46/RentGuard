@@ -357,6 +357,20 @@ export const updateBill = async (req, res) => {
       });
     }
 
+    if (bill.paymentStatus === "paid") {
+      return res.status(400).json({
+        success: false,
+        message: "Paid bills cannot be edited.",
+      });
+    }
+
+    if (bill.paymentStatus === "reserved") {
+      return res.status(400).json({
+        success: false,
+        message: "Bills currently reserved in an open checkout cannot be edited.",
+      });
+    }
+
     const {
       billName,
       category,

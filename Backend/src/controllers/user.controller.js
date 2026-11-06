@@ -180,8 +180,6 @@ export const register = async (req, res) => {
 export const requestOtp = async (req, res) => {
   try {
     const { contact } = req.body;
-    console.log("REQUEST OTP CONTROLLER STARTED");
-    console.log("ABOUT TO SEND OTP EMAIL");
     if (!contact || typeof contact !== "string") {
       return res.status(400).json({
         message: "Email address is required.",
@@ -246,7 +244,7 @@ export const requestOtp = async (req, res) => {
         },
         {
           upsert: true,
-          new: true,
+          returnDocument: "after",
           runValidators: true,
           setDefaultsOnInsert: true,
         },
@@ -338,66 +336,27 @@ export const verifyOtp = async (req, res) => {
       });
     }
 
-    // Find OTP record
-
-    const otpRecord = await Otp.findOne({
-      contact: normalizedContact,
-    });
+    // Spend one attempt atomically BEFORE comparing, so parallel guesses
+    // can never exceed the attempt limit
+    const otpRecord = await Otp.findOneAndUpdate(
+      {
+        contact: normalizedContact,
+        expiresAt: { $gt: new Date() },
+        attempts: { $lt: OTP_CONFIG.MAX_ATTEMPTS },
+      },
+      { $inc: { attempts: 1 } },
+      { returnDocument: "after" },
+    );
 
     if (!otpRecord) {
       return res.status(400).json({
-        message: "Invalid or expired OTP",
+        message: "Invalid or expired OTP. Please request a new OTP.",
       });
     }
 
-    const now = new Date();
-
-    if (otpRecord.expiresAt <= now) {
-      await Otp.deleteOne({ _id: otpRecord._id });
-
-      return res.status(400).json({
-        message: "OTP has expired. Please request a new OTP.",
-      });
-    }
-
-    if (otpRecord.attempts >= OTP_CONFIG.MAX_ATTEMPTS) {
-      await Otp.deleteOne({ _id: otpRecord._id });
-
-      return res.status(400).json({
-        message: "Too many incorrect attempts. Please request a new OTP.",
-      });
-    }
-
-    // Compare OTP safely
-
-    const isOtpCorrect = compareOtp(otp, otpRecord.hash);
-
-    if (!isOtpCorrect) {
-      const updateResult = await Otp.updateOne(
-        {
-          _id: otpRecord._id,
-          hash: otpRecord.hash,
-          attempts: { $lt: OTP_CONFIG.MAX_ATTEMPTS },
-          expiresAt: { $gt: now },
-        },
-        {
-          $inc: { attempts: 1 },
-        },
-      );
-
-      if (updateResult.modifiedCount === 0) {
-        return res.status(400).json({
-          message: "Invalid or expired OTP",
-        });
-      }
-
-      const updatedOtp = await Otp.findById(otpRecord._id);
-
-      if (!updatedOtp || updatedOtp.attempts >= OTP_CONFIG.MAX_ATTEMPTS) {
-        await Otp.deleteOne({
-          _id: otpRecord._id,
-          attempts: { $gte: OTP_CONFIG.MAX_ATTEMPTS },
-        });
+    if (!compareOtp(otp, otpRecord.hash)) {
+      if (otpRecord.attempts >= OTP_CONFIG.MAX_ATTEMPTS) {
+        await Otp.deleteOne({ _id: otpRecord._id });
 
         return res.status(400).json({
           message: "Too many incorrect attempts. Please request a new OTP.",
@@ -406,7 +365,7 @@ export const verifyOtp = async (req, res) => {
 
       return res.status(400).json({
         message: "Invalid OTP",
-        remainingAttempts: OTP_CONFIG.MAX_ATTEMPTS - updatedOtp.attempts,
+        remainingAttempts: OTP_CONFIG.MAX_ATTEMPTS - otpRecord.attempts,
       });
     }
 
@@ -456,6 +415,8 @@ export const verifyOtp = async (req, res) => {
     // If multiple accounts match, ask user to select one
 
     if (!role && accounts.length > 1) {
+      await Otp.updateOne({ _id: otpRecord._id }, { $inc: { attempts: -1 } });
+
       return res.status(200).json({
         message: "Please select an account",
         requiresAccountSelection: true,
@@ -478,6 +439,8 @@ export const verifyOtp = async (req, res) => {
     }
 
     if (!accountId && roleAccounts.length > 1) {
+      await Otp.updateOne({ _id: otpRecord._id }, { $inc: { attempts: -1 } });
+
       return res.status(200).json({
         message: "Please select a tenancy",
         requiresAccountSelection: true,
@@ -506,7 +469,6 @@ export const verifyOtp = async (req, res) => {
     const consumedOtp = await Otp.findOneAndDelete({
       _id: otpRecord._id,
       hash: otpRecord.hash,
-      attempts: { $lt: OTP_CONFIG.MAX_ATTEMPTS },
       expiresAt: { $gt: new Date() },
     });
 
@@ -711,7 +673,7 @@ export const updateProfile = async (req, res) => {
         $set: updates,
       },
       {
-        new: true,
+        returnDocument: "after",
         runValidators: true,
       },
     );

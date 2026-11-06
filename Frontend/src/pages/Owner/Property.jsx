@@ -919,7 +919,7 @@ const Property = () => {
                                 onClick={closeForm}
                                 disabled={submitting}
                                 aria-label="Close form"
-                                className="rounded-lg p-2 text-xl text-gray-500 hover:bg-gray-100 hover:text-black disabled:opacity-50 dark:text-gray-400 dark:hover:bg-yellow-300 dark:hover:text-black"
+                                className="rounded-sm p-2 text-xl text-gray-500 hover:bg-gray-100 hover:text-black disabled:opacity-50 dark:text-gray-400 dark:hover:bg-yellow-300 dark:hover:text-black"
                             >
                                 &times;
                             </button>
@@ -1029,7 +1029,7 @@ const Property = () => {
                                 onClick={closeUnitForm}
                                 disabled={submitting}
                                 aria-label="Close unit form"
-                                className="rounded-lg p-2 text-xl text-gray-500 hover:bg-gray-100 hover:text-black disabled:opacity-50 dark:text-gray-400 dark:hover:bg-yellow-300 dark:hover:text-black"
+                                className="rounded-sm p-2 text-xl text-gray-500 hover:bg-gray-100 hover:text-black disabled:opacity-50 dark:text-gray-400 dark:hover:bg-yellow-300 dark:hover:text-black"
                             >
                                 &times;
                             </button>
@@ -1163,7 +1163,7 @@ const Property = () => {
                                 onClick={closeTenantForm}
                                 disabled={submitting}
                                 aria-label="Close Tenant form"
-                                className="rounded-lg p-2 text-xl text-gray-500 hover:bg-gray-100 hover:text-black disabled:opacity-50 dark:text-gray-400 dark:hover:bg-yellow-300 dark:hover:text-black"
+                                className="rounded-sm p-2 text-xl text-gray-500 hover:bg-gray-100 hover:text-black disabled:opacity-50 dark:text-gray-400 dark:hover:bg-yellow-300 dark:hover:text-black"
                             >
                                 &times;
                             </button>
@@ -1373,7 +1373,7 @@ const Property = () => {
                                 type="button"
                                 onClick={closeTenantDetails}
                                 aria-label="Close tenant details"
-                                className="rounded-lg p-2 text-xl text-gray-500 hover:bg-gray-100 hover:text-black dark:text-gray-400 dark:hover:bg-yellow-300 dark:hover:text-black"
+                                className="rounded-sm p-2 text-xl text-gray-500 hover:bg-gray-100 hover:text-black dark:text-gray-400 dark:hover:bg-yellow-300 dark:hover:text-black"
                             >
                                 &times;
                             </button>
@@ -1449,7 +1449,7 @@ const Property = () => {
                                 onClick={closeConfirmModal}
                                 disabled={deleting}
                                 aria-label="Close confirmation"
-                                className="rounded-lg p-1 text-gray-500 transition hover:bg-gray-100 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-stone-800"
+                                className="rounded-sm p-1 text-gray-500 transition hover:bg-gray-100 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-stone-800"
                             >
                                 <X size={19} />
                             </button>

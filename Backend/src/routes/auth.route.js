@@ -21,10 +21,6 @@ const router = express.Router();
 // Public OTP routes
 router.post(
   "/request-otp",
-  (req, res, next) => {
-    console.log("REQUEST OTP ROUTE HIT");
-    next();
-  },
   otpIpLimiter,
   otpContactHourlyLimiter,
   otpContactCooldownLimiter,

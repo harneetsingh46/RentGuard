@@ -272,27 +272,24 @@ export const uploadMyTenantDocument = async (req, res) => {
  * TENANT: List documents associated with their own tenancy.
  * GET /document/mine
  */
+
 export const getMyTenantDocuments = async (req, res) => {
   try {
-    if (req.user.role !== "tenant") {
+    if (req.authRole !== "tenant") {
       return res.status(403).json({
         message: "Only tenants can view tenancy documents.",
       });
     }
 
+    // Tenant JWT ID is the Tenant document ID
     const tenant = await Tenant.findOne({
-      user: req.user._id,
+      _id: req.user._id,
+      isActive: true,
     }).populate("property", "propertyName address");
 
     if (!tenant) {
       return res.status(404).json({
-        message: "Tenant profile not found.",
-      });
-    }
-
-    if (!tenant.property) {
-      return res.status(404).json({
-        message: "Your tenancy has no associated property.",
+        message: "Active tenant profile not found.",
       });
     }
 
@@ -310,7 +307,11 @@ export const getMyTenantDocuments = async (req, res) => {
       property: tenant.property,
     });
   } catch (error) {
-    return sendError(res, error, "Failed to fetch your tenancy documents.");
+    console.error("Get tenant documents error:", error);
+
+    return res.status(500).json({
+      message: "Failed to fetch your tenancy documents.",
+    });
   }
 };
 
@@ -476,9 +477,10 @@ export const getPropertyDocumentDownloadUrl = async (req, res) => {
  * TENANT: Download only documents associated with their own tenancy.
  * GET /document/mine/:documentId/download
  */
+
 export const getMyTenantDocumentDownloadUrl = async (req, res) => {
   try {
-    if (req.user.role !== "tenant") {
+    if (req.authRole !== "tenant") {
       return res.status(403).json({
         message: "Only tenants can download tenancy documents.",
       });
@@ -486,25 +488,20 @@ export const getMyTenantDocumentDownloadUrl = async (req, res) => {
 
     const { documentId } = req.params;
 
-    if (!isValidObjectId(documentId)) {
+    if (!mongoose.isValidObjectId(documentId)) {
       return res.status(400).json({
         message: "Invalid document ID.",
       });
     }
 
     const tenant = await Tenant.findOne({
-      user: req.user._id,
+      _id: req.user._id,
+      isActive: true,
     });
 
     if (!tenant) {
       return res.status(404).json({
-        message: "Tenant profile not found.",
-      });
-    }
-
-    if (!tenant.property) {
-      return res.status(404).json({
-        message: "Your tenancy has no associated property.",
+        message: "Active tenant profile not found.",
       });
     }
 
@@ -520,7 +517,9 @@ export const getMyTenantDocumentDownloadUrl = async (req, res) => {
       });
     }
 
-    const { downloadUrl, expiresAt } = makeDownloadUrl(document);
+    const { downloadUrl, expiresAt } = makeDownloadUrl(document, {
+      attachment: req.query.mode !== "view",
+    });
 
     return res.status(200).json({
       message: "Secure download URL generated successfully.",
@@ -531,7 +530,11 @@ export const getMyTenantDocumentDownloadUrl = async (req, res) => {
       },
     });
   } catch (error) {
-    return sendError(res, error, "Failed to generate document download URL.");
+    console.error("Tenant document download error:", error);
+
+    return res.status(500).json({
+      message: "Failed to generate document download URL.",
+    });
   }
 };
 
