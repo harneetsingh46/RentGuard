@@ -1,51 +1,111 @@
-const sendEmail = async ({ to, subject, html, text, replyTo }) => {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  const sender = process.env.RESEND_FROM_EMAIL?.trim();
+import nodemailer from "nodemailer";
 
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not configured.");
+export const sendOtpEmail = async (email, otp) => {
+  try {
+    const emailUser = process.env.EMAIL_USER?.trim();
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s/g, "");
+
+    // Check credentials
+
+    if (!emailUser || !emailPass) {
+      throw new Error("EMAIL_USER or EMAIL_PASS is missing in .env");
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
+
+    const mailOptions = {
+      from: `"RentGuard" <${emailUser}>`,
+      to: email,
+      subject: "Your RentGuard Login OTP",
+      html: `
+        <div style="font-family: Arial; max-width: 500px; margin: auto; padding: 25px;">
+          <h2 style="color: #d4a017;">RentGuard</h2>
+          <h3>Your Login OTP</h3>
+          <p>Your verification code is:</p>
+          <h1 style="letter-spacing: 8px;">${otp}</h1>
+          <p>This OTP expires in 5 minutes.</p>
+          <p>Do not share this code with anyone.</p>
+        </div>
+      `,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+
+    console.log("OTP email sent:", result.messageId);
+
+    return result;
+  } catch (error) {
+    console.error("OTP email sending failed:", error.message);
+    throw new Error("Unable to send OTP email.");
   }
-
-  if (!sender) {
-    throw new Error("RESEND_FROM_EMAIL is not configured.");
-  }
-
-  if (!to) {
-    throw new Error("Email recipient is required.");
-  }
-
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: sender,
-      to: Array.isArray(to) ? to : [to],
-      subject,
-      ...(html ? { html } : {}),
-      ...(text ? { text } : {}),
-      ...(replyTo ? { reply_to: replyTo } : {}),
-    }),
-    signal: AbortSignal.timeout(15000),
-  });
-
-  const result = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(
-      result.message || `Resend request failed: ${response.status}`,
-    );
-  }
-
-  return {
-    ...result,
-    messageId: result.id,
-  };
 };
 
-// Escape HTML content
+// Send maintenance complaint notification to owner
+export const sendMaintenanceEmail = async ({
+  ownerEmail,
+  ownerName,
+  tenantName,
+  propertyName,
+  unitName,
+  title,
+  category,
+  priority,
+  description,
+}) => {
+  try {
+    const emailUser = process.env.EMAIL_USER?.trim();
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s/g, "");
+
+    if (!emailUser || !emailPass || !ownerEmail) {
+      return null;
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
+
+    const mailOptions = {
+      from: `"RentGuard Maintenance" <${emailUser}>`,
+      to: ownerEmail,
+      subject: `[Maintenance Alert] ${priority} Priority: ${title}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 25px; border: 1px solid #e5e5e5; border-radius: 8px;">
+          <h2 style="color: #d4a017; margin-top: 0;">RentGuard Maintenance Alert</h2>
+          <p>Hello ${ownerName || "Property Owner"},</p>
+          <p>A new maintenance complaint has been posted by tenant <strong>${tenantName}</strong>.</p>
+          
+          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 6px; margin: 15px 0;">
+            <p style="margin: 5px 0;"><strong>Property:</strong> ${propertyName || "N/A"}</p>
+            <p style="margin: 5px 0;"><strong>Unit:</strong> ${unitName || "N/A"}</p>
+            <p style="margin: 5px 0;"><strong>Title:</strong> ${title}</p>
+            <p style="margin: 5px 0;"><strong>Category:</strong> ${category}</p>
+            <p style="margin: 5px 0;"><strong>Priority:</strong> <span style="color: ${priority === "High" ? "#dc2626" : priority === "Medium" ? "#d97706" : "#16a34a"}; font-weight: bold;">${priority}</span></p>
+            <p style="margin: 10px 0 5px 0;"><strong>Description:</strong></p>
+            <p style="margin: 0; white-space: pre-line; color: #374151;">${description}</p>
+          </div>
+
+          <p style="color: #6b7280; font-size: 13px;">Please log in to your RentGuard owner portal to review and manage this request.</p>
+        </div>
+      `,
+    };
+
+    return await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error("Maintenance notification email failed:", error.message);
+    return null;
+  }
+};
+
 const escapeHtml = (value = "") =>
   String(value).replace(
     /[&<>"']/g,
@@ -59,79 +119,9 @@ const escapeHtml = (value = "") =>
       })[char],
   );
 
-// 1. SEND OTP EMAIL
-export const sendOtpEmail = async (email, otp) => {
-  try {
-    const result = await sendEmail({
-      to: email,
-      subject: "Your RentGuard Login OTP",
-      html: `
-        <div style="font-family:Arial;max-width:500px;margin:auto;padding:25px;">
-          <h2 style="color:#d4a017;">RentGuard</h2>
-          <h3>Your Login OTP</h3>
-          <p>Your verification code is:</p>
-          <h1 style="letter-spacing:8px;">${escapeHtml(otp)}</h1>
-          <p>This OTP expires in 5 minutes.</p>
-          <p>Do not share this code with anyone.</p>
-        </div>
-      `,
-    });
 
-    console.log("OTP email sent:", result.messageId);
-    return result;
-  } catch (error) {
-    console.error("OTP email sending failed:", error.message);
-    throw new Error("Unable to send OTP email.");
-  }
-};
 
-// 2. SEND MAINTENANCE EMAIL
-export const sendMaintenanceEmail = async ({
-  ownerEmail,
-  ownerName,
-  tenantName,
-  propertyName,
-  unitName,
-  title,
-  category,
-  priority,
-  description,
-}) => {
-  try {
-    if (!ownerEmail) return null;
-
-    return await sendEmail({
-      to: ownerEmail,
-      subject: `[Maintenance Alert] ${priority} Priority: ${title}`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:25px;border:1px solid #e5e5e5;border-radius:8px;">
-          <h2 style="color:#d4a017;">RentGuard Maintenance Alert</h2>
-          <p>Hello ${escapeHtml(ownerName || "Property Owner")},</p>
-          <p>A new maintenance complaint has been posted by tenant
-            <strong>${escapeHtml(tenantName)}</strong>.
-          </p>
-
-          <div style="background:#f9f9f9;padding:15px;border-radius:8px;">
-            <p><strong>Property:</strong> ${escapeHtml(propertyName || "N/A")}</p>
-            <p><strong>Unit:</strong> ${escapeHtml(unitName || "N/A")}</p>
-            <p><strong>Title:</strong> ${escapeHtml(title)}</p>
-            <p><strong>Category:</strong> ${escapeHtml(category)}</p>
-            <p><strong>Priority:</strong> ${escapeHtml(priority)}</p>
-            <p><strong>Description:</strong></p>
-            <p style="white-space:pre-line;">${escapeHtml(description)}</p>
-          </div>
-
-          <p>Please log in to your RentGuard owner portal to review this request.</p>
-        </div>
-      `,
-    });
-  } catch (error) {
-    console.error("Maintenance notification email failed:", error.message);
-    return null;
-  }
-};
-
-// 3. TENANT REGISTRATION AND MOVE-OUT EMAILS
+// Send tenant registration and move-out notifications to both parties.
 export const sendTenancyNotificationEmails = async ({
   event,
   tenantEmail,
@@ -148,6 +138,21 @@ export const sendTenancyNotificationEmails = async ({
   bills = [],
 }) => {
   try {
+    const emailUser = process.env.EMAIL_USER?.trim();
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s/g, "");
+
+    if (!emailUser || !emailPass) {
+      throw new Error("Email credentials are missing.");
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
+
     const date = (value) =>
       value
         ? new Date(value).toLocaleString("en-IN", {
@@ -156,7 +161,8 @@ export const sendTenancyNotificationEmails = async ({
           })
         : "N/A";
 
-    const amount = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
+    const amount = (value) =>
+      `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
     const templates = {
       registered: {
@@ -168,22 +174,19 @@ export const sendTenancyNotificationEmails = async ({
       requested: {
         subject: "RentGuard - Move-out Request Submitted",
         heading: "Move-out Request Submitted",
-        tenantMessage:
-          "Your move-out request has been successfully submitted to your property owner.",
+        tenantMessage: "Your move-out request has been successfully submitted to your property owner.",
         ownerMessage: `${escapeHtml(tenantName)} has submitted a move-out request. Please log in to your owner dashboard to review it.`,
       },
       approved: {
         subject: "RentGuard - Move-out Request Approved",
         heading: "Move-out Request Approved",
-        tenantMessage:
-          "Your move-out request has been approved. Your tenancy has now ended.",
+        tenantMessage: "Your move-out request has been approved. Your tenancy has now ended.",
         ownerMessage: `The move-out request for ${escapeHtml(tenantName)} has been approved successfully.`,
       },
       rejected: {
         subject: "RentGuard - Move-out Request Rejected",
         heading: "Move-out Request Rejected",
-        tenantMessage:
-          "Your move-out request was rejected because some bills are unpaid or pending. Please clear your outstanding bills before submitting another request. You may submit a new request immediately.",
+        tenantMessage: "Your move-out request was rejected because some bills are unpaid or pending. Please clear your outstanding bills before submitting another request. You may submit a new request immediately.",
         ownerMessage: `The move-out request for ${escapeHtml(tenantName)} was rejected because unpaid or pending bills were found.`,
       },
     };
@@ -203,9 +206,7 @@ export const sendTenancyNotificationEmails = async ({
             <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">Status</th>
             <th style="text-align:right;padding:8px;border-bottom:1px solid #ddd;">Amount</th>
           </tr>
-          ${bills
-            .map(
-              (bill) => `
+          ${bills.map((bill) => `
             <tr>
               <td style="padding:8px;border-bottom:1px solid #eee;">
                 ${escapeHtml(bill.billName)}
@@ -217,9 +218,7 @@ export const sendTenancyNotificationEmails = async ({
                 ${amount(bill.amount)}
               </td>
             </tr>
-          `,
-            )
-            .join("")}
+          `).join("")}
         </table>
       `
       : "";
@@ -251,7 +250,8 @@ export const sendTenancyNotificationEmails = async ({
 
     if (tenantEmail) {
       emails.push(
-        sendEmail({
+        transporter.sendMail({
+          from: `"RentGuard" <${emailUser}>`,
           to: tenantEmail,
           subject: template.subject,
           html: `
@@ -269,7 +269,8 @@ export const sendTenancyNotificationEmails = async ({
 
     if (ownerEmail) {
       emails.push(
-        sendEmail({
+        transporter.sendMail({
+          from: `"RentGuard" <${emailUser}>`,
           to: ownerEmail,
           subject: template.subject,
           html: `
@@ -278,7 +279,7 @@ export const sendTenancyNotificationEmails = async ({
               <h3>${template.heading}</h3>
               <p>${template.ownerMessage}</p>
               ${details}
-              <p>Please log in to your owner dashboard to manage your property.</p>
+              <p>Please log in to your RentGuard dashboard to manage your property.</p>
             </div>
           `,
         }),
@@ -300,7 +301,7 @@ export const sendTenancyNotificationEmails = async ({
   }
 };
 
-// 4. PAYMENT CONFIRMATION EMAILS
+// Send payment confirmation to both tenant and owner
 export const sendPaymentConfirmationEmails = async ({
   tenantEmail,
   tenantName,
@@ -316,6 +317,21 @@ export const sendPaymentConfirmationEmails = async ({
   bills = [],
 }) => {
   try {
+    const emailUser = process.env.EMAIL_USER?.trim();
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s/g, "");
+
+    if (!emailUser || !emailPass) {
+      throw new Error("EMAIL_USER or EMAIL_PASS is missing in .env");
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
+
     const formatAmount = (value) =>
       `₹${Number(value || 0).toLocaleString("en-IN", {
         minimumFractionDigits: 2,
@@ -384,7 +400,8 @@ export const sendPaymentConfirmationEmails = async ({
 
     if (tenantEmail) {
       emails.push(
-        sendEmail({
+        transporter.sendMail({
+          from: `"RentGuard" <${emailUser}>`,
           to: tenantEmail,
           subject: "RentGuard - Bill Payment Successful",
           html: `
@@ -403,7 +420,8 @@ export const sendPaymentConfirmationEmails = async ({
 
     if (ownerEmail) {
       emails.push(
-        sendEmail({
+        transporter.sendMail({
+          from: `"RentGuard Payments" <${emailUser}>`,
           to: ownerEmail,
           subject: "RentGuard - Tenant Payment Received",
           html: `
@@ -437,9 +455,42 @@ export const sendPaymentConfirmationEmails = async ({
   }
 };
 
-// 5. CONTACT EMAIL
-export const sendContactEmail = async ({ name, email, topic, message }) => {
-  return sendEmail({
+const escapeEmailHtml = (value = "") =>
+  String(value).replace(/[&<>"']/g, (char) => {
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    };
+
+    return entities[char];
+  });
+
+export const sendContactEmail = async ({
+  name,
+  email,
+  topic,
+  message,
+}) => {
+  const emailUser = process.env.EMAIL_USER?.trim();
+  const emailPass = process.env.EMAIL_PASS?.replace(/\s/g, "");
+
+  if (!emailUser || !emailPass) {
+    throw new Error("Email credentials are not configured.");
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: emailUser,
+      pass: emailPass,
+    },
+  });
+
+  return transporter.sendMail({
+    from: `"RentGuard Contact" <${emailUser}>`,
     to: "singh2harneet@gmail.com",
     replyTo: email,
     subject: `[RentGuard Contact] ${topic}`,
@@ -452,14 +503,14 @@ export const sendContactEmail = async ({ name, email, topic, message }) => {
       message,
     ].join("\n"),
     html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;">
-        <h2 style="color:#d4a017;">New RentGuard Contact Enquiry</h2>
-        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-        <p><strong>Topic:</strong> ${escapeHtml(topic)}</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px;">
+        <h2 style="color: #d4a017;">New RentGuard Contact Enquiry</h2>
+        <p><strong>Name:</strong> ${escapeEmailHtml(name)}</p>
+        <p><strong>Email:</strong> ${escapeEmailHtml(email)}</p>
+        <p><strong>Topic:</strong> ${escapeEmailHtml(topic)}</p>
         <hr />
         <h3>Message</h3>
-        <p style="white-space:pre-wrap;">${escapeHtml(message)}</p>
+        <p style="white-space: pre-wrap;">${escapeEmailHtml(message)}</p>
       </div>
     `,
   });
