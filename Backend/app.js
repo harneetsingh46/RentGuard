@@ -11,8 +11,8 @@ import tenantRouter from "./src/routes/tenant.route.js";
 import authRouter from "./src/routes/auth.route.js";
 import billRouter from "./src/routes/bill.route.js";
 import paymentRouter from "./src/routes/payment.route.js";
-import dashboardRouter from "./src/routes/dashboard.route.js"
-import documentRouter from "./src/routes/propertyDocument.routes.js"
+import dashboardRouter from "./src/routes/dashboard.route.js";
+import documentRouter from "./src/routes/propertyDocument.routes.js";
 import orderRouter from "./src/routes/order.route.js";
 import maintenanceRouter from "./src/routes/maintenance.route.js";
 import contactRouter from "./src/routes/contact.route.js";
@@ -28,11 +28,7 @@ if (process.env.TRUST_PROXY) {
   const num = Number(trustProxy);
   app.set(
     "trust proxy",
-    !isNaN(num)
-      ? num
-      : trustProxy.toLowerCase() === "true"
-      ? true
-      : trustProxy,
+    !isNaN(num) ? num : trustProxy.toLowerCase() === "true" ? true : trustProxy,
   );
 }
 
@@ -41,7 +37,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin:"http://localhost:5173",
+    origin: "https://rent-guard-1.vercel.app/",
     credentials: true,
   }),
 );
@@ -63,8 +59,8 @@ app.use("/tenant/", tenantRouter);
 app.use("/auth/", authRouter);
 app.use("/bill/", billRouter);
 app.use("/payment/", paymentRouter);
-app.use("/dashboard/",dashboardRouter);
-app.use("/document/",documentRouter);
+app.use("/dashboard/", dashboardRouter);
+app.use("/document/", documentRouter);
 app.use("/order", orderRouter);
 app.use("/maintenance/", maintenanceRouter);
 app.use("/contact/", contactRouter);
