@@ -137,7 +137,7 @@ const Home = () => {
       >
         <div className="mx-auto max-w-7xl">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-yellow-300 dark:text-yellow-300">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-600 dark:text-yellow-300">
               Everything in one place
             </p>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
