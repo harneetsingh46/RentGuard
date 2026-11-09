@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const apiClient = axios.create({
-  baseURL: "https://rentguard-cqht.onrender.com",
+  baseURL: "https://rentguard-cqht.onrender.com" || "http://localhost:2000",
   withCredentials: true,
 });
 
