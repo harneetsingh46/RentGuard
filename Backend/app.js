@@ -37,7 +37,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "https://rent-guard-1.vercel.app/",
+    origin: "https://rent-guard-1.vercel.app",
     credentials: true,
   }),
 );
