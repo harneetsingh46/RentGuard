@@ -3,8 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import apiClient from '../../ApiClient/interceptor.js'
 import { useToast } from "../../common/ToastProvider"
-import ConfirmModal from "../../common/ConfirmModal"
-import { Pencil, LogOut, Search, Upload, X, FileText, FileImage, LoaderCircle, ReceiptText } from "lucide-react"
+import { Pencil, Search, Upload, X, FileText, FileImage, LoaderCircle, ReceiptText, Clock3, CheckCircle2 } from "lucide-react"
 
 const Tenant = () => {
   const navigate = useNavigate()
@@ -12,10 +11,11 @@ const Tenant = () => {
   const [tenantSearch, setTenantSearch] = useState('')
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false)
   const searchRef = useRef(null)
-  const [confirmTenant, setConfirmTenant] = useState(null)
-  const [confirmLoading, setConfirmLoading] = useState(false)
   const [tenants, setTenants] = useState([])
   const [history, setHistory] = useState([])
+  const [moveOutRequests, setMoveOutRequests] = useState([])
+  const [approvingRequestId, setApprovingRequestId] = useState(null)
+  const [approvalRequest, setApprovalRequest] = useState(null)
   const [activeSection, setActiveSection] = useState('active')
 
   const [loading, setLoading] = useState(false)
@@ -66,17 +66,34 @@ const Tenant = () => {
             }
           }
 
-          const [activeTenants, pastTenants] = await Promise.all([
+          const [activeTenants, pastTenants, requestsResponse] = await Promise.all([
             fetchList(`/property/${property._id}/tenants`),
             fetchList(`/property/${property._id}/tenants/history`),
+            apiClient.get(`/property/${property._id}/move-out-requests`).catch((err) => {
+              if (err.response?.status === 404) return { data: { data: [] } }
+              throw err
+            }),
           ])
 
-          return { activeTenants, pastTenants }
+          const requests = (requestsResponse.data.data || []).map((tenant) => ({
+            ...tenant,
+            // The backend returns Tenant documents, not a nested `tenant` object.
+            // Normalize the response to the shape used by this page.
+            tenant,
+            status: tenant.moveOutRequest?.status || "pending",
+            requestedAt: tenant.moveOutRequest?.requestedAt || null,
+            expiresAt: tenant.moveOutRequest?.expiresAt || null,
+            property: property._id,
+            propertyName: property.propertyName,
+          }))
+
+          return { activeTenants, pastTenants, requests }
         })
       )
 
       setTenants(results.flatMap((item) => item.activeTenants))
       setHistory(results.flatMap((item) => item.pastTenants))
+      setMoveOutRequests(results.flatMap((item) => item.requests))
     } catch (err) {
       console.error('Error fetching tenants:', err)
       setError(
@@ -156,29 +173,50 @@ const Tenant = () => {
     }
   }
 
-  // Open the custom move-out confirmation modal
-  const handleMoveOut = (tenant) => setConfirmTenant(tenant)
+  // Open the in-app confirmation modal before approving a move-out request.
+  const approveMoveOutRequest = async () => {
+    if (!approvalRequest) return
 
-  const confirmMoveOut = async () => {
-    if (!confirmTenant) return
-    const tenantToMove = confirmTenant
+    const request = approvalRequest
+    const tenantName = request.tenant?.fullName || "this tenant"
+
     try {
-      setConfirmLoading(true)
+      setApprovingRequestId(request._id)
+
       await apiClient.patch(
-        `/property/${tenantToMove.property}/tenants/${tenantToMove._id}/move-out`
+        `/property/${request.property}/move-out-requests/${request._id}/approve`
       )
-      setConfirmTenant(null)
-      showToast(`${tenantToMove.fullName} has been moved out successfully.`, "success")
+
+      setApprovalRequest(null)
+
+      showToast(
+        `${tenantName}'s move-out request was approved.`,
+        "success"
+      )
+
       await getTenants()
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to move out tenant.', 'error')
+      const message =
+        err.response?.data?.message ||
+        "Unable to approve the move-out request."
+
+      // Backend rejected the request because bills are unpaid or pending.
+      if (err.response?.data?.code === "MOVE_OUT_UNPAID_BILLS") {
+        setApprovalRequest(null)
+
+        showToast(message, "error")
+
+        // Refresh so the rejected request disappears from pending requests.
+        await getTenants()
+      } else {
+        showToast(message, "error")
+      }
     } finally {
-      setConfirmLoading(false)
+      setApprovingRequestId(null)
     }
   }
 
-  const displayedTenants =
-    activeSection === 'active' ? tenants : history
+  const displayedTenants = activeSection === 'history' ? history : tenants
 
   const matchingTenants = useMemo(() => {
     const query = tenantSearch.trim().toLowerCase()
@@ -396,9 +434,91 @@ const Tenant = () => {
         >
           Tenant History ({history.length})
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSection('requests')
+            setError('')
+            setSuccess('')
+          }}
+          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${activeSection === 'requests'
+            ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400'
+            : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+            }`}
+        >
+          Move-out Requests ({moveOutRequests.filter((request) => request.status === 'pending').length})
+        </button>
       </div>
 
-      {loading ? (
+      {activeSection === 'requests' ? (
+        loading ? (
+          <p className="text-gray-600 dark:text-gray-300">Loading move-out requests...</p>
+        ) : moveOutRequests.length === 0 ? (
+          <div className="rounded-xs border border-gray-200 bg-white p-8 text-center dark:border-stone-800 dark:bg-[#1b1b1b]">
+            <Clock3 className="mx-auto text-gray-400" size={28} />
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">There are no move-out requests across your properties.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            {moveOutRequests.map((request) => (
+              <article key={request._id} className="rounded-xs border border-gray-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {request.tenant?.fullName || "Tenant"}
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                      {request.propertyName} · {request.unit?.unitName || "Unit"}
+                    </p>
+                  </div>
+                  <span className={`rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${request.status === "pending"
+                      ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
+                      : request.status === "approved"
+                        ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
+                        : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
+                    }`}>
+                    {request.status}
+                  </span>
+                </div>
+                <dl className="mt-4 grid grid-cols-1 gap-3 border-t border-gray-100 pt-4 text-sm dark:border-stone-800 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Email</dt>
+                    <dd className="mt-1 break-all text-gray-800 dark:text-gray-200">{request.tenant?.email || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Phone</dt>
+                    <dd className="mt-1 text-gray-800 dark:text-gray-200">{request.tenant?.phone || "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Requested</dt>
+                    <dd className="mt-1 text-gray-800 dark:text-gray-200">{request.requestedAt ? new Date(request.requestedAt).toLocaleString("en-IN") : "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Valid until</dt>
+                    <dd className="mt-1 text-gray-800 dark:text-gray-200">{request.expiresAt ? new Date(request.expiresAt).toLocaleString("en-IN") : "—"}</dd>
+                  </div>
+                </dl>
+                {request.status === "pending" && (
+                  <div className="mt-4 flex flex-col gap-3 border-t border-gray-100 pt-4 dark:border-stone-800 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs leading-5 text-gray-500 dark:text-gray-400">
+                      Approval is allowed only when every bill for this tenancy is fully paid.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setApprovalRequest(request)}
+                      disabled={approvingRequestId === request._id}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xs bg-yellow-300 px-4 py-2.5 text-sm font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <CheckCircle2 size={16} />
+                      {approvingRequestId === request._id ? "Approving..." : "Approve move-out"}
+                    </button>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )
+      ) : loading ? (
         <p className="text-gray-600 dark:text-gray-300">
           Loading tenants...
         </p>
@@ -410,221 +530,304 @@ const Tenant = () => {
         </p>
       ) : (
         <>
-        {/* Mobile tenant cards */}
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:hidden">
-          {filteredTenants.map((tenant) => (
-            <article
-              key={tenant._id}
-              className="min-w-0 rounded-sm border border-gray-200 bg-white p-3 shadow-sm dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-4"
-            >
-              <div className="flex min-w-0 items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <h2 className="break-words text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
-                    {tenant.fullName}
-                  </h2>
-                  <p className="mt-1 break-words text-sm text-gray-600 dark:text-gray-400">
-                    {tenant.propertyName || 'Property unavailable'}
-                  </p>
+          {/* Mobile tenant cards */}
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:hidden">
+            {filteredTenants.map((tenant) => (
+              <article
+                key={tenant._id}
+                className="min-w-0 rounded-sm border border-gray-200 bg-white p-3 shadow-sm dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-4"
+              >
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="break-words text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
+                      {tenant.fullName}
+                    </h2>
+                    <p className="mt-1 break-words text-sm text-gray-600 dark:text-gray-400">
+                      {tenant.propertyName || 'Property unavailable'}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-xs px-2 py-1 text-xs font-medium ${tenant.isActive
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-gray-200 text-gray-700 dark:bg-stone-700 dark:text-gray-300'
+                      }`}
+                  >
+                    {tenant.isActive ? 'Active' : 'Moved Out'}
+                  </span>
                 </div>
-                <span
-                  className={`shrink-0 rounded-xs px-2 py-1 text-xs font-medium ${tenant.isActive
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : 'bg-gray-200 text-gray-700 dark:bg-stone-700 dark:text-gray-300'
-                  }`}
-                >
-                  {tenant.isActive ? 'Active' : 'Moved Out'}
-                </span>
-              </div>
 
-              <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 border-t border-gray-100 pt-3 text-sm dark:border-stone-800 sm:grid-cols-2">
-                <div className="min-w-0">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Unit</dt>
-                  <dd className="mt-1 break-words text-gray-800 dark:text-gray-200">{tenant.unit?.unitName || 'Unit unavailable'}</dd>
-                </div>
-                <div className="min-w-0">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Monthly Rent</dt>
-                  <dd className="mt-1 break-words text-gray-800 dark:text-gray-200">
-                    {tenant.unit?.rent != null ? `₹${tenant.unit.rent}` : 'N/A'}
-                  </dd>
-                </div>
-                <div className="min-w-0 sm:col-span-2">
-                  <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Address</dt>
-                  <dd className="mt-1 break-words text-gray-800 dark:text-gray-200">{tenant.address || 'N/A'}</dd>
-                </div>
-                {activeSection === 'history' && (
+                <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-3 border-t border-gray-100 pt-3 text-sm dark:border-stone-800 sm:grid-cols-2">
                   <div className="min-w-0">
-                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Move-out Date</dt>
-                    <dd className="mt-1 text-gray-800 dark:text-gray-200">
-                      {tenant.moveOutDate ? new Date(tenant.moveOutDate).toLocaleDateString() : 'N/A'}
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Unit</dt>
+                    <dd className="mt-1 break-words text-gray-800 dark:text-gray-200">{tenant.unit?.unitName || 'Unit unavailable'}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Monthly Rent</dt>
+                    <dd className="mt-1 break-words text-gray-800 dark:text-gray-200">
+                      {tenant.unit?.rent != null ? `₹${tenant.unit.rent}` : 'N/A'}
                     </dd>
                   </div>
-                )}
-              </dl>
-
-              {activeSection === 'active' && (
-                <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3 dark:border-stone-800">
-                  <button
-                    type="button"
-                    onClick={() => openEditModal(tenant)}
-                    aria-label={`Edit ${tenant.fullName}`}
-                    title="Edit tenant"
-                    className="inline-flex min-h-10 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-400 dark:text-gray-900"
-                  >
-                    <Pencil size={17} />
-                    <span className="ml-2 text-sm">Edit</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/owner/bill?propertyId=${tenant.property}&tenantId=${tenant._id}`)}
-                    aria-label={`View bills for ${tenant.fullName}`}
-                    title="View bills"
-                    className="inline-flex min-h-10 items-center justify-center rounded-xs border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
-                  >
-                    <ReceiptText size={17} />
-                    <span className="ml-2 text-sm">Bills</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openTenantDocuments(tenant)}
-                    aria-label={`Upload document for ${tenant.fullName}`}
-                    title="Upload document"
-                    className="inline-flex min-h-10 items-center justify-center rounded-xs border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
-                  >
-                    <Upload size={17} />
-                    <span className="ml-2 text-sm">Upload Document</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMoveOut(tenant)}
-                    aria-label={`Move out ${tenant.fullName}`}
-                    title="Move tenant out"
-                    className="inline-flex min-h-10 items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
-                  >
-                    <LogOut size={17} />
-                    <span className="ml-2 text-sm">Move Out</span>
-                  </button>
-                </div>
-              )}
-            </article>
-          ))}
-        </div>
-
-        {/* Full table for larger screens */}
-        <div className="hidden overflow-x-auto rounded-xs border border-gray-200 dark:border-stone-800 lg:block">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-100 text-gray-700 dark:bg-stone-900 dark:text-gray-300">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Tenant Name</th>
-                <th className="px-4 py-3 font-semibold">Property</th>
-                <th className="px-4 py-3 font-semibold">Unit</th>
-                <th className="px-4 py-3 font-semibold">Address</th>
-                <th className="px-4 py-3 font-semibold">Monthly Rent</th>
-                {activeSection === 'history' && (
-                  <th className="px-4 py-3 font-semibold">Move-out Date</th>
-                )}
-                <th className="px-4 py-3 font-semibold">Status</th>
-                {activeSection === 'active' && (
-                  <th className="px-4 py-3 font-semibold">Actions</th>
-                )}
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-gray-200 bg-white dark:divide-stone-800 dark:bg-[#1b1b1b]">
-              {filteredTenants.map((tenant) => (
-                <tr
-                  key={tenant._id}
-                  className="text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-stone-900"
-                >
-                  <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-white">
-                    {tenant.fullName}
-                  </td>
-
-                  <td className="whitespace-nowrap px-4 py-3">
-                    {tenant.propertyName}
-                  </td>
-
-                  <td className="whitespace-nowrap px-4 py-3">
-                    {tenant.unit?.unitName || 'Unit unavailable'}
-                  </td>
-
-                  <td className="px-4 py-3">{tenant.address}</td>
-
-                  <td className="whitespace-nowrap px-4 py-3">
-                    {tenant.unit?.rent != null
-                      ? `₹${tenant.unit.rent}`
-                      : 'N/A'}
-                  </td>
-
+                  <div className="min-w-0 sm:col-span-2">
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Address</dt>
+                    <dd className="mt-1 break-words text-gray-800 dark:text-gray-200">{tenant.address || 'N/A'}</dd>
+                  </div>
                   {activeSection === 'history' && (
-                    <td className="whitespace-nowrap px-4 py-3">
-                      {tenant.moveOutDate
-                        ? new Date(tenant.moveOutDate).toLocaleDateString()
-                        : 'N/A'}
-                    </td>
+                    <div className="min-w-0">
+                      <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Move-out Date</dt>
+                      <dd className="mt-1 text-gray-800 dark:text-gray-200">
+                        {tenant.moveOutDate ? new Date(tenant.moveOutDate).toLocaleDateString() : 'N/A'}
+                      </dd>
+                    </div>
                   )}
+                </dl>
 
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <span
-                      className={`rounded-xs px-2 py-1 text-xs font-medium ${tenant.isActive
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-gray-200 text-gray-700 dark:bg-stone-700 dark:text-gray-300'
-                        }`}
+                {activeSection === 'active' && (
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3 dark:border-stone-800">
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(tenant)}
+                      aria-label={`Edit ${tenant.fullName}`}
+                      title="Edit tenant"
+                      className="inline-flex min-h-10 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-400 dark:text-gray-900"
                     >
-                      {tenant.isActive ? 'Active' : 'Moved Out'}
-                    </span>
-                  </td>
+                      <Pencil size={17} />
+                      <span className="ml-2 text-sm">Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/owner/bill?propertyId=${tenant.property}&tenantId=${tenant._id}`)}
+                      aria-label={`View bills for ${tenant.fullName}`}
+                      title="View bills"
+                      className="inline-flex min-h-10 items-center justify-center rounded-xs border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                    >
+                      <ReceiptText size={17} />
+                      <span className="ml-2 text-sm">Bills</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openTenantDocuments(tenant)}
+                      aria-label={`Upload document for ${tenant.fullName}`}
+                      title="Upload document"
+                      className="inline-flex min-h-10 items-center justify-center rounded-xs border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                    >
+                      <Upload size={17} />
+                      <span className="ml-2 text-sm">Upload Document</span>
+                    </button>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
 
+          {/* Full table for larger screens */}
+          <div className="hidden overflow-x-auto rounded-xs border border-gray-200 dark:border-stone-800 lg:block">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-100 text-gray-700 dark:bg-stone-900 dark:text-gray-300">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Tenant Name</th>
+                  <th className="px-4 py-3 font-semibold">Property</th>
+                  <th className="px-4 py-3 font-semibold">Unit</th>
+                  <th className="px-4 py-3 font-semibold">Address</th>
+                  <th className="px-4 py-3 font-semibold">Monthly Rent</th>
+                  {activeSection === 'history' && (
+                    <th className="px-4 py-3 font-semibold">Move-out Date</th>
+                  )}
+                  <th className="px-4 py-3 font-semibold">Status</th>
                   {activeSection === 'active' && (
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(tenant)}
-                          aria-label={`Edit ${tenant.fullName}`}
-                          title="Edit tenant"
-                          className="mx-0 my-1 inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400"
-                        >
-                          <Pencil size={17} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/owner/bill?propertyId=${tenant.property}&tenantId=${tenant._id}`)}
-                          aria-label={`View bills for ${tenant.fullName}`}
-                          title="View bills"
-                          className="mx-0 my-1 inline-flex m-1 items-center justify-center rounded-xs border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
-                        >
-                          <ReceiptText size={17} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => openTenantDocuments(tenant)}
-                          aria-label={`Upload document for ${tenant.fullName}`}
-                          title="Upload document"
-                          className="mx-1 my-1 inline-flex items-center justify-center gap-2 rounded-xs border border-gray-300 px-3 py-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
-                        >
-                          <Upload size={16} />
-                          <span>Upload Document</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleMoveOut(tenant)}
-                          aria-label={`Move out ${tenant.fullName}`}
-                          title="Move tenant out"
-                          className="mx-1 my-1 inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
-                        >
-                          <LogOut size={17} />
-                        </button>
-                      </div>
-                    </td>
+                    <th className="px-4 py-3 font-semibold">Actions</th>
                   )}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              <tbody className="divide-y divide-gray-200 bg-white dark:divide-stone-800 dark:bg-[#1b1b1b]">
+                {filteredTenants.map((tenant) => (
+                  <tr
+                    key={tenant._id}
+                    className="text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-stone-900"
+                  >
+                    <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-white">
+                      {tenant.fullName}
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {tenant.propertyName}
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {tenant.unit?.unitName || 'Unit unavailable'}
+                    </td>
+
+                    <td className="px-4 py-3">{tenant.address}</td>
+
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {tenant.unit?.rent != null
+                        ? `₹${tenant.unit.rent}`
+                        : 'N/A'}
+                    </td>
+
+                    {activeSection === 'history' && (
+                      <td className="whitespace-nowrap px-4 py-3">
+                        {tenant.moveOutDate
+                          ? new Date(tenant.moveOutDate).toLocaleDateString()
+                          : 'N/A'}
+                      </td>
+                    )}
+
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span
+                        className={`rounded-xs px-2 py-1 text-xs font-medium ${tenant.isActive
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-gray-200 text-gray-700 dark:bg-stone-700 dark:text-gray-300'
+                          }`}
+                      >
+                        {tenant.isActive ? 'Active' : 'Moved Out'}
+                      </span>
+                    </td>
+
+                    {activeSection === 'active' && (
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(tenant)}
+                            aria-label={`Edit ${tenant.fullName}`}
+                            title="Edit tenant"
+                            className="mx-0 my-1 inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400"
+                          >
+                            <Pencil size={17} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/owner/bill?propertyId=${tenant.property}&tenantId=${tenant._id}`)}
+                            aria-label={`View bills for ${tenant.fullName}`}
+                            title="View bills"
+                            className="mx-0 my-1 inline-flex m-1 items-center justify-center rounded-xs border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                          >
+                            <ReceiptText size={17} />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => openTenantDocuments(tenant)}
+                            aria-label={`Upload document for ${tenant.fullName}`}
+                            title="Upload document"
+                            className="mx-1 my-1 inline-flex items-center justify-center gap-2 rounded-xs border border-gray-300 px-3 py-2 text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                          >
+                            <Upload size={16} />
+                            <span>Upload Document</span>
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </>
+      )}
+
+      {/* Move-out approval confirmation modal */}
+      {approvalRequest && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !approvingRequestId) {
+              setApprovalRequest(null)
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="approve-moveout-title"
+            aria-describedby="approve-moveout-description"
+            className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white text-gray-900 shadow-2xl dark:border-stone-700 dark:bg-[#1b1b1b] dark:text-white"
+          >
+            <div className="flex items-start justify-between border-b border-gray-200 p-5 dark:border-stone-800">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-yellow-300/10 text-yellow-300">
+                  <CheckCircle2 size={22} />
+                </span>
+                <div>
+                  <h2 id="approve-moveout-title" className="text-lg font-semibold">
+                    Approve move-out request?
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-stone-400">
+                    Please review before continuing.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setApprovalRequest(null)}
+                disabled={Boolean(approvingRequestId)}
+                aria-label="Close confirmation modal"
+                className="rounded-md p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-white"
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-5">
+              <div className="rounded-sm border border-gray-200 bg-gray-50 p-4 dark:border-stone-700 dark:bg-[#111111]">
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-stone-400">
+                  Tenant
+                </p>
+                <p className="mt-1 font-semibold text-gray-900 dark:text-white">
+                  {approvalRequest.tenant?.fullName || "Tenant"}
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-stone-400">
+                  {approvalRequest.propertyName || "Property"} · {approvalRequest.unit?.unitName || "Unit"}
+                </p>
+              </div>
+
+              <div
+                id="approve-moveout-description"
+                className="rounded-sm border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-500/30 dark:bg-amber-400/10 dark:text-amber-100"
+              >
+                Approving this request will immediately end the tenant's active
+                tenancy and make the unit available, provided all bills are fully paid.
+                The tenant's current session will also be invalidated.
+              </div>
+
+              <p className="text-xs leading-5 text-gray-500 dark:text-stone-400">
+                If any bill is unpaid or reserved in checkout, the backend will
+                reject the approval and the tenancy will remain active.
+              </p>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-gray-200 p-5 sm:flex-row sm:justify-end dark:border-stone-800">
+              <button
+                type="button"
+                onClick={() => setApprovalRequest(null)}
+                disabled={Boolean(approvingRequestId)}
+                className="rounded-sm border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-stone-600 dark:text-stone-200 dark:hover:bg-stone-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={approveMoveOutRequest}
+                disabled={Boolean(approvingRequestId)}
+                className="inline-flex items-center justify-center gap-2 rounded-sm bg-yellow-300 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {approvingRequestId ? (
+                  <>
+                    <LoaderCircle size={16} className="animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} />
+                    Approve move-out
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Upload document modal */}
@@ -783,15 +986,6 @@ const Tenant = () => {
         </div>
       )}
 
-      <ConfirmModal
-        isOpen={Boolean(confirmTenant)}
-        title="Move tenant out?"
-        message={confirmTenant ? `Are you sure you want to move out ${confirmTenant.fullName}? This will move the tenant to history.` : ''}
-        confirmText="Move Out"
-        loading={confirmLoading}
-        onCancel={() => { if (!confirmLoading) setConfirmTenant(null) }}
-        onConfirm={confirmMoveOut}
-      />
     </div>
   )
 }

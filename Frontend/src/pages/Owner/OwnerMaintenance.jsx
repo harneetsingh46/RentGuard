@@ -385,9 +385,9 @@ const OwnerMaintenance = () => {
                                                     href={complaint.imageUrl}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="mt-4 inline-flex max-w-full items-center gap-2 break-all rounded-xs text-sm font-semibold text-gray-800 no-underline transition-colors hover:text-black hover:underline hover:underline-offset-4 dark:text-yellow-300 dark:hover:text-yellow-500"
+                                                    className="mt-4 inline-flex max-w-full items-center gap-2 break-all rounded-xs underline text-sm font-semibold text-gray-800 no-underline transition-colors hover:text-black hover:underline hover:underline-offset-4 dark:text-yellow-300 dark:hover:text-yellow-500"
                                                 >
-                                                    View attached image ↗
+                                                    View attached image 
                                                 </a>
                                             )}
 

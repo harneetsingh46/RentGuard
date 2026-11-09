@@ -44,7 +44,7 @@ const OwnerDashboard = () => {
         if (isMounted) {
           setError(
             requestError.response?.data?.message ||
-              "Unable to load dashboard data. Please try again.",
+            "Unable to load dashboard data. Please try again.",
           );
         }
       } finally {
@@ -298,9 +298,10 @@ const OwnerDashboard = () => {
                   <h2 className="text-xl font-medium tracking-tight">
                     Recent Payments
                   </h2>
-                  <div className="mt-5 overflow-x-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+                  <div className="mt-5 max-h-[230px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
                     <table className="w-full text-left text-sm">
-                      <thead className="border-b border-stone-200 text-gray-500 dark:border-neutral-800 dark:text-[#A5A5A5]">
+                      <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
+
                         <tr>
                           <th className="whitespace-nowrap px-4 py-3 font-normal">Tenant</th>
                           <th className="whitespace-nowrap px-4 py-3 font-normal">Property / Unit</th>
@@ -343,9 +344,10 @@ const OwnerDashboard = () => {
                   <h2 className="text-xl font-medium tracking-tight">
                     Recent Tenants
                   </h2>
-                  <div className="mt-5 overflow-x-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+                  <div className="mt-5 max-h-[230px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
                     <table className="w-full text-left text-sm">
-                      <thead className="border-b border-stone-200 text-gray-500 dark:border-neutral-800 dark:text-[#A5A5A5]">
+                      <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
+
                         <tr>
                           <th className="whitespace-nowrap px-4 py-3 font-normal">Tenant</th>
                           <th className="whitespace-nowrap px-4 py-3 font-normal">Property</th>
@@ -388,9 +390,10 @@ const OwnerDashboard = () => {
                   <h2 className="text-xl font-medium tracking-tight">
                     Recent Bills — {periodLabel}
                   </h2>
-                  <div className="mt-5 overflow-x-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+                  <div className="mt-5 max-h-[230px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
                     <table className="w-full text-left text-sm">
-                      <thead className="border-b border-stone-200 text-gray-500 dark:border-neutral-800 dark:text-[#A5A5A5]">
+                      <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
+
                         <tr>
                           <th className="whitespace-nowrap px-4 py-3 font-normal">Bill</th>
                           <th className="whitespace-nowrap px-4 py-3 font-normal">Tenant</th>
@@ -433,9 +436,10 @@ const OwnerDashboard = () => {
                   <h2 className="text-xl font-medium tracking-tight">
                     Recent Maintenance Complaints
                   </h2>
-                  <div className="mt-5 overflow-x-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+                  <div className="mt-5 max-h-[230px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
                     <table className="w-full text-left text-sm">
-                      <thead className="border-b border-stone-200 text-gray-500 dark:border-neutral-800 dark:text-[#A5A5A5]">
+                      <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
+
                         <tr>
                           <th className="whitespace-nowrap px-4 py-3 font-normal">Issue</th>
                           <th className="whitespace-nowrap px-4 py-3 font-normal">Tenant</th>

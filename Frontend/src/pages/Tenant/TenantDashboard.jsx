@@ -7,6 +7,9 @@ const TenantDashboard = () => {
   const [dashboard, setDashboard] = useState(null);
   const [unpaidBills, setUnpaidBills] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [moveOutRequest, setMoveOutRequest] = useState(null);
+  const [submittingMoveOutRequest, setSubmittingMoveOutRequest] = useState(false);
+  const [moveOutRequestError, setMoveOutRequestError] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -26,6 +29,7 @@ const TenantDashboard = () => {
           apiClient.get("/tenant/dashboard"),
           apiClient.get("/order/unpaid-bills"),
           apiClient.get("/payment/my-payments"),
+          apiClient.get("/tenant/me/move-out-request"),
         ]);
 
         // Dashboard information is required
@@ -52,12 +56,21 @@ const TenantDashboard = () => {
               : "Payment history is unavailable."
           );
         }
+
+        if (results[3].status === "fulfilled") {
+          setMoveOutRequest(results[3].value.data.data || null);
+        } else if (results[3].reason?.response?.status !== 404) {
+          setMoveOutRequestError(
+            results[3].reason?.response?.data?.message ||
+            "Unable to load your move-out request status."
+          );
+        }
       } catch (err) {
         console.error("Tenant dashboard error:", err);
 
         setError(
           err.response?.data?.message ||
-            "Unable to load your dashboard."
+          "Unable to load your dashboard."
         );
       } finally {
         setLoading(false);
@@ -66,6 +79,32 @@ const TenantDashboard = () => {
 
     fetchDashboardData();
   }, []);
+
+  const submitMoveOutRequest = async () => {
+    try {
+      setSubmittingMoveOutRequest(true);
+      setMoveOutRequestError("");
+      const response = await apiClient.post("/tenant/me/move-out-request");
+      setMoveOutRequest(response.data.data || null);
+    } catch (err) {
+      setMoveOutRequestError(
+        err.response?.data?.message || "Unable to submit your move-out request."
+      );
+    } finally {
+      setSubmittingMoveOutRequest(false);
+    }
+  };
+
+  const formatDateTime = (date) => {
+    if (!date) return "—";
+    return new Date(date).toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   // Format currency
   const formatCurrency = (amount) =>
@@ -373,6 +412,100 @@ const TenantDashboard = () => {
               </div>
             </section>
 
+            {/* Move-out request */}
+            <section className="mt-7 border border-stone-200 bg-white p-5 dark:border-neutral-800 dark:bg-[#171717] sm:p-6">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500 dark:text-[#A5A5A5]">
+                    Tenancy
+                  </p>
+                  <h2 className="mt-2 text-xl font-normal tracking-tight">
+                    Move-out request
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
+                    If you plan to leave this property, submit a request to your owner.
+                    The request remains valid for 48 hours. Your tenancy only ends after
+                    the owner approves it and confirms that all bills are paid.
+                  </p>
+                </div>
+                {moveOutRequest?.status && (
+                  <span className={`inline-flex w-fit shrink-0 px-3 py-1.5 text-xs font-medium capitalize ${moveOutRequest.status === "pending"
+                    ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
+                    : moveOutRequest.status === "approved"
+                      ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
+                      : moveOutRequest.status === "rejected"
+                        ? "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400"
+                        : "bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-neutral-300"
+                    }`}>
+                    {moveOutRequest.status}
+                  </span>
+                )}
+              </div>
+
+              {moveOutRequestError && (
+                <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">
+                  {moveOutRequestError}
+                </p>
+              )}
+
+              {moveOutRequest?.status === "pending" ? (
+                <div className="mt-5 border-t border-stone-200 pt-4 dark:border-neutral-800">
+                  <p className="text-sm text-stone-700 dark:text-neutral-300">
+                    Your request has been sent to the property owner.
+                  </p>
+
+                  <p className="mt-2 text-xs text-stone-500 dark:text-[#A5A5A5]">
+                    Valid until: {formatDateTime(moveOutRequest.expiresAt)}
+                  </p>
+
+                  <p className="mt-1 text-xs text-stone-500 dark:text-[#A5A5A5]">
+                    You remain an active tenant until the owner approves the request.
+                  </p>
+                </div>
+              ) : moveOutRequest?.status === "approved" ? (
+                <p className="mt-4 border-t border-stone-200 pt-4 text-sm text-green-700 dark:border-neutral-800 dark:text-green-400">
+                  Your move-out request was approved on{" "}
+                  {formatDateTime(moveOutRequest.reviewedAt)}.
+                </p>
+              ) : (
+                <div className="mt-5 border-t border-stone-200 pt-4 dark:border-neutral-800">
+
+                  {moveOutRequest?.status === "rejected" && (
+                    <div className="mb-4 border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
+                      <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                        Your previous move-out request was rejected.
+                      </p>
+
+                      <p className="mt-2 text-sm leading-6 text-red-600 dark:text-red-300">
+                        Your bills were not fully paid. You can submit a new move-out
+                        request immediately after rejection. There is no need to wait
+                        for the previous 48-hour period to end.
+                      </p>
+                    </div>
+                  )}
+
+                  {moveOutRequest?.status === "expired" && (
+                    <p className="mb-3 text-sm text-stone-500 dark:text-[#A5A5A5]">
+                      Your previous request expired. You can submit a new request.
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={submitMoveOutRequest}
+                    disabled={submittingMoveOutRequest}
+                    className="inline-flex items-center justify-center bg-[#f9c83d] px-5 py-3 text-sm font-medium text-[#171717] transition hover:bg-[#edbb2f] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {submittingMoveOutRequest
+                      ? "Submitting..."
+                      : moveOutRequest?.status === "rejected"
+                        ? "Submit new move-out request"
+                        : "Submit move-out request"}
+                  </button>
+                </div>
+              )}
+            </section>
+
             {/* Payment History */}
             <section className="mt-7">
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -456,13 +589,12 @@ const TenantDashboard = () => {
                           <td className="px-3 py-5 text-right">
                             <div className="flex flex-col items-end gap-2">
                               <span
-                                className={`inline-flex px-2.5 py-1 text-xs font-medium capitalize ${
-                                  payment.status === "paid"
-                                    ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
-                                    : payment.status === "failed"
-                                      ? "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400"
-                                      : "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
-                                }`}
+                                className={`inline-flex px-2.5 py-1 text-xs font-medium capitalize ${payment.status === "paid"
+                                  ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
+                                  : payment.status === "failed"
+                                    ? "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400"
+                                    : "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
+                                  }`}
                               >
                                 {payment.status}
                               </span>

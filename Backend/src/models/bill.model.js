@@ -91,4 +91,12 @@ billSchema.pre("validate", function () {
   }
 });
 
+billSchema.index(
+  { tenant: 1, category: 1, month: 1, year: 1 },
+  {
+    unique: true,
+    name: "unique_tenant_category_month_year",
+  }
+);
+
 export const Bill = mongoose.model("Bill", billSchema);

@@ -165,6 +165,21 @@ export const createBill = async (req, res) => {
       });
     }
 
+    // Prevent duplicate bills for the same tenant, category and month.
+    const existingBill = await Bill.findOne({
+      tenant: tenant._id,
+      category,
+      month: billMonth,
+      year: billYear,
+    }).select("_id");
+
+    if (existingBill) {
+      return res.status(409).json({
+        success: false,
+        message: `A ${category} bill already exists for this tenant for ${billMonth}/${billYear}.`,
+      });
+    }
+
     const bill = await Bill.create({
       property: property._id,
       unit: unit._id,
@@ -367,7 +382,8 @@ export const updateBill = async (req, res) => {
     if (bill.paymentStatus === "reserved") {
       return res.status(400).json({
         success: false,
-        message: "Bills currently reserved in an open checkout cannot be edited.",
+        message:
+          "Bills currently reserved in an open checkout cannot be edited.",
       });
     }
 
@@ -468,6 +484,22 @@ export const updateBill = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: dateError,
+      });
+    }
+
+    // Prevent duplicate bills when editing.
+    const duplicateBill = await Bill.findOne({
+      _id: { $ne: bill._id },
+      tenant: bill.tenant,
+      category: bill.category,
+      month: bill.month,
+      year: bill.year,
+    }).select("_id");
+
+    if (duplicateBill) {
+      return res.status(409).json({
+        success: false,
+        message: `A ${bill.category} bill already exists for this tenant for ${bill.month}/${bill.year}.`,
       });
     }
 

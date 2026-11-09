@@ -119,6 +119,188 @@ const escapeHtml = (value = "") =>
       })[char],
   );
 
+
+
+// Send tenant registration and move-out notifications to both parties.
+export const sendTenancyNotificationEmails = async ({
+  event,
+  tenantEmail,
+  tenantName,
+  ownerEmail,
+  ownerName,
+  propertyName,
+  propertyAddress,
+  unitName,
+  rent,
+  requestedAt,
+  expiresAt,
+  reviewedAt,
+  bills = [],
+}) => {
+  try {
+    const emailUser = process.env.EMAIL_USER?.trim();
+    const emailPass = process.env.EMAIL_PASS?.replace(/\s/g, "");
+
+    if (!emailUser || !emailPass) {
+      throw new Error("Email credentials are missing.");
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: emailUser,
+        pass: emailPass,
+      },
+    });
+
+    const date = (value) =>
+      value
+        ? new Date(value).toLocaleString("en-IN", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })
+        : "N/A";
+
+    const amount = (value) =>
+      `₹${Number(value || 0).toLocaleString("en-IN")}`;
+
+    const templates = {
+      registered: {
+        subject: "Welcome to RentGuard - Tenant Registration Successful",
+        heading: "Tenant Registration Successful",
+        tenantMessage: `Hello ${escapeHtml(tenantName)}, your tenancy has been successfully registered on RentGuard.`,
+        ownerMessage: `Hello ${escapeHtml(ownerName)}, tenant ${escapeHtml(tenantName)} has been successfully registered.`,
+      },
+      requested: {
+        subject: "RentGuard - Move-out Request Submitted",
+        heading: "Move-out Request Submitted",
+        tenantMessage: "Your move-out request has been successfully submitted to your property owner.",
+        ownerMessage: `${escapeHtml(tenantName)} has submitted a move-out request. Please log in to your owner dashboard to review it.`,
+      },
+      approved: {
+        subject: "RentGuard - Move-out Request Approved",
+        heading: "Move-out Request Approved",
+        tenantMessage: "Your move-out request has been approved. Your tenancy has now ended.",
+        ownerMessage: `The move-out request for ${escapeHtml(tenantName)} has been approved successfully.`,
+      },
+      rejected: {
+        subject: "RentGuard - Move-out Request Rejected",
+        heading: "Move-out Request Rejected",
+        tenantMessage: "Your move-out request was rejected because some bills are unpaid or pending. Please clear your outstanding bills before submitting another request. You may submit a new request immediately.",
+        ownerMessage: `The move-out request for ${escapeHtml(tenantName)} was rejected because unpaid or pending bills were found.`,
+      },
+    };
+
+    const template = templates[event];
+
+    if (!template) {
+      throw new Error(`Unsupported tenancy email event: ${event}`);
+    }
+
+    const billRows = bills.length
+      ? `
+        <h3>Outstanding Bills</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">Bill</th>
+            <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">Status</th>
+            <th style="text-align:right;padding:8px;border-bottom:1px solid #ddd;">Amount</th>
+          </tr>
+          ${bills.map((bill) => `
+            <tr>
+              <td style="padding:8px;border-bottom:1px solid #eee;">
+                ${escapeHtml(bill.billName)}
+              </td>
+              <td style="padding:8px;border-bottom:1px solid #eee;">
+                ${escapeHtml(bill.paymentStatus)}
+              </td>
+              <td style="padding:8px;text-align:right;border-bottom:1px solid #eee;">
+                ${amount(bill.amount)}
+              </td>
+            </tr>
+          `).join("")}
+        </table>
+      `
+      : "";
+
+    const details = `
+      <div style="background:#f8fafc;padding:16px;border-radius:8px;margin:20px 0;">
+        <p><strong>Tenant:</strong> ${escapeHtml(tenantName)}</p>
+        <p><strong>Property:</strong> ${escapeHtml(propertyName)}</p>
+        <p><strong>Address:</strong> ${escapeHtml(propertyAddress)}</p>
+        <p><strong>Unit:</strong> ${escapeHtml(unitName)}</p>
+        ${rent !== undefined ? `<p><strong>Monthly Rent:</strong> ${amount(rent)}</p>` : ""}
+        ${requestedAt ? `<p><strong>Requested At:</strong> ${date(requestedAt)}</p>` : ""}
+        ${expiresAt ? `<p><strong>Request Expires:</strong> ${date(expiresAt)}</p>` : ""}
+        ${reviewedAt ? `<p><strong>Reviewed At:</strong> ${date(reviewedAt)}</p>` : ""}
+      </div>
+      ${billRows}
+    `;
+
+    const baseStyle = `
+      font-family:Arial,sans-serif;
+      max-width:600px;
+      margin:auto;
+      padding:25px;
+      color:#333;
+      line-height:1.6;
+    `;
+
+    const emails = [];
+
+    if (tenantEmail) {
+      emails.push(
+        transporter.sendMail({
+          from: `"RentGuard" <${emailUser}>`,
+          to: tenantEmail,
+          subject: template.subject,
+          html: `
+            <div style="${baseStyle}">
+              <h2 style="color:#d4a017;">RentGuard</h2>
+              <h3>${template.heading}</h3>
+              <p>${template.tenantMessage}</p>
+              ${details}
+              <p>Thank you for using RentGuard.</p>
+            </div>
+          `,
+        }),
+      );
+    }
+
+    if (ownerEmail) {
+      emails.push(
+        transporter.sendMail({
+          from: `"RentGuard" <${emailUser}>`,
+          to: ownerEmail,
+          subject: template.subject,
+          html: `
+            <div style="${baseStyle}">
+              <h2 style="color:#d4a017;">RentGuard</h2>
+              <h3>${template.heading}</h3>
+              <p>${template.ownerMessage}</p>
+              ${details}
+              <p>Please log in to your RentGuard dashboard to manage your property.</p>
+            </div>
+          `,
+        }),
+      );
+    }
+
+    const results = await Promise.allSettled(emails);
+
+    results.forEach((result) => {
+      if (result.status === "rejected") {
+        console.error("Tenancy notification email failed:", result.reason);
+      }
+    });
+
+    return results;
+  } catch (error) {
+    console.error("Tenancy notification email error:", error);
+    return null;
+  }
+};
+
 // Send payment confirmation to both tenant and owner
 export const sendPaymentConfirmationEmails = async ({
   tenantEmail,

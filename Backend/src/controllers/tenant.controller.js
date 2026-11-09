@@ -2,8 +2,10 @@ import mongoose from "mongoose";
 import { Property } from "../models/property.model.js";
 import { Tenant } from "../models/tenant.model.js";
 import { Unit } from "../models/unit.model.js";
+import { Bill } from "../models/bill.model.js";
 import uploadToCloudinary from "../utils/uploadToCloudinary.js";
 import cloudinary from "../config/cloudinary.js";
+import { sendTenancyNotificationEmails } from "../utils/email.js";
 
 // HELPERS
 
@@ -37,9 +39,25 @@ const safeTenantData = (tenant) => {
 // REGISTER TENANT
 
 export const registerTenant = async (req, res) => {
+  let claimedUnitId = null;
+
+  await sendTenancyNotificationEmails({
+    event: "registered",
+
+    tenantEmail: tenant.email,
+    tenantName: tenant.fullName,
+
+    ownerEmail: req.user.email,
+    ownerName: req.user.fullName || req.user.name || "Property Owner",
+
+    propertyName: property.propertyName,
+    propertyAddress: property.address,
+    unitName: claimedUnit.unitName,
+    rent: claimedUnit.rent,
+  });
+
   try {
     const { propertyId, unitId } = req.params;
-
     const { fullName, address, aadhaarNumber, email, phone } = req.body;
 
     if (req.authRole !== "owner") {
@@ -58,20 +76,34 @@ export const registerTenant = async (req, res) => {
     }
 
     if (
-      !fullName?.trim() ||
-      !address?.trim() ||
+      typeof fullName !== "string" ||
+      typeof address !== "string" ||
       !aadhaarNumber ||
-      !email?.trim() ||
-      !phone?.trim()
+      typeof email !== "string" ||
+      typeof phone !== "string"
     ) {
       return res.status(400).json({
         message: "Please fill in all required fields!",
       });
     }
 
+    const normalizedName = fullName.trim();
+    const normalizedAddress = address.trim();
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedPhone = phone.trim();
-    const normalizedAadhaar = aadhaarNumber.toString().trim();
+    const normalizedPhone = phone.replace(/\D/g, "");
+    const normalizedAadhaar = String(aadhaarNumber).replace(/\D/g, "");
+
+    if (normalizedName.length < 2 || normalizedName.length > 100) {
+      return res.status(400).json({
+        message: "Full name must be between 2 and 100 characters!",
+      });
+    }
+
+    if (normalizedAddress.length < 5 || normalizedAddress.length > 250) {
+      return res.status(400).json({
+        message: "Address must be between 5 and 250 characters!",
+      });
+    }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail)) {
       return res.status(400).json({
@@ -79,12 +111,32 @@ export const registerTenant = async (req, res) => {
       });
     }
 
-    if (!/^\d{10}$/.test(normalizedPhone)) {
+    if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
       return res.status(400).json({
-        message: "Phone number must contain 10 digits!",
+        message: "Phone number must be a valid 10-digit Indian mobile number!",
       });
     }
 
+    if (!/^[2-9]\d{11}$/.test(normalizedAadhaar)) {
+      return res.status(400).json({
+        message: "Aadhaar number must contain 12 valid digits!",
+      });
+    }
+
+    // Tenant contact details must differ from owner's contact details.
+    if (
+      (req.user.email &&
+        normalizedEmail === String(req.user.email).trim().toLowerCase()) ||
+      (req.user.phone &&
+        normalizedPhone === String(req.user.phone).replace(/\D/g, ""))
+    ) {
+      return res.status(400).json({
+        message:
+          "Tenant email and phone must be different from the owner's contact details!",
+      });
+    }
+
+    // Verify property ownership.
     const property = await getOwnedProperty(propertyId, req.user._id);
 
     if (!property) {
@@ -93,39 +145,71 @@ export const registerTenant = async (req, res) => {
       });
     }
 
-    const unit = await Unit.findOne({
-      _id: unitId,
-      property: propertyId,
-    });
+    // Check email globally and Aadhaar/phone under this owner.
+    const [existingEmail, existingOwnerTenant] = await Promise.all([
+      Tenant.findOne({
+        email: normalizedEmail,
+        isActive: true,
+      }).select("_id"),
 
-    if (!unit) {
-      return res.status(404).json({
-        message: "Unit not found!",
-      });
-    }
+      Tenant.findOne({
+        owner: req.user._id,
+        isActive: true,
+        $or: [{ aadhaarNumber: normalizedAadhaar }, { phone: normalizedPhone }],
+      }).select("_id"),
+    ]);
 
-    if (unit.status !== "available") {
-      return res.status(400).json({
-        message: "This unit is not available!",
-      });
-    }
-
-    const existingTenant = await Tenant.findOne({
-      owner: req.user._id,
-      isActive: true,
-      $or: [
-        { aadhaarNumber: normalizedAadhaar },
-        { email: normalizedEmail },
-        { phone: normalizedPhone },
-      ],
-    });
-
-    if (existingTenant) {
+    if (existingEmail) {
       return res.status(409).json({
-        message: "This tenant already has an active tenancy!",
+        message:
+          "This email already belongs to an active tenancy. The previous tenancy must be moved out before it can be registered again.",
       });
     }
 
+    if (existingOwnerTenant) {
+      return res.status(409).json({
+        message:
+          "An active tenant with this Aadhaar number or phone number already exists under your account!",
+      });
+    }
+
+    // Atomically claim the available unit.
+    const claimedUnit = await Unit.findOneAndUpdate(
+      {
+        _id: unitId,
+        property: propertyId,
+        status: "available",
+      },
+      {
+        $set: { status: "occupied" },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!claimedUnit) {
+      const unitExists = await Unit.exists({
+        _id: unitId,
+        property: propertyId,
+      });
+
+      if (!unitExists) {
+        return res.status(404).json({
+          message: "Unit not found in the selected property!",
+        });
+      }
+
+      return res.status(409).json({
+        message:
+          "This unit is no longer available. Please refresh the unit list.",
+      });
+    }
+
+    claimedUnitId = claimedUnit._id;
+
+    // Register immediately. No registration OTP.
     const tenant = await Tenant.create({
       owner: req.user._id,
       property: propertyId,
@@ -136,13 +220,20 @@ export const registerTenant = async (req, res) => {
       email: normalizedEmail,
       phone: normalizedPhone,
       isActive: true,
+      moveInDate: new Date(),
       moveOutDate: null,
+      moveOutRequest: {
+        status: "none",
+        requestedAt: null,
+        expiresAt: null,
+        reviewedAt: null,
+      },
       tokenVersion: 0,
       contactVerified: false,
     });
 
-    unit.status = "occupied";
-    await unit.save();
+    // Registration succeeded. Keep unit occupied.
+    claimedUnitId = null;
 
     return res.status(201).json({
       message: "Tenant registered successfully!",
@@ -157,9 +248,40 @@ export const registerTenant = async (req, res) => {
       },
     });
   } catch (error) {
+    // Roll back unit status if tenant creation fails.
+    if (claimedUnitId) {
+      try {
+        await Unit.updateOne(
+          {
+            _id: claimedUnitId,
+            status: "occupied",
+          },
+          {
+            $set: { status: "available" },
+          },
+        );
+      } catch (rollbackError) {
+        console.error("Unit registration rollback error:", rollbackError);
+      }
+    }
+
     if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern || {})[0];
+
+      if (duplicateField === "email") {
+        return res.status(409).json({
+          message: "This email already belongs to an active tenancy.",
+        });
+      }
+
+      if (duplicateField === "unit") {
+        return res.status(409).json({
+          message: "This unit is already assigned to an active tenant.",
+        });
+      }
+
       return res.status(409).json({
-        message: "This tenant or unit is already registered!",
+        message: "An active tenant with these details already exists.",
       });
     }
 
@@ -752,5 +874,498 @@ export const uploadProfilePicture = async (req, res) => {
     return res.status(500).json({
       message: "Failed to upload profile picture!",
     });
+  }
+};
+
+// TENANT: CREATE MOVE-OUT REQUEST
+
+export const createMoveOutRequest = async (req, res) => {
+  try {
+    if (req.authRole !== "tenant") {
+      return res.status(403).json({
+        message: "Only tenants can request move-out!",
+      });
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+    // Mark an old pending request as expired after 48 hours.
+    await Tenant.updateOne(
+      {
+        _id: req.user._id,
+        isActive: true,
+        "moveOutRequest.status": "pending",
+        "moveOutRequest.expiresAt": { $lte: now },
+      },
+      {
+        $set: {
+          "moveOutRequest.status": "expired",
+          "moveOutRequest.reviewedAt": now,
+        },
+      },
+    );
+
+    // Allow a new request if the previous request was:
+    // none, expired, or rejected.
+    const tenant = await Tenant.findOneAndUpdate(
+      {
+        _id: req.user._id,
+        isActive: true,
+        $or: [
+          {
+            "moveOutRequest.status": {
+              $in: ["none", "expired", "rejected"],
+            },
+          },
+          {
+            "moveOutRequest.status": { $exists: false },
+          },
+        ],
+      },
+      {
+        $set: {
+          "moveOutRequest.requestedAt": now,
+          "moveOutRequest.expiresAt": expiresAt,
+          "moveOutRequest.status": "pending",
+          "moveOutRequest.reviewedAt": null,
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!tenant) {
+      const activeTenant = await Tenant.findOne({
+        _id: req.user._id,
+        isActive: true,
+      });
+
+      if (!activeTenant) {
+        return res.status(404).json({
+          message: "Active tenancy not found!",
+        });
+      }
+
+      if (activeTenant.moveOutRequest?.status === "pending") {
+        return res.status(400).json({
+          message: "You already have a pending move-out request.",
+        });
+      }
+
+      if (activeTenant.moveOutRequest?.status === "approved") {
+        return res.status(400).json({
+          message: "Your move-out request has already been approved.",
+        });
+      }
+
+      return res.status(400).json({
+        message:
+          "Unable to create a new move-out request. Please refresh and try again.",
+      });
+    }
+
+    await tenant.populate([
+      { path: "owner", select: "fullName name email" },
+      { path: "property", select: "propertyName address" },
+      { path: "unit", select: "unitName rent" },
+    ]);
+
+    await sendTenancyNotificationEmails({
+      event: "requested",
+
+      tenantEmail: tenant.email,
+      tenantName: tenant.fullName,
+
+      ownerEmail: tenant.owner?.email,
+      ownerName:
+        tenant.owner?.fullName || tenant.owner?.name || "Property Owner",
+
+      propertyName: tenant.property?.propertyName,
+      propertyAddress: tenant.property?.address,
+      unitName: tenant.unit?.unitName,
+
+      requestedAt: tenant.moveOutRequest.requestedAt,
+      expiresAt: tenant.moveOutRequest.expiresAt,
+    });
+
+    return res.status(201).json({
+      message: "Move-out request submitted successfully!",
+      data: {
+        status: tenant.moveOutRequest.status,
+        requestedAt: tenant.moveOutRequest.requestedAt,
+        expiresAt: tenant.moveOutRequest.expiresAt,
+      },
+    });
+  } catch (error) {
+    console.error("Create move-out request error:", error);
+
+    return res.status(500).json({
+      message: "Unable to submit move-out request!",
+    });
+  }
+};
+
+// TENANT: GET MY MOVE-OUT REQUEST
+
+export const getMyMoveOutRequest = async (req, res) => {
+  try {
+    if (req.authRole !== "tenant") {
+      return res.status(403).json({
+        message: "Only tenants can access this request!",
+      });
+    }
+
+    const now = new Date();
+
+    await Tenant.updateOne(
+      {
+        _id: req.user._id,
+        "moveOutRequest.status": "pending",
+        "moveOutRequest.expiresAt": { $lte: now },
+      },
+      {
+        $set: {
+          "moveOutRequest.status": "expired",
+        },
+      },
+    );
+
+    const tenant = await Tenant.findById(req.user._id).select(
+      "isActive moveOutRequest moveInDate moveOutDate",
+    );
+
+    if (!tenant) {
+      return res.status(404).json({
+        message: "Tenant record not found!",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Move-out request fetched successfully!",
+      data: {
+        isActive: tenant.isActive,
+        moveInDate: tenant.moveInDate,
+        moveOutDate: tenant.moveOutDate,
+        moveOutRequest: tenant.moveOutRequest,
+      },
+    });
+  } catch (error) {
+    console.error("Get move-out request error:", error);
+
+    return res.status(500).json({
+      message: "Unable to fetch move-out request!",
+    });
+  }
+};
+
+// OWNER: GET MOVE-OUT REQUESTS FOR A PROPERTY
+
+export const getPropertyMoveOutRequests = async (req, res) => {
+  try {
+    const { propertyId } = req.params;
+
+    if (req.authRole !== "owner") {
+      return res.status(403).json({
+        message: "Only owners can access move-out requests!",
+      });
+    }
+
+    if (!mongoose.isValidObjectId(propertyId)) {
+      return res.status(400).json({
+        message: "Invalid property ID!",
+      });
+    }
+
+    const property = await getOwnedProperty(propertyId, req.user._id);
+
+    if (!property) {
+      return res.status(404).json({
+        message: "Property not found or access denied!",
+      });
+    }
+
+    const now = new Date();
+
+    // Expire requests that have passed their 48-hour validity.
+    await Tenant.updateMany(
+      {
+        owner: req.user._id,
+        property: propertyId,
+        isActive: true,
+        "moveOutRequest.status": "pending",
+        "moveOutRequest.expiresAt": { $lte: now },
+      },
+      {
+        $set: {
+          "moveOutRequest.status": "expired",
+        },
+      },
+    );
+
+    const tenants = await Tenant.find({
+      owner: req.user._id,
+      property: propertyId,
+      isActive: true,
+      "moveOutRequest.status": "pending",
+      "moveOutRequest.expiresAt": { $gt: now },
+    })
+      .select("fullName email phone unit moveInDate moveOutRequest")
+      .populate("unit", "unitName unitType rent");
+
+    return res.status(200).json({
+      message: "Move-out requests fetched successfully!",
+      data: tenants,
+    });
+  } catch (error) {
+    console.error("Get property move-out requests error:", error);
+
+    return res.status(500).json({
+      message: "Unable to fetch move-out requests!",
+    });
+  }
+};
+
+// OWNER: APPROVE MOVE-OUT REQUEST
+
+export const approveMoveOutRequest = async (req, res) => {
+  let session;
+
+  try {
+    const { propertyId, tenantId } = req.params;
+
+    if (req.authRole !== "owner") {
+      return res.status(403).json({
+        message: "Only owners can approve move-out requests!",
+      });
+    }
+
+    if (
+      !mongoose.isValidObjectId(propertyId) ||
+      !mongoose.isValidObjectId(tenantId)
+    ) {
+      return res.status(400).json({
+        message: "Invalid property or tenant ID!",
+      });
+    }
+
+    const property = await getOwnedProperty(propertyId, req.user._id);
+
+    if (!property) {
+      return res.status(404).json({
+        message: "Property not found or access denied!",
+      });
+    }
+
+    const now = new Date();
+
+    // Expire this request first if its validity has passed.
+    await Tenant.updateOne(
+      {
+        _id: tenantId,
+        owner: req.user._id,
+        property: propertyId,
+        "moveOutRequest.status": "pending",
+        "moveOutRequest.expiresAt": { $lte: now },
+      },
+      {
+        $set: {
+          "moveOutRequest.status": "expired",
+        },
+      },
+    );
+
+    session = await mongoose.startSession();
+
+    let approvedTenant;
+
+    await session.withTransaction(async () => {
+      const tenant = await Tenant.findOne({
+        _id: tenantId,
+        owner: req.user._id,
+        property: propertyId,
+        isActive: true,
+        "moveOutRequest.status": "pending",
+        "moveOutRequest.expiresAt": { $gt: now },
+      }).session(session);
+
+      if (!tenant) {
+        const error = new Error(
+          "Move-out request is not pending or has expired.",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      // Unpaid and reserved bills both prevent move-out approval.
+      const unpaidBills = await Bill.find({
+        tenant: tenant._id,
+        paymentStatus: { $ne: "paid" },
+      })
+        .select("_id billName amount paymentStatus dueDate")
+        .session(session);
+
+      if (unpaidBills.length > 0) {
+        const error = new Error(
+          "Move-out request rejected because the tenant has unpaid or pending bills.",
+        );
+
+        error.code = "MOVE_OUT_UNPAID_BILLS";
+        error.unpaidBills = unpaidBills;
+
+        throw error;
+      }
+
+      const unit = await Unit.findOne({
+        _id: tenant.unit,
+        property: propertyId,
+      }).session(session);
+
+      if (!unit) {
+        const error = new Error("Tenant's unit was not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      // End tenancy and invalidate existing tenant sessions.
+      tenant.isActive = false;
+      tenant.moveOutDate = new Date();
+      tenant.tokenVersion += 1;
+
+      tenant.moveOutRequest.status = "approved";
+      tenant.moveOutRequest.reviewedAt = new Date();
+
+      unit.status = "available";
+
+      await tenant.save({ session });
+      await unit.save({ session });
+
+      approvedTenant = tenant;
+    });
+
+    await approvedTenant.populate([
+      { path: "owner", select: "fullName name email" },
+      { path: "property", select: "propertyName address" },
+      { path: "unit", select: "unitName rent" },
+    ]);
+
+    await sendTenancyNotificationEmails({
+      event: "approved",
+
+      tenantEmail: approvedTenant.email,
+      tenantName: approvedTenant.fullName,
+
+      ownerEmail: approvedTenant.owner?.email,
+      ownerName:
+        approvedTenant.owner?.fullName ||
+        approvedTenant.owner?.name ||
+        "Property Owner",
+
+      propertyName: approvedTenant.property?.propertyName,
+      propertyAddress: approvedTenant.property?.address,
+      unitName: approvedTenant.unit?.unitName,
+
+      requestedAt: approvedTenant.moveOutRequest.requestedAt,
+      reviewedAt: approvedTenant.moveOutRequest.reviewedAt,
+    });
+
+    return res.status(200).json({
+      message: "Move-out request approved. Tenant has been moved out.",
+      data: {
+        tenant: safeTenantData(approvedTenant),
+      },
+    });
+  } catch (error) {
+    console.error("Approve move-out request error:", error);
+
+    // Reject outside the transaction so the status change is saved.
+    if (error.code === "MOVE_OUT_UNPAID_BILLS") {
+      try {
+        const rejection = await Tenant.updateOne(
+          {
+            _id: req.params.tenantId,
+            owner: req.user._id,
+            property: req.params.propertyId,
+            isActive: true,
+            "moveOutRequest.status": "pending",
+          },
+          {
+            $set: {
+              "moveOutRequest.status": "rejected",
+              "moveOutRequest.reviewedAt": new Date(),
+            },
+          },
+          { runValidators: true },
+        );
+
+        if (rejection.modifiedCount === 0) {
+          return res.status(409).json({
+            message: "Request is no longer pending. Please refresh.",
+          });
+        }
+
+        const rejectedTenant = await Tenant.findOne({
+          _id: req.params.tenantId,
+          owner: req.user._id,
+          property: req.params.propertyId,
+        })
+          .populate("owner", "fullName name email")
+          .populate("property", "propertyName address")
+          .populate("unit", "unitName rent");
+
+        if (rejectedTenant) {
+          await sendTenancyNotificationEmails({
+            event: "rejected",
+
+            tenantEmail: rejectedTenant.email,
+            tenantName: rejectedTenant.fullName,
+
+            ownerEmail: rejectedTenant.owner?.email,
+            ownerName:
+              rejectedTenant.owner?.fullName ||
+              rejectedTenant.owner?.name ||
+              "Property Owner",
+
+            propertyName: rejectedTenant.property?.propertyName,
+            propertyAddress: rejectedTenant.property?.address,
+            unitName: rejectedTenant.unit?.unitName,
+
+            requestedAt: rejectedTenant.moveOutRequest.requestedAt,
+            reviewedAt: rejectedTenant.moveOutRequest.reviewedAt,
+
+            bills: error.unpaidBills || [],
+          });
+        }
+
+        return res.status(409).json({
+          message:
+            "Move-out request rejected. The tenant has unpaid or pending bills. The tenant remains active and the unit remains occupied.",
+          code: "MOVE_OUT_UNPAID_BILLS",
+          unpaidBills: error.unpaidBills,
+        });
+      } catch (rejectionError) {
+        console.error("Reject move-out request error:", rejectionError);
+
+        return res.status(500).json({
+          message: "Unable to update the move-out request status.",
+        });
+      }
+    }
+
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Unable to approve move-out request!",
+    });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
   }
 };

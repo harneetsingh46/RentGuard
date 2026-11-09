@@ -57,6 +57,11 @@ const tenantSchema = new mongoose.Schema(
       default: true,
     },
 
+    moveInDate: {
+      type: Date,
+      default: Date.now,
+    },
+
     moveOutDate: {
       type: Date,
       default: null,
@@ -81,8 +86,27 @@ const tenantSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    moveOutRequest: {
+      requestedAt: {
+        type: Date,
+        default: null,
+      },
+      expiresAt: {
+        type: Date,
+        default: null,
+      },
+      status: {
+        type: String,
+        enum: ["none", "pending", "approved", "expired", "rejected"],
+        default: "none",
+      },
+      reviewedAt: {
+        type: Date,
+        default: null,
+      },
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // One active tenant per unit
@@ -91,7 +115,7 @@ tenantSchema.index(
   {
     unique: true,
     partialFilterExpression: { isActive: true },
-  }
+  },
 );
 
 // Prevent duplicate active Aadhaar under the same owner
@@ -100,16 +124,18 @@ tenantSchema.index(
   {
     unique: true,
     partialFilterExpression: { isActive: true },
-  }
+  },
 );
 
-// Prevent duplicate active email under the same owner
+// Only one active tenancy per email across all owners.
+// Historical inactive tenancy records can share the same email.
 tenantSchema.index(
-  { owner: 1, email: 1 },
+  { email: 1 },
   {
     unique: true,
     partialFilterExpression: { isActive: true },
-  }
+    name: "unique_active_tenant_email",
+  },
 );
 
 // Prevent duplicate active phone under the same owner
@@ -118,7 +144,7 @@ tenantSchema.index(
   {
     unique: true,
     partialFilterExpression: { isActive: true },
-  }
+  },
 );
 
 // OTP login lookups
