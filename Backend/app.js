@@ -49,6 +49,15 @@ app.use(
 //   razorpayWebhook,
 // );
 
+// Backend health check
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "RentGuard backend is running!",
+    status: " healthy",
+  });
+});
+
 //routes
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/user/", userRouter);
