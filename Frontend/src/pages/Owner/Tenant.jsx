@@ -3,9 +3,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import apiClient from '../../ApiClient/interceptor.js'
 import { useToast } from "../../common/ToastProvider"
+import Pagination from "../../common/Pagination"
 import { Pencil, Search, Upload, X, FileText, FileImage, LoaderCircle, ReceiptText, Clock3, CheckCircle2 } from "lucide-react"
 
 const Tenant = () => {
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 10
   const navigate = useNavigate()
   const { showToast } = useToast()
   const [tenantSearch, setTenantSearch] = useState('')
@@ -250,8 +253,48 @@ const Tenant = () => {
     })
   }, [displayedTenants, tenantSearch])
 
+  // Keep pagination within the available pages.
+  const tenantTotalPages = Math.ceil(filteredTenants.length / PAGE_SIZE)
+  const safeTenantPage = Math.min(
+    currentPage,
+    Math.max(tenantTotalPages, 1)
+  )
+
+  const paginatedTenants = useMemo(() => {
+    const startIndex = (safeTenantPage - 1) * PAGE_SIZE
+
+    return filteredTenants.slice(startIndex, startIndex + PAGE_SIZE)
+  }, [filteredTenants, safeTenantPage])
+
+  // Move-out request pagination
+  const requestTotalPages = Math.ceil(moveOutRequests.length / PAGE_SIZE)
+  const safeRequestPage = Math.min(
+    currentPage,
+    Math.max(requestTotalPages, 1)
+  )
+
+  const paginatedMoveOutRequests = useMemo(() => {
+    const startIndex = (safeRequestPage - 1) * PAGE_SIZE
+
+    return moveOutRequests.slice(startIndex, startIndex + PAGE_SIZE)
+  }, [moveOutRequests, safeRequestPage])
+
+  useEffect(() => {
+    const totalPages =
+      activeSection === 'requests'
+        ? Math.ceil(moveOutRequests.length / PAGE_SIZE)
+        : Math.ceil(filteredTenants.length / PAGE_SIZE)
+
+    const maxPage = Math.max(totalPages, 1)
+
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage)
+    }
+  }, [activeSection, currentPage, filteredTenants.length, moveOutRequests.length])
+
   const selectSearchTenant = (tenant) => {
-    setTenantSearch(tenant.fullName || '')
+    setTenantSearch(tenant.fullName || "")
+    setCurrentPage(1)
     setSearchDropdownOpen(false)
   }
 
@@ -364,6 +407,7 @@ const Tenant = () => {
             value={tenantSearch}
             onChange={(event) => {
               setTenantSearch(event.target.value)
+              setCurrentPage(1)
               setSearchDropdownOpen(true)
             }}
             onFocus={() => setSearchDropdownOpen(true)}
@@ -408,6 +452,7 @@ const Tenant = () => {
         <button
           type="button"
           onClick={() => {
+            setCurrentPage(1)
             setActiveSection('active')
             setError('')
             setSuccess('')
@@ -423,6 +468,7 @@ const Tenant = () => {
         <button
           type="button"
           onClick={() => {
+            setCurrentPage(1)
             setActiveSection('history')
             setError('')
             setSuccess('')
@@ -437,6 +483,7 @@ const Tenant = () => {
         <button
           type="button"
           onClick={() => {
+            setCurrentPage(1)
             setActiveSection('requests')
             setError('')
             setSuccess('')
@@ -459,8 +506,9 @@ const Tenant = () => {
             <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">There are no move-out requests across your properties.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            {moveOutRequests.map((request) => (
+          <>
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              {paginatedMoveOutRequests.map((request) => (
               <article key={request._id} className="rounded-xs border border-gray-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -472,10 +520,10 @@ const Tenant = () => {
                     </p>
                   </div>
                   <span className={`rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${request.status === "pending"
-                      ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
-                      : request.status === "approved"
-                        ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
-                        : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
+                    ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
+                    : request.status === "approved"
+                      ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
+                      : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
                     }`}>
                     {request.status}
                   </span>
@@ -515,8 +563,15 @@ const Tenant = () => {
                   </div>
                 )}
               </article>
-            ))}
-          </div>
+              ))}
+            </div>
+            <Pagination
+              currentPage={safeRequestPage}
+            totalItems={moveOutRequests.length}
+            pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )
       ) : loading ? (
         <p className="text-gray-600 dark:text-gray-300">
@@ -532,7 +587,7 @@ const Tenant = () => {
         <>
           {/* Mobile tenant cards */}
           <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:hidden">
-            {filteredTenants.map((tenant) => (
+            {paginatedTenants.map((tenant) => (
               <article
                 key={tenant._id}
                 className="min-w-0 rounded-sm border border-gray-200 bg-white p-3 shadow-sm dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-4"
@@ -640,7 +695,7 @@ const Tenant = () => {
               </thead>
 
               <tbody className="divide-y divide-gray-200 bg-white dark:divide-stone-800 dark:bg-[#1b1b1b]">
-                {filteredTenants.map((tenant) => (
+                {paginatedTenants.map((tenant) => (
                   <tr
                     key={tenant._id}
                     className="text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-stone-900"
@@ -725,6 +780,12 @@ const Tenant = () => {
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={safeTenantPage}
+            totalItems={filteredTenants.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setCurrentPage}
+          />
         </>
       )}
 

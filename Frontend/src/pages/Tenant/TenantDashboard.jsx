@@ -205,8 +205,7 @@ const TenantDashboard = () => {
           (a, b) =>
             new Date(b.paidAt || b.createdAt) -
             new Date(a.paidAt || a.createdAt)
-        )
-        .slice(0, 5),
+        ),
     [payments]
   );
 
@@ -269,16 +268,16 @@ const TenantDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#f7f5f0] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
-      <main className="mx-auto max-w-[1600px] px-5 py-8 sm:px-8 sm:py-10 lg:px-10">
+      <main className="mx-auto max-w-[1600px] px-3 py-5 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
 
         {/* Header */}
-        <header className="mb-9 flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+        <header className="mb-6 flex flex-col justify-between gap-4 sm:mb-9 sm:gap-6 lg:flex-row lg:items-center">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500 dark:text-[#A5A5A5]">
               Tenant Portal
             </p>
 
-            <h1 className="mt-4 text-3xl font-normal leading-tight tracking-tight sm:text-4xl lg:text-[42px]">
+            <h1 className="mt-3 text-2xl font-normal leading-tight tracking-tight [overflow-wrap:anywhere] sm:mt-4 sm:text-4xl lg:text-[42px]">
               Your home. Your peace of mind.
             </h1>
 
@@ -288,7 +287,7 @@ const TenantDashboard = () => {
             </p>
           </div>
 
-          <div className="flex items-start gap-3 lg:max-w-[300px]">
+          <div className="flex min-w-0 items-start gap-3 lg:max-w-[300px]">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -314,14 +313,14 @@ const TenantDashboard = () => {
         </header>
 
         {/* Main Two Column Layout */}
-        <div className="grid grid-cols-1 items-start gap-7 xl:grid-cols-[minmax(0,1.7fr)_minmax(350px,0.95fr)]">
+        <div className="grid min-w-0 grid-cols-1 items-start gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,0.95fr)] xl:gap-7">
 
           {/* LEFT COLUMN */}
           <div className="min-w-0">
 
             {/* Rental Overview */}
-            <section className="relative overflow-hidden bg-[#141414] p-6 text-white sm:p-8">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            <section className="relative min-w-0 overflow-hidden bg-[#141414] p-4 text-white sm:p-8">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-medium uppercase tracking-[0.12em] text-stone-300">
                   Your rental overview
                 </p>
@@ -338,7 +337,7 @@ const TenantDashboard = () => {
                 </h2>
               </div>
 
-              <div className="mt-8 grid grid-cols-1 gap-5 border-t border-white/15 pt-5 sm:grid-cols-2">
+              <div className="mt-6 grid grid-cols-1 gap-4 border-t border-white/15 pt-5 sm:mt-8 sm:grid-cols-2 sm:gap-5">
                 <div>
                   <p className="text-xs text-stone-400">Property</p>
 
@@ -357,157 +356,8 @@ const TenantDashboard = () => {
               </div>
             </section>
 
-            {/* Property and Tenancy Details */}
-            <section className="mt-7 border-b border-stone-200 pb-7 dark:border-neutral-800">
-              <div className="grid grid-cols-1 gap-7 sm:grid-cols-2">
-
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500 dark:text-[#A5A5A5]">
-                    Your property
-                  </p>
-
-                  <h3 className="mt-3 text-lg font-medium">
-                    {propertyName}
-                  </h3>
-
-                  <p className="mt-2 text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
-                    {fullAddress}
-                  </p>
-
-                  <Link
-                    to="/tenant/documents"
-                    className="mt-4 inline-flex items-center gap-2 text-sm font-medium underline decoration-stone-300 underline-offset-4 transition hover:decoration-stone-800 dark:hover:decoration-white"
-                  >
-                    View rental documents
-                  </Link>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500 dark:text-[#A5A5A5]">
-                      Tenancy information
-                    </p>
-
-                    <span className="text-xs text-stone-400">
-                      Current
-                    </span>
-                  </div>
-
-                  <h3 className="mt-3 text-lg font-medium">
-                    {unitName}
-                  </h3>
-
-                  <p className="mt-2 text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
-                    Your current accommodation details.
-                  </p>
-
-                  <div className="mt-4 flex items-center gap-2 text-sm">
-                    <span className="h-2 w-2 rounded-full bg-emerald-600" />
-
-                    <span className="text-stone-700 dark:text-neutral-300">
-                      Active tenancy
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Move-out request */}
-            <section className="mt-7 border border-stone-200 bg-white p-5 dark:border-neutral-800 dark:bg-[#171717] sm:p-6">
-              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500 dark:text-[#A5A5A5]">
-                    Tenancy
-                  </p>
-                  <h2 className="mt-2 text-xl font-normal tracking-tight">
-                    Move-out request
-                  </h2>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
-                    If you plan to leave this property, submit a request to your owner.
-                    The request remains valid for 48 hours. Your tenancy only ends after
-                    the owner approves it and confirms that all bills are paid.
-                  </p>
-                </div>
-                {moveOutRequest?.status && (
-                  <span className={`inline-flex w-fit shrink-0 px-3 py-1.5 text-xs font-medium capitalize ${moveOutRequest.status === "pending"
-                    ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
-                    : moveOutRequest.status === "approved"
-                      ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
-                      : moveOutRequest.status === "rejected"
-                        ? "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400"
-                        : "bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-neutral-300"
-                    }`}>
-                    {moveOutRequest.status}
-                  </span>
-                )}
-              </div>
-
-              {moveOutRequestError && (
-                <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">
-                  {moveOutRequestError}
-                </p>
-              )}
-
-              {moveOutRequest?.status === "pending" ? (
-                <div className="mt-5 border-t border-stone-200 pt-4 dark:border-neutral-800">
-                  <p className="text-sm text-stone-700 dark:text-neutral-300">
-                    Your request has been sent to the property owner.
-                  </p>
-
-                  <p className="mt-2 text-xs text-stone-500 dark:text-[#A5A5A5]">
-                    Valid until: {formatDateTime(moveOutRequest.expiresAt)}
-                  </p>
-
-                  <p className="mt-1 text-xs text-stone-500 dark:text-[#A5A5A5]">
-                    You remain an active tenant until the owner approves the request.
-                  </p>
-                </div>
-              ) : moveOutRequest?.status === "approved" ? (
-                <p className="mt-4 border-t border-stone-200 pt-4 text-sm text-green-700 dark:border-neutral-800 dark:text-green-400">
-                  Your move-out request was approved on{" "}
-                  {formatDateTime(moveOutRequest.reviewedAt)}.
-                </p>
-              ) : (
-                <div className="mt-5 border-t border-stone-200 pt-4 dark:border-neutral-800">
-
-                  {moveOutRequest?.status === "rejected" && (
-                    <div className="mb-4 border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
-                      <p className="text-sm font-medium text-red-700 dark:text-red-400">
-                        Your previous move-out request was rejected.
-                      </p>
-
-                      <p className="mt-2 text-sm leading-6 text-red-600 dark:text-red-300">
-                        Your bills were not fully paid. You can submit a new move-out
-                        request immediately after rejection. There is no need to wait
-                        for the previous 48-hour period to end.
-                      </p>
-                    </div>
-                  )}
-
-                  {moveOutRequest?.status === "expired" && (
-                    <p className="mb-3 text-sm text-stone-500 dark:text-[#A5A5A5]">
-                      Your previous request expired. You can submit a new request.
-                    </p>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={submitMoveOutRequest}
-                    disabled={submittingMoveOutRequest}
-                    className="inline-flex items-center justify-center bg-[#f9c83d] px-5 py-3 text-sm font-medium text-[#171717] transition hover:bg-[#edbb2f] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {submittingMoveOutRequest
-                      ? "Submitting..."
-                      : moveOutRequest?.status === "rejected"
-                        ? "Submit new move-out request"
-                        : "Submit move-out request"}
-                  </button>
-                </div>
-              )}
-            </section>
-
             {/* Payment History */}
-            <section className="mt-7">
+            <section className="mt-4 min-w-0 bg-white shadow-2xs p-3 dark:bg-[#171717] sm:mt-7 sm:p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-normal tracking-tight">
@@ -521,7 +371,7 @@ const TenantDashboard = () => {
 
                 <Link
                   to="/tenant/bills"
-                  className="inline-flex items-center gap-2 border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium transition hover:border-stone-400 dark:border-neutral-800 dark:bg-[#171717] dark:hover:border-neutral-600"
+                  className="inline-flex w-full items-center justify-center gap-2 border border-stone-200 bg-yellow-300 px-3 py-2.5 text-sm font-medium text-black sm:w-auto sm:px-4 transition hover:border-stone-400 dark:border-neutral-800 dark:bg-[#171717] dark:hover:border-neutral-600"
                 >
                   Pay bills →
                 </Link>
@@ -539,10 +389,71 @@ const TenantDashboard = () => {
                 </p>
               )}
 
-              <div className="mt-5 overflow-x-auto border-y border-stone-200 dark:border-neutral-800">
-                <table className="w-full min-w-[550px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-stone-200 text-[10px] uppercase tracking-wider text-stone-500 dark:border-neutral-800 dark:text-[#A5A5A5]">
+              {/* Compact payment cards for phones */}
+              <div className="mt-5 max-h-[420px] space-y-3 overflow-y-auto overscroll-contain pr-1 sm:hidden">
+                {recentPayments.length > 0 ? (
+                  recentPayments.map((payment) => (
+                    <article
+                      key={payment._id}
+                      className="min-w-0 border border-stone-200 p-3 dark:border-neutral-800"
+                    >
+                      <div className="flex min-w-0 items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">
+                            {payment.order?.items?.length || 0} bill(s)
+                          </p>
+                          <p className="mt-1 break-all text-xs text-stone-500 dark:text-[#A5A5A5]">
+                            {payment.razorpayPaymentId || "Payment record"}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 px-2 py-1 text-[11px] font-medium capitalize ${
+                            payment.status === "paid"
+                              ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
+                              : payment.status === "failed"
+                                ? "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400"
+                                : "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
+                          }`}
+                        >
+                          {payment.status}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-end justify-between gap-3 border-t border-stone-200 pt-3 dark:border-neutral-800">
+                        <div>
+                          <p className="text-xs text-stone-500 dark:text-[#A5A5A5]">
+                            {formatDate(payment.paidAt || payment.createdAt)}
+                          </p>
+                          <p className="mt-1 text-base font-semibold">
+                            {formatCurrency(payment.amount)}
+                          </p>
+                        </div>
+                        {payment.status === "paid" && (
+                          <button
+                            type="button"
+                            onClick={() => downloadReceipt(payment)}
+                            disabled={downloadingReceiptId === payment._id}
+                            className="max-w-full border border-stone-300 px-3 py-2 text-xs font-medium transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                          >
+                            {downloadingReceiptId === payment._id
+                              ? "Downloading..."
+                              : "Download receipt"}
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <p className="py-8 text-center text-sm text-stone-500 dark:text-[#A5A5A5]">
+                    No payment records found.
+                  </p>
+                )}
+              </div>
+
+              {/* Full table from small tablets upward */}
+              <div className="mt-5 hidden max-h-[420px] overflow-auto overscroll-contain border-y border-stone-200 dark:border-neutral-800 sm:block">
+                <table className="w-full text-left text-sm">
+                  <thead className="sticky top-0 z-10">
+                    <tr className="border-b border-stone-200 bg-[#f7f5f0] text-black font-medium text-[10px] uppercase tracking-wider dark:border-neutral-800 dark:text-[#A5A5A5]">
                       <th className="px-3 py-4 font-normal">
                         Transaction
                       </th>
@@ -633,80 +544,13 @@ const TenantDashboard = () => {
                 Your recent payment transactions are displayed here.
               </p>
             </section>
-
-            {/* TENANT SERVICES - MOVED INSIDE LEFT COLUMN */}
-            <section className="mt-7 grid grid-cols-1 gap-5 sm:grid-cols-2">
-
-              {/* Rent and Utility Bills */}
-              <div className="border border-stone-200 bg-white p-5 dark:border-neutral-800 dark:bg-[#171717] sm:p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500 dark:text-[#A5A5A5]">
-                      Payments
-                    </p>
-
-                    <h2 className="mt-3 text-xl font-normal tracking-tight">
-                      Rent & utility bills
-                    </h2>
-                  </div>
-
-                  <span className="flex h-10 w-10 items-center justify-center bg-[#f9c83d] text-xl text-[#171717]">
-                    ₹
-                  </span>
-                </div>
-
-                <p className="mt-3 text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
-                  View your rent, electricity, water and other bills.
-                  Select multiple bills to create one combined Order.
-                </p>
-
-                <Link
-                  to="/tenant/bills"
-                  className="mt-5 inline-flex w-full items-center justify-center gap-2 bg-[#f9c83d] px-5 py-3 text-sm font-medium text-[#171717] transition hover:bg-[#edbb2f]"
-                >
-                  View & Pay Bills →
-                </Link>
-              </div>
-
-              {/* File a Complaint */}
-              <div className="border border-stone-200 bg-white p-5 dark:border-neutral-800 dark:bg-[#171717] sm:p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500 dark:text-[#A5A5A5]">
-                      Support
-                    </p>
-
-                    <h2 className="mt-3 text-xl font-normal tracking-tight">
-                      File a complaint
-                    </h2>
-                  </div>
-
-                  <span className="flex h-10 w-10 items-center justify-center bg-[#171717] text-xl text-[#f9c83d] dark:bg-[#f9c83d] dark:text-[#171717]">
-                    !
-                  </span>
-                </div>
-
-                <p className="mt-3 text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
-                  Report maintenance issues, plumbing problems,
-                  electrical faults or other concerns about your
-                  accommodation.
-                </p>
-
-                <Link
-                  to="/tenant/maintenance"
-                  className="mt-5 inline-flex w-full items-center justify-center gap-2 border border-stone-200 bg-white px-5 py-3 text-sm font-medium transition hover:border-stone-400 dark:border-neutral-700 dark:bg-[#171717] dark:hover:border-neutral-500"
-                >
-                  Submit a complaint →
-                </Link>
-              </div>
-            </section>
           </div>
 
           {/* RIGHT COLUMN */}
-          <aside className="min-w-0 border border-stone-200 bg-white p-5 sm:p-7 dark:border-neutral-800 dark:bg-[#171717]">
+          <aside className="min-w-0 h-full border border-stone-200 bg-white p-4 sm:p-7 dark:border-neutral-800 dark:bg-[#171717]">
 
             {/* Rent and Payments */}
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center lg:py-6 justify-between gap-3">
               <h2 className="text-xl font-normal tracking-tight sm:text-2xl">
                 Rent & payments
               </h2>
@@ -728,23 +572,6 @@ const TenantDashboard = () => {
               View your rental charges, outstanding bills and payment
               information.
             </p>
-
-            {/* Monthly Rent */}
-            <div className="mt-6 border border-stone-200 bg-[#f7f5f0] p-5 dark:border-neutral-800 dark:bg-[#111111]">
-              <p className="text-[11px] font-medium uppercase tracking-[0.13em] text-stone-500 dark:text-[#A5A5A5]">
-                Monthly rent
-              </p>
-
-              <p className="mt-3 text-3xl font-normal tracking-tight sm:text-4xl">
-                {monthlyRent ? formatCurrency(monthlyRent) : "—"}
-              </p>
-
-              <p className="mt-2 text-xs leading-5 text-stone-500 dark:text-[#A5A5A5]">
-                {monthlyRent
-                  ? "Your monthly rental amount."
-                  : "Monthly rent information is not available."}
-              </p>
-            </div>
 
             {/* Outstanding Bills */}
             <div className="mt-4 border border-stone-200 p-5 dark:border-neutral-800">
@@ -791,75 +618,105 @@ const TenantDashboard = () => {
             >
               Pay Rent & Bills →
             </Link>
-
-            {/* Rental Account */}
-            <div className="mt-7 border-t border-stone-200 pt-6 dark:border-neutral-800">
-              <h3 className="text-base font-medium">
-                Your rental account
-              </h3>
-
-              <p className="mt-2 text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
-                Keep your personal details and rental documents up to date.
-              </p>
-
-              <div className="mt-5 space-y-0">
-                <Link
-                  to="/tenant/profile"
-                  className="flex items-center justify-between border-b border-stone-100 py-4 text-sm transition hover:text-stone-500 dark:border-neutral-800 dark:hover:text-[#f9c83d]"
-                >
-                  <span>Personal information</span>
-                  <span>→</span>
-                </Link>
-
-                <Link
-                  to="/tenant/documents"
-                  className="flex items-center justify-between border-b border-stone-100 py-4 text-sm transition hover:text-stone-500 dark:border-neutral-800 dark:hover:text-[#f9c83d]"
-                >
-                  <span>Rental documents</span>
-                  <span>→</span>
-                </Link>
-
-                <Link
-                  to="/tenant/bills"
-                  className="flex items-center justify-between py-4 text-sm transition hover:text-stone-500 dark:hover:text-[#f9c83d]"
-                >
-                  <span>Rent and bills</span>
-                  <span>→</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Account Details */}
-            <div className="mt-5 border-t border-stone-200 pt-5 dark:border-neutral-800">
-              <p className="text-[11px] font-medium uppercase tracking-[0.13em] text-stone-500 dark:text-[#A5A5A5]">
-                Account details
-              </p>
-
-              <div className="mt-4">
-                <p className="text-xs text-stone-500 dark:text-[#A5A5A5]">
-                  Tenant name
-                </p>
-
-                <p className="mt-1 break-words text-sm font-medium">
-                  {tenant?.fullName || "—"}
-                </p>
-              </div>
-
-              <div className="mt-4">
-                <p className="text-xs text-stone-500 dark:text-[#A5A5A5]">
-                  Email address
-                </p>
-
-                <p className="mt-1 break-words text-sm font-medium">
-                  {tenant?.email || "—"}
-                </p>
-              </div>
-            </div>
           </aside>
         </div>
 
+        {/* Move-out request */}
+        <section className="mt-5 w-full min-w-0 border border-stone-200 bg-white p-4 sm:mt-7 sm:p-6 dark:border-neutral-800 dark:bg-[#171717] sm:p-6">
+          <div className="flex min-w-0 flex-col justify-between gap-3 sm:flex-row sm:items-start">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500 dark:text-[#A5A5A5]">
+                Tenancy
+              </p>
+              <h2 className="mt-2 text-xl font-normal tracking-tight">
+                Move-out request
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
+                If you plan to leave this property, submit a request to your owner.
+                The request remains valid for 48 hours. Your tenancy only ends after
+                the owner approves it and confirms that all bills are paid.
+              </p>
+            </div>
+            {moveOutRequest?.status && (
+              <span className={`inline-flex w-fit shrink-0 px-3 py-1.5 text-xs font-medium capitalize ${moveOutRequest.status === "pending"
+                ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
+                : moveOutRequest.status === "approved"
+                  ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
+                  : moveOutRequest.status === "rejected"
+                    ? "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400"
+                    : "bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-neutral-300"
+                }`}>
+                {moveOutRequest.status}
+              </span>
+            )}
+          </div>
+
+          {moveOutRequestError && (
+            <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">
+              {moveOutRequestError}
+            </p>
+          )}
+
+          {moveOutRequest?.status === "pending" ? (
+            <div className="mt-5 border-t border-stone-200 pt-4 dark:border-neutral-800">
+              <p className="text-sm text-stone-700 dark:text-neutral-300">
+                Your request has been sent to the property owner.
+              </p>
+
+              <p className="mt-2 text-xs text-stone-500 dark:text-[#A5A5A5]">
+                Valid until: {formatDateTime(moveOutRequest.expiresAt)}
+              </p>
+
+              <p className="mt-1 text-xs text-stone-500 dark:text-[#A5A5A5]">
+                You remain an active tenant until the owner approves the request.
+              </p>
+            </div>
+          ) : moveOutRequest?.status === "approved" ? (
+            <p className="mt-4 border-t border-stone-200 pt-4 text-sm text-green-700 dark:border-neutral-800 dark:text-green-400">
+              Your move-out request was approved on{" "}
+              {formatDateTime(moveOutRequest.reviewedAt)}.
+            </p>
+          ) : (
+            <div className="mt-5 border-t border-stone-200 pt-4 dark:border-neutral-800">
+
+              {moveOutRequest?.status === "rejected" && (
+                <div className="mb-4 border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
+                  <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                    Your previous move-out request was rejected.
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-red-600 dark:text-red-300">
+                    Your bills were not fully paid. You can submit a new move-out
+                    request immediately after rejection. There is no need to wait
+                    for the previous 48-hour period to end.
+                  </p>
+                </div>
+              )}
+
+              {moveOutRequest?.status === "expired" && (
+                <p className="mb-3 text-sm text-stone-500 dark:text-[#A5A5A5]">
+                  Your previous request expired. You can submit a new request.
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={submitMoveOutRequest}
+                disabled={submittingMoveOutRequest}
+                className="inline-flex w-full items-center justify-center bg-[#f9c83d] px-5 py-3 text-sm font-medium sm:w-auto text-[#171717] transition hover:bg-[#edbb2f] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submittingMoveOutRequest
+                  ? "Submitting..."
+                  : moveOutRequest?.status === "rejected"
+                    ? "Submit new move-out request"
+                    : "Submit move-out request"}
+              </button>
+            </div>
+          )}
+        </section>
+
         {/* Footer */}
-        <footer className="mt-10 flex flex-col justify-between gap-2 border-t border-stone-200 py-5 text-xs text-stone-500 sm:flex-row sm:items-center dark:border-neutral-800 dark:text-[#A5A5A5]">
+        <footer className="mt-8 flex flex-col justify-between gap-2 border-t border-stone-200 py-5 text-xs text-stone-500 sm:flex-row sm:items-center dark:border-neutral-800 dark:text-[#A5A5A5]">
           <p>RentGuard · Your rental, made simpler.</p>
           <p>{formatDate(new Date())}</p>
         </footer>

@@ -34,6 +34,7 @@ const TenantBills = () => {
   const [receiptPayment, setReceiptPayment] = useState(null);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [receiptError, setReceiptError] = useState("");
+  const [activeTab, setActiveTab] = useState("bills");
 
   // Fetch tenant's unpaid bills
   const fetchBills = async () => {
@@ -399,60 +400,103 @@ const TenantBills = () => {
           </Link>
         </div>
 
-        {/* Summary Cards */}
-        <section className="mb-6 grid grid-cols-1 gap-5 md:grid-cols-3">
+        {/* Bills and transaction history tabs */}
+        <div className="mb-6 flex gap-2 border-b border-neutral-200 dark:border-neutral-800" role="tablist" aria-label="Bill sections">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "bills"}
+            onClick={() => setActiveTab("bills")}
+            className={`border-b-2 px-5 py-3 text-sm font-semibold transition ${
+              activeTab === "bills"
+                ? "border-[#f9c83d] text-neutral-900 dark:text-white"
+                : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+            }`}
+          >
+            Pay Bills
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "transactions"}
+            onClick={() => setActiveTab("transactions")}
+            className={`border-b-2 px-5 py-3 text-sm font-semibold transition ${
+              activeTab === "transactions"
+                ? "border-[#f9c83d] text-neutral-900 dark:text-white"
+                : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+            }`}
+          >
+            Transaction History
+            <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-xs dark:bg-neutral-800">
+              {payments.length}
+            </span>
+          </button>
+        </div>
 
-          {/* Unpaid Bills */}
-          <div className="rounded-xs bg-[#141414] p-6 text-white shadow-sm">
-            <p className="text-sm text-neutral-400">
-              Unpaid Bills
-            </p>
+        {/* Created Order Confirmation */}
+        {activeTab === "bills" && createdOrder && (
+          <section className="mt-6 rounded-xs border border-green-200 bg-white p-6 shadow-sm dark:border-green-900 dark:bg-[#171717] sm:p-7">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-green-700 dark:text-green-400">
+                  Order Created
+                </p>
 
-            <h2 className="mt-4 text-4xl font-semibold">
-              {loading ? "—" : bills.length}
-            </h2>
+                <h2 className="mt-2 text-xl font-semibold">
+                  Your Order is ready
+                </h2>
 
-            <p className="mt-6 border-t border-white/10 pt-4 text-xs text-neutral-400">
-              Bills awaiting payment
-            </p>
-          </div>
+                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                  Order ID: {createdOrder._id}
+                </p>
+              </div>
 
-          {/* Selected Bills */}
-          <div className="rounded-xs border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#171717]">
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Selected Bills
-            </p>
+              <span className="w-fit rounded-xs bg-amber-50 px-4 py-2 text-xs font-semibold capitalize text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
+                {createdOrder.status}
+              </span>
+            </div>
 
-            <h2 className="mt-4 text-4xl font-semibold">
-              {selectedBills.length}
-            </h2>
+            <div className="mt-6 border-t border-neutral-100 pt-5 dark:border-neutral-800">
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                Total Order Amount
+              </p>
 
-            <p className="mt-6 border-t border-neutral-100 pt-4 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-              Bills selected for checkout
-            </p>
-          </div>
+              <p className="mt-2 text-3xl font-semibold">
+                {formatCurrency(createdOrder.totalAmount)}
+              </p>
 
-          {/* Selected Total */}
-          <div className="rounded-xs border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#171717]">
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Selected Total
-            </p>
+              {createdOrder.status === "paid" ? (
+                <p className="mt-4 text-sm font-semibold text-green-600 dark:text-green-400">
+                  Payment completed successfully.
+                </p>
+              ) : (
+                <>
+                  <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+                    Your selected bills are reserved for this order. Complete payment
+                    to mark them as paid.
+                  </p>
 
-            <h2 className="mt-4 text-3xl font-semibold">
-              {formatCurrency(totalAmount)}
-            </h2>
+                  <button
+                    type="button"
+                    onClick={handlePayment}
+                    disabled={paying}
+                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-xs bg-[#f9c83d] px-7 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {paying ? "Processing Payment..." : "Pay Now"}
+                    {!paying && <span aria-hidden="true">→</span>}
+                  </button>
+                </>
+              )}
+            </div>
+          </section>
+        )}
 
-            <p className="mt-6 border-t border-neutral-100 pt-4 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-              Combined amount of selected bills
-            </p>
-          </div>
-        </section>
-
-        {/* Recent Transactions */}
+        {/* Transaction History tab content */}
+        {activeTab === "transactions" && (
         <section className="mb-6 overflow-hidden rounded-xs border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-[#171717]">
           <div className="border-b border-neutral-100 p-6 dark:border-neutral-800 sm:p-7">
             <h2 className="text-xl font-semibold tracking-tight">
-              Recent Transactions
+              Transaction History
             </h2>
             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
               Your latest rent and bill payments.
@@ -482,7 +526,6 @@ const TenantBills = () => {
                         new Date(b.paidAt || b.createdAt) -
                         new Date(a.paidAt || a.createdAt)
                     )
-                    .slice(0, 5)
                     .map((payment) => (
                       <tr
                         key={payment._id}
@@ -546,6 +589,7 @@ const TenantBills = () => {
             </div>
           )}
         </section>
+        )}
 
         {/* Immediate Receipt Prompt */}
         {receiptPayment && (
@@ -643,7 +687,9 @@ const TenantBills = () => {
           </p>
         )}
 
-        {/* Bills Section */}
+        {/* Bills tab content */}
+        {activeTab === "bills" && (
+        <>
         <section className="overflow-hidden rounded-xs border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-[#171717]">
 
           <div className="flex flex-col justify-between gap-4 border-b border-neutral-100 p-6 dark:border-neutral-800 sm:flex-row sm:items-center sm:p-7">
@@ -848,64 +894,6 @@ const TenantBills = () => {
           </div>
         </section>
 
-        {/* Created Order Confirmation */}
-        {createdOrder && (
-          <section className="mt-6 rounded-xs border border-green-200 bg-white p-6 shadow-sm dark:border-green-900 dark:bg-[#171717] sm:p-7">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-green-700 dark:text-green-400">
-                  Order Created
-                </p>
-
-                <h2 className="mt-2 text-xl font-semibold">
-                  Your Order is ready
-                </h2>
-
-                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                  Order ID: {createdOrder._id}
-                </p>
-              </div>
-
-              <span className="w-fit rounded-xs bg-amber-50 px-4 py-2 text-xs font-semibold capitalize text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
-                {createdOrder.status}
-              </span>
-            </div>
-
-            <div className="mt-6 border-t border-neutral-100 pt-5 dark:border-neutral-800">
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                Total Order Amount
-              </p>
-
-              <p className="mt-2 text-3xl font-semibold">
-                {formatCurrency(createdOrder.totalAmount)}
-              </p>
-
-              {createdOrder.status === "paid" ? (
-                <p className="mt-4 text-sm font-semibold text-green-600 dark:text-green-400">
-                  Payment completed successfully.
-                </p>
-              ) : (
-                <>
-                  <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                    Your selected bills are reserved for this order. Complete payment
-                    to mark them as paid.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={handlePayment}
-                    disabled={paying}
-                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-xs bg-[#f9c83d] px-7 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {paying ? "Processing Payment..." : "Pay Now"}
-                    {!paying && <span aria-hidden="true">→</span>}
-                  </button>
-                </>
-              )}
-            </div>
-          </section>
-        )}
-
         {/* Information Sections */}
         <section className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
 
@@ -948,10 +936,12 @@ const TenantBills = () => {
             </Link>
           </div>
         </section>
+        </>
+        )}
 
         {/* Footer */}
         <footer className="py-8 text-center text-xs text-neutral-400 dark:text-neutral-500">
-          RentGuard Tenant Portal · Bills
+          RentGuard Tenant Portal · Payments
         </footer>
 
       </div>

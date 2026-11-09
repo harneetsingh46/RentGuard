@@ -3,6 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import { Eye, Download, LoaderCircle } from "lucide-react";
 import apiClient from "../../ApiClient/interceptor";
 import toast from "react-hot-toast";
+import Pagination from "../../common/Pagination";
+
+const PAGE_SIZE = 10;
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -101,6 +104,7 @@ const Bill = () => {
   const [error, setError] = useState("");
   const [receiptLoadingId, setReceiptLoadingId] = useState(null);
   const [receiptActionType, setReceiptActionType] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // View or download receipt for a paid bill
   const handleReceiptAction = async (bill, action = "download") => {
@@ -345,6 +349,17 @@ const Bill = () => {
     [bills, categoryFilter, tenantFilter]
   );
 
+  const totalPages = Math.max(1, Math.ceil(filteredBills.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedBills = useMemo(() => {
+    const startIndex = (safePage - 1) * PAGE_SIZE;
+    return filteredBills.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredBills, safePage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
   const summary = useMemo(
     () => ({
       count: filteredBills.length,
@@ -503,7 +518,10 @@ const Bill = () => {
             <select
               id="bill-property"
               value={selectedProperty}
-              onChange={(event) => setSelectedProperty(event.target.value)}
+              onChange={(event) => {
+                setSelectedProperty(event.target.value);
+                setCurrentPage(1);
+              }}
               disabled={loadingProperties || properties.length === 0}
               className={inputClass}
             >
@@ -548,7 +566,10 @@ const Bill = () => {
               <select
                 aria-label="Filter bills by tenant"
                 value={tenantFilter}
-                onChange={(event) => setTenantFilter(event.target.value)}
+                onChange={(event) => {
+                  setTenantFilter(event.target.value);
+                  setCurrentPage(1);
+                }}
                 className={inputClass + " sm:w-44"}
               >
                 <option value="all">All tenants</option>
@@ -562,7 +583,10 @@ const Bill = () => {
               <select
                 aria-label="Filter bills by category"
                 value={categoryFilter}
-                onChange={(event) => setCategoryFilter(event.target.value)}
+                onChange={(event) => {
+                  setCategoryFilter(event.target.value);
+                  setCurrentPage(1);
+                }}
                 className={inputClass + " sm:w-44"}
               >
                 <option value="all">All categories</option>
@@ -614,7 +638,7 @@ const Bill = () => {
           ) : (
             <>
             <div className="space-y-3 p-3 md:hidden">
-              {filteredBills.map((bill) => (
+              {paginatedBills.map((bill) => (
                 <article key={bill._id} className="rounded-xs border border-stone-200 p-4 dark:border-neutral-800">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -697,7 +721,7 @@ const Bill = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-200 dark:divide-neutral-800">
-                  {filteredBills.map((bill) => (
+                  {paginatedBills.map((bill) => (
                     <tr key={bill._id} className="transition hover:bg-stone-50 dark:hover:bg-neutral-800/60">
                       <td className="px-5 py-4 font-medium">{bill.billName}</td>
                       <td className="px-5 py-4 capitalize">{bill.category}</td>
@@ -764,6 +788,12 @@ const Bill = () => {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              currentPage={safePage}
+              totalItems={filteredBills.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
             </>
           )}
         </section>

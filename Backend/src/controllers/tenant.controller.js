@@ -39,33 +39,22 @@ const safeTenantData = (tenant) => {
 // REGISTER TENANT
 
 export const registerTenant = async (req, res) => {
-  let claimedUnitId = null;
-
-  await sendTenancyNotificationEmails({
-    event: "registered",
-
-    tenantEmail: tenant.email,
-    tenantName: tenant.fullName,
-
-    ownerEmail: req.user.email,
-    ownerName: req.user.fullName || req.user.name || "Property Owner",
-
-    propertyName: property.propertyName,
-    propertyAddress: property.address,
-    unitName: claimedUnit.unitName,
-    rent: claimedUnit.rent,
-  });
+  let session = null;
+  let tenant = null;
+  let claimedUnit = null;
 
   try {
     const { propertyId, unitId } = req.params;
     const { fullName, address, aadhaarNumber, email, phone } = req.body;
 
+    // Only owners can register tenants.
     if (req.authRole !== "owner") {
       return res.status(403).json({
         message: "Only owners can register tenants!",
       });
     }
 
+    // Validate IDs.
     if (
       !mongoose.isValidObjectId(propertyId) ||
       !mongoose.isValidObjectId(unitId)
@@ -75,6 +64,7 @@ export const registerTenant = async (req, res) => {
       });
     }
 
+    // Validate required fields.
     if (
       typeof fullName !== "string" ||
       typeof address !== "string" ||
@@ -87,43 +77,49 @@ export const registerTenant = async (req, res) => {
       });
     }
 
+    // Normalize input.
     const normalizedName = fullName.trim();
     const normalizedAddress = address.trim();
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPhone = phone.replace(/\D/g, "");
     const normalizedAadhaar = String(aadhaarNumber).replace(/\D/g, "");
 
+    // Validate name.
     if (normalizedName.length < 2 || normalizedName.length > 100) {
       return res.status(400).json({
         message: "Full name must be between 2 and 100 characters!",
       });
     }
 
+    // Validate address.
     if (normalizedAddress.length < 5 || normalizedAddress.length > 250) {
       return res.status(400).json({
         message: "Address must be between 5 and 250 characters!",
       });
     }
 
+    // Validate email.
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail)) {
       return res.status(400).json({
         message: "Invalid email address!",
       });
     }
 
+    // Validate Indian mobile number.
     if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
       return res.status(400).json({
         message: "Phone number must be a valid 10-digit Indian mobile number!",
       });
     }
 
+    // Validate Aadhaar.
     if (!/^[2-9]\d{11}$/.test(normalizedAadhaar)) {
       return res.status(400).json({
         message: "Aadhaar number must contain 12 valid digits!",
       });
     }
 
-    // Tenant contact details must differ from owner's contact details.
+    // Tenant contact details must differ from owner's details.
     if (
       (req.user.email &&
         normalizedEmail === String(req.user.email).trim().toLowerCase()) ||
@@ -173,68 +169,97 @@ export const registerTenant = async (req, res) => {
       });
     }
 
-    // Atomically claim the available unit.
-    const claimedUnit = await Unit.findOneAndUpdate(
-      {
-        _id: unitId,
-        property: propertyId,
-        status: "available",
-      },
-      {
-        $set: { status: "occupied" },
-      },
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
+    // Start MongoDB transaction.
+    session = await mongoose.startSession();
 
-    if (!claimedUnit) {
-      const unitExists = await Unit.exists({
-        _id: unitId,
-        property: propertyId,
-      });
+    await session.withTransaction(async () => {
+      // Atomically claim the available unit.
+      claimedUnit = await Unit.findOneAndUpdate(
+        {
+          _id: unitId,
+          property: propertyId,
+          status: "available",
+        },
+        {
+          $set: { status: "occupied" },
+        },
+        {
+          new: true,
+          runValidators: true,
+          session,
+        },
+      );
 
-      if (!unitExists) {
-        return res.status(404).json({
-          message: "Unit not found in the selected property!",
-        });
+      // Unit was not available or does not exist.
+      if (!claimedUnit) {
+        const unitExists = await Unit.exists({
+          _id: unitId,
+          property: propertyId,
+        }).session(session);
+
+        const error = new Error(
+          unitExists
+            ? "This unit is no longer available. Please refresh the unit list."
+            : "Unit not found in the selected property!",
+        );
+
+        error.statusCode = unitExists ? 409 : 404;
+        throw error;
       }
 
-      return res.status(409).json({
-        message:
-          "This unit is no longer available. Please refresh the unit list.",
-      });
-    }
+      // Create tenant inside the same transaction.
+      const [createdTenant] = await Tenant.create(
+        [
+          {
+            owner: req.user._id,
+            property: propertyId,
+            unit: unitId,
 
-    claimedUnitId = claimedUnit._id;
+            fullName: normalizedName,
+            address: normalizedAddress,
+            aadhaarNumber: normalizedAadhaar,
+            email: normalizedEmail,
+            phone: normalizedPhone,
 
-    // Register immediately. No registration OTP.
-    const tenant = await Tenant.create({
-      owner: req.user._id,
-      property: propertyId,
-      unit: unitId,
-      fullName: fullName.trim(),
-      address: address.trim(),
-      aadhaarNumber: normalizedAadhaar,
-      email: normalizedEmail,
-      phone: normalizedPhone,
-      isActive: true,
-      moveInDate: new Date(),
-      moveOutDate: null,
-      moveOutRequest: {
-        status: "none",
-        requestedAt: null,
-        expiresAt: null,
-        reviewedAt: null,
-      },
-      tokenVersion: 0,
-      contactVerified: false,
+            isActive: true,
+            moveInDate: new Date(),
+            moveOutDate: null,
+
+            moveOutRequest: {
+              status: "none",
+              requestedAt: null,
+              expiresAt: null,
+              reviewedAt: null,
+            },
+
+            tokenVersion: 0,
+            contactVerified: false,
+          },
+        ],
+        { session },
+      );
+
+      tenant = createdTenant;
     });
 
-    // Registration succeeded. Keep unit occupied.
-    claimedUnitId = null;
+    // Transaction committed successfully.
+    // Send registration emails after the database commit.
+    await sendTenancyNotificationEmails({
+      event: "registered",
 
+      tenantEmail: tenant.email,
+      tenantName: tenant.fullName,
+
+      ownerEmail: req.user.email,
+      ownerName: req.user.fullName || req.user.name || "Property Owner",
+
+      propertyName: property.propertyName,
+      propertyAddress: property.address,
+      unitName: claimedUnit.unitName,
+      rent: claimedUnit.rent,
+    });
+
+    // Return successful response.
     return res.status(201).json({
       message: "Tenant registered successfully!",
       data: {
@@ -248,23 +273,14 @@ export const registerTenant = async (req, res) => {
       },
     });
   } catch (error) {
-    // Roll back unit status if tenant creation fails.
-    if (claimedUnitId) {
-      try {
-        await Unit.updateOne(
-          {
-            _id: claimedUnitId,
-            status: "occupied",
-          },
-          {
-            $set: { status: "available" },
-          },
-        );
-      } catch (rollbackError) {
-        console.error("Unit registration rollback error:", rollbackError);
-      }
+    // Handle unit availability and validation errors.
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
     }
 
+    // Handle MongoDB duplicate-key errors.
     if (error.code === 11000) {
       const duplicateField = Object.keys(error.keyPattern || {})[0];
 
@@ -280,6 +296,20 @@ export const registerTenant = async (req, res) => {
         });
       }
 
+      if (duplicateField === "aadhaarNumber") {
+        return res.status(409).json({
+          message:
+            "An active tenant with this Aadhaar number already exists under your account.",
+        });
+      }
+
+      if (duplicateField === "phone") {
+        return res.status(409).json({
+          message:
+            "An active tenant with this phone number already exists under your account.",
+        });
+      }
+
       return res.status(409).json({
         message: "An active tenant with these details already exists.",
       });
@@ -290,6 +320,11 @@ export const registerTenant = async (req, res) => {
     return res.status(500).json({
       message: "Something went wrong while registering the tenant!",
     });
+  } finally {
+    // Always close the MongoDB session.
+    if (session) {
+      await session.endSession();
+    }
   }
 };
 
