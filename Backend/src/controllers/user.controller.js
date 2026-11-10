@@ -49,17 +49,13 @@ const compareOtp = (enteredOtp, storedHash) => {
 };
 
 // Cookie settings
-const getCookieOptions = (role) => {
-  const isProduction = process.env.NODE_ENV === "production";
-
-  return {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? "none" : "lax",
-    path: "/",
-    maxAge: role === "tenant" ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
-  };
-};
+const getCookieOptions = (role) => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  path: "/",
+  maxAge: role === "tenant" ? 7 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000,
+});
 
 // Cookie clearing settings
 const clearCookieOptions = {
