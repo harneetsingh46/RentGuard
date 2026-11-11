@@ -39,6 +39,7 @@ app.use(
   cors({
     origin: "https://rent-guard-1.vercel.app",
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   }),
 );
 
