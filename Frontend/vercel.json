@@ -2,8 +2,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://rentguard-cqht.onrender.com/:path*"
+      "source": "/api/(.*)",
+      "destination": "https://rentguard-cqht.onrender.com/$1"
     },
     {
       "source": "/(.*)",
