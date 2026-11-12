@@ -145,7 +145,8 @@ export const settleCapturedPayment = async ({
   } catch (error) {
     if (
       error.message === "BILL_RESERVATION_MISMATCH" ||
-      error.message === "ORDER_SETTLEMENT_CONFLICT"
+      error.message === "ORDER_SETTLEMENT_CONFLICT" ||
+      error.message === "PAYMENT_SETTLEMENT_CONFLICT"
     ) {
       await Payment.updateOne(
         {
@@ -207,6 +208,14 @@ export const sendPaidEmails = async (paymentId) => {
       return;
     }
 
+    const bills = payment.order.items
+      .filter((item) => item.bill)
+      .map((item) => ({
+        billName: item.bill.billName,
+        category: item.bill.category,
+        amount: item.amount,
+      }));
+
     await sendPaymentConfirmationEmails({
       tenantEmail: payment.tenant?.email,
       tenantName: payment.tenant?.fullName,
@@ -217,8 +226,9 @@ export const sendPaidEmails = async (paymentId) => {
       unitName: payment.unit?.unitName,
       amount: payment.amount,
       paymentId: payment.razorpayPaymentId,
-      orderId: payment.razorpayOrderId,
-      bills: payment.order.items,
+      receiptNumber: `RG-${payment._id.toString().slice(-8).toUpperCase()}`,
+      paidAt: payment.paidAt,
+      bills,
     });
   } catch (error) {
     console.error("Payment confirmation email error:", error);
