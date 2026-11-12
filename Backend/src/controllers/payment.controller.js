@@ -597,10 +597,13 @@ export const getPropertyPayments = async (req, res) => {
 };
 
 // SHARED: GENERATE PAYMENT RECEIPT PDF
+
+// SHARED: GENERATE MINIMAL TABLE-STYLE PAYMENT RECEIPT PDF
 const generatePaymentReceipt = (res, payment, property) => {
   const doc = new PDFDocument({
     size: "A4",
     margin: 50,
+    bufferPages: true,
     info: {
       Title: "RentGuard Payment Receipt",
       Author: "RentGuard",
@@ -625,6 +628,19 @@ const generatePaymentReceipt = (res, payment, property) => {
       maximumFractionDigits: 2,
     })}`;
 
+  const formatDate = (date) =>
+    date ? new Date(date).toLocaleDateString("en-IN") : "N/A";
+
+  const pageWidth =
+    doc.page.width - doc.page.margins.left - doc.page.margins.right;
+
+  const left = doc.page.margins.left;
+  const right = left + pageWidth;
+
+  const borderColor = "#777777";
+  const textColor = "#171717";
+  const labelColor = "#444444";
+
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
@@ -633,85 +649,291 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   doc.pipe(res);
 
-  doc.fontSize(24).fillColor("#171717").text("RentGuard", { align: "center" });
+  // -------------------------------
+  // BASIC TABLE HELPERS
+  // -------------------------------
 
-  doc.moveDown(0.5).fontSize(16).text("PAYMENT RECEIPT", { align: "center" });
+  const checkPageSpace = (height) => {
+    if (doc.y + height > doc.page.height - 50) {
+      doc.addPage();
+    }
+  };
 
-  doc.moveDown(1.5);
+  const drawSectionTitle = (title) => {
+    checkPageSpace(35);
 
-  doc.fontSize(11).fillColor("#333333");
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(10)
+      .fillColor(textColor)
+      .text(title.toUpperCase(), left, doc.y);
 
-  doc.text(`Receipt Number: ${receiptNumber}`);
-  doc.text(`Payment Date: ${formattedDate}`);
-  doc.text(`Payment ID: ${payment.razorpayPaymentId || "N/A"}`);
+    doc.moveDown(0.5);
+  };
 
-  doc.moveDown();
+  const drawTable = (rows, columnWidths, options = {}) => {
+    const padding = 7;
+    const fontSize = options.fontSize || 9;
+    const headerRows = options.headerRows || 0;
 
-  doc.fontSize(14).fillColor("#171717").text("Property Details");
+    rows.forEach((row, rowIndex) => {
+      const isHeader = rowIndex < headerRows;
 
-  doc.moveDown(0.5);
-  doc.fontSize(11).fillColor("#333333");
+      doc.font(isHeader ? "Helvetica-Bold" : "Helvetica").fontSize(fontSize);
 
-  doc.text(`Property: ${property.propertyName || "N/A"}`);
-  doc.text(`Address: ${property.address || "N/A"}`);
-  doc.text(`Unit: ${payment.unit?.unitName || "N/A"}`);
+      const rowHeight = Math.max(
+        27,
+        ...row.map((cell, columnIndex) => {
+          const text =
+            cell === null || cell === undefined ? "N/A" : String(cell);
 
-  doc.moveDown();
+          return (
+            doc.heightOfString(text, {
+              width: columnWidths[columnIndex] - padding * 2,
+              fontSize,
+              lineGap: 1,
+            }) +
+            padding * 2
+          );
+        }),
+      );
 
-  doc.fontSize(14).fillColor("#171717").text("Tenant Details");
+      checkPageSpace(rowHeight + 2);
 
-  doc.moveDown(0.5);
-  doc.fontSize(11).fillColor("#333333");
+      const rowY = doc.y;
 
-  doc.text(`Tenant Name: ${payment.tenant?.fullName || "N/A"}`);
-  doc.text(`Tenant Email: ${payment.tenant?.email || "N/A"}`);
+      let cellX = left;
 
-  doc.moveDown();
+      row.forEach((cell, columnIndex) => {
+        const cellWidth = columnWidths[columnIndex];
 
-  doc.fontSize(14).fillColor("#171717").text("Bill Details");
+        // Simple table borders
+        doc
+          .lineWidth(0.5)
+          .strokeColor(borderColor)
+          .rect(cellX, rowY, cellWidth, rowHeight)
+          .stroke();
 
-  doc.moveDown(0.5);
-  doc.fontSize(10).fillColor("#333333");
+        const text = cell === null || cell === undefined ? "N/A" : String(cell);
 
-  payment.order.items.forEach((item, index) => {
+        doc
+          .font(isHeader ? "Helvetica-Bold" : "Helvetica")
+          .fontSize(fontSize)
+          .fillColor(isHeader ? textColor : labelColor)
+          .text(text, cellX + padding, rowY + padding, {
+            width: cellWidth - padding * 2,
+            height: rowHeight - padding * 2,
+            lineGap: 1,
+            ellipsis: false,
+          });
+
+        cellX += cellWidth;
+      });
+
+      doc.y = rowY + rowHeight;
+    });
+  };
+
+  const drawDetailsTable = (rows) => {
+    drawTable(
+      [["Field", "Details"], ...rows],
+      [pageWidth * 0.32, pageWidth * 0.68],
+      { headerRows: 1 },
+    );
+  };
+
+  // -------------------------------
+  // RECEIPT HEADER
+  // -------------------------------
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(19)
+    .fillColor(textColor)
+    .text("RentGuard", left, 45, {
+      width: pageWidth / 2,
+    });
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(13)
+    .fillColor(textColor)
+    .text("PAYMENT RECEIPT", left + pageWidth / 2, 48, {
+      width: pageWidth / 2,
+      align: "right",
+    });
+
+  doc
+    .moveTo(left, 80)
+    .lineTo(right, 80)
+    .lineWidth(0.8)
+    .strokeColor(textColor)
+    .stroke();
+
+  doc.y = 95;
+
+  // -------------------------------
+  // RECEIPT INFORMATION
+  // -------------------------------
+
+  drawSectionTitle("Receipt Information");
+
+  drawTable(
+    [
+      ["Receipt Number", "Payment Date", "Payment ID"],
+      [receiptNumber, formattedDate, payment.razorpayPaymentId || "N/A"],
+    ],
+    [pageWidth * 0.3, pageWidth * 0.3, pageWidth * 0.4],
+    { headerRows: 1 },
+  );
+
+  doc.moveDown(1);
+
+  // -------------------------------
+  // PROPERTY DETAILS
+  // -------------------------------
+
+  drawSectionTitle("Property Details");
+
+  drawDetailsTable([
+    ["Property", property.propertyName || "N/A"],
+    ["Address", property.address || "N/A"],
+    ["Unit", payment.unit?.unitName || "N/A"],
+  ]);
+
+  doc.moveDown(1);
+
+  // -------------------------------
+  // TENANT DETAILS
+  // -------------------------------
+
+  drawSectionTitle("Tenant Details");
+
+  drawDetailsTable([
+    ["Tenant Name", payment.tenant?.fullName || "N/A"],
+    ["Tenant Email", payment.tenant?.email || "N/A"],
+  ]);
+
+  doc.moveDown(1);
+
+  // -------------------------------
+  // BILL DETAILS
+  // -------------------------------
+
+  drawSectionTitle("Bill Details");
+
+  const billRows = [["Description", "Billing Period", "Due Date", "Amount"]];
+
+  payment.order?.items?.forEach((item) => {
     const bill = item.bill;
 
     if (!bill) return;
 
-    doc.text(
-      `${index + 1}. ${bill.billName} (${bill.category}) - ${formatAmount(
-        item.amount,
-      )}`,
-    );
-
-    doc.text(
-      `   Billing Period: ${bill.month}/${bill.year} | Due: ${
-        bill.dueDate
-          ? new Date(bill.dueDate).toLocaleDateString("en-IN")
-          : "N/A"
-      }`,
-    );
+    billRows.push([
+      `${bill.billName || "N/A"} (${bill.category || "N/A"})`,
+      bill.month && bill.year ? `${bill.month}/${bill.year}` : "N/A",
+      formatDate(bill.dueDate),
+      formatAmount(item.amount),
+    ]);
   });
 
-  doc.moveDown();
+  if (billRows.length === 1) {
+    billRows.push(["No bill details", "N/A", "N/A", "N/A"]);
+  }
+
+  drawTable(
+    billRows,
+    [pageWidth * 0.37, pageWidth * 0.19, pageWidth * 0.19, pageWidth * 0.25],
+    { headerRows: 1, fontSize: 8.5 },
+  );
+
+  doc.moveDown(1);
+
+  // -------------------------------
+  // TOTAL AMOUNT
+  // -------------------------------
+
+  const summaryY = doc.y + 5;
+
+  checkPageSpace(65);
+
+  const finalY = doc.y + 5;
 
   doc
-    .fontSize(13)
-    .fillColor("#171717")
-    .text(`Total Amount Paid: ${formatAmount(payment.amount)}`);
+    .moveTo(left, finalY)
+    .lineTo(right, finalY)
+    .lineWidth(0.8)
+    .strokeColor(textColor)
+    .stroke();
 
-  doc.text("Payment Status: PAID");
+  doc.y = finalY + 12;
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(11)
+    .fillColor(textColor)
+    .text("Total Amount Paid", left, doc.y, {
+      width: pageWidth * 0.55,
+      continued: false,
+    });
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(11)
+    .fillColor(textColor)
+    .text(formatAmount(payment.amount), left, doc.y - 13, {
+      width: pageWidth,
+      align: "right",
+    });
+
+  doc.moveDown(0.7);
+
+  doc
+    .moveTo(left, doc.y)
+    .lineTo(right, doc.y)
+    .lineWidth(0.8)
+    .strokeColor(textColor)
+    .stroke();
+
+  doc.moveDown(0.7);
+
+  // -------------------------------
+  // PAYMENT STATUS
+  // -------------------------------
+
+  drawTable([["Payment Status", "PAID"]], [pageWidth * 0.5, pageWidth * 0.5]);
 
   doc.moveDown(2);
 
-  doc.fontSize(12).text("Thank you for your payment.", {
-    align: "center",
-  });
+  // -------------------------------
+  // FOOTER
+  // -------------------------------
+
+  checkPageSpace(45);
 
   doc
-    .moveDown(0.5)
-    .fontSize(9)
-    .fillColor("#777777")
+    .moveTo(left, doc.y)
+    .lineTo(right, doc.y)
+    .lineWidth(0.5)
+    .strokeColor(borderColor)
+    .stroke();
+
+  doc.moveDown(1);
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .fillColor(textColor)
+    .text("Thank you for your payment.", {
+      align: "center",
+    });
+
+  doc.moveDown(0.4);
+
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor(labelColor)
     .text("Generated by RentGuard.", {
       align: "center",
     });

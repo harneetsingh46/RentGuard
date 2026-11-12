@@ -357,7 +357,7 @@ const TenantDashboard = () => {
             </section>
 
             {/* Payment History */}
-            <section className="mt-4 min-w-0 bg-white shadow-2xs p-3 dark:bg-[#171717] sm:mt-7 sm:p-5">
+            <section className="mt-4 min-w-0 bg-white p-3 shadow-sm shadow-stone-200/40 dark:bg-[#171717] dark:shadow-none sm:mt-7 sm:p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-normal tracking-tight">
@@ -371,7 +371,7 @@ const TenantDashboard = () => {
 
                 <Link
                   to="/tenant/bills"
-                  className="inline-flex w-full items-center justify-center gap-2 border border-stone-200 bg-yellow-300 px-3 py-2.5 text-sm font-medium text-black sm:w-auto sm:px-4 transition hover:border-stone-400 dark:border-neutral-800 dark:bg-[#171717] dark:hover:border-neutral-600"
+                  className="inline-flex w-full items-center justify-center gap-2 border border-stone-200 bg-yellow-300 px-3 py-2.5 text-sm font-medium text-black transition hover:border-stone-400 sm:w-auto sm:px-4 dark:border-neutral-700 dark:bg-[#242424] dark:text-[#F1F0ED] dark:hover:border-neutral-500 dark:hover:bg-[#2D2D2D]"
                 >
                   Pay bills →
                 </Link>
@@ -395,7 +395,7 @@ const TenantDashboard = () => {
                   recentPayments.map((payment) => (
                     <article
                       key={payment._id}
-                      className="min-w-0 border border-stone-200 p-3 dark:border-neutral-800"
+                      className="min-w-0 border border-stone-200 bg-white p-3 dark:border-neutral-700 dark:bg-[#1D1D1D]"
                     >
                       <div className="flex min-w-0 items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -432,7 +432,7 @@ const TenantDashboard = () => {
                             type="button"
                             onClick={() => downloadReceipt(payment)}
                             disabled={downloadingReceiptId === payment._id}
-                            className="max-w-full border border-stone-300 px-3 py-2 text-xs font-medium transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                            className="max-w-full border border-stone-300 px-3 py-2 text-xs font-medium transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-600 dark:bg-[#242424] dark:text-[#F1F0ED] dark:hover:bg-[#303030]"
                           >
                             {downloadingReceiptId === payment._id
                               ? "Downloading..."
@@ -450,10 +450,10 @@ const TenantDashboard = () => {
               </div>
 
               {/* Full table from small tablets upward */}
-              <div className="mt-5 hidden max-h-[420px] overflow-auto overscroll-contain border-y border-stone-200 dark:border-neutral-800 sm:block">
+              <div className="mt-5 hidden max-h-[420px] overflow-auto overscroll-contain border-y border-stone-200 dark:border-neutral-700 sm:block">
                 <table className="w-full text-left text-sm">
                   <thead className="sticky top-0 z-10">
-                    <tr className="border-b border-stone-200 bg-[#f7f5f0] text-black font-medium text-[10px] uppercase tracking-wider dark:border-neutral-800 dark:text-[#A5A5A5]">
+                    <tr className="border-b border-stone-200 bg-[#f7f5f0] font-medium text-[10px] uppercase tracking-wider text-stone-600 dark:border-neutral-700 dark:bg-[#222222] dark:text-[#C4C4C4]">
                       <th className="px-3 py-4 font-normal">
                         Transaction
                       </th>
@@ -477,7 +477,7 @@ const TenantDashboard = () => {
                       recentPayments.map((payment) => (
                         <tr
                           key={payment._id}
-                          className="border-b border-stone-200/70 dark:border-neutral-800"
+                          className="border-b border-stone-200/70 transition-colors hover:bg-stone-50 dark:border-neutral-800 dark:hover:bg-[#202020]"
                         >
                           <td className="px-3 py-5">
                             <p className="font-medium">
@@ -515,7 +515,7 @@ const TenantDashboard = () => {
                                   type="button"
                                   onClick={() => downloadReceipt(payment)}
                                   disabled={downloadingReceiptId === payment._id}
-                                  className="border border-stone-300 px-3 py-1.5 text-xs font-medium transition hover:border-stone-600 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:hover:border-neutral-500 dark:hover:bg-neutral-800"
+                                  className="border border-stone-300 px-3 py-1.5 text-xs font-medium transition hover:border-stone-600 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-600 dark:bg-[#242424] dark:text-[#F1F0ED] dark:hover:border-neutral-500 dark:hover:bg-[#303030]"
                                 >
                                   {downloadingReceiptId === payment._id
                                     ? "Downloading..."
