@@ -490,27 +490,25 @@ export const sendPaymentConfirmationEmails = async ({
 
 export const sendContactEmail = async ({ name, email, topic, message }) => {
   try {
+    const { fromEmail } = getBrevoConfig();
+
     await sendEmail({
-      to: email, // Visitor's email address
+      to: email,
       subject: `We received your enquiry: ${topic}`,
       html: `
         <div style="font-family: Arial, sans-serif; line-height: 1.6;">
           <h2>Thank you for contacting RentGuard!</h2>
-
           <p>Hello ${escapeHtml(name)},</p>
-
           <p>We have received your enquiry successfully.</p>
-
           <h3>Your enquiry details:</h3>
           <p><strong>Topic:</strong> ${escapeHtml(topic)}</p>
           <p><strong>Message:</strong></p>
           <p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
-
           <p>Thank you for reaching out to us.</p>
           <p>Regards,<br><strong>RentGuard Support Team</strong></p>
         </div>
       `,
-      replyTo: BREVO_FROM_EMAIL,
+      replyTo: fromEmail,
     });
 
     return true;
