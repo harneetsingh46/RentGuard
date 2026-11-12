@@ -12,6 +12,7 @@ const OwnerMaintenance = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
+    const [activeTab, setActiveTab] = useState("active");
     const [statusFilter, setStatusFilter] = useState("All");
     const [priorityFilter, setPriorityFilter] = useState("All");
     const [search, setSearch] = useState("");
@@ -48,6 +49,12 @@ const OwnerMaintenance = () => {
 
     const filteredComplaints = useMemo(() => {
         return complaints.filter((complaint) => {
+            // Resolved complaints are shown only in the Resolved Requests tab.
+            const matchesTab =
+                activeTab === "resolved"
+                    ? complaint.status === "Resolved"
+                    : complaint.status !== "Resolved";
+
             const matchesStatus =
                 statusFilter === "All" ||
                 complaint.status === statusFilter;
@@ -66,9 +73,9 @@ const OwnerMaintenance = () => {
                 complaint.unit?.unitName?.toLowerCase().includes(searchText) ||
                 complaint.category?.toLowerCase().includes(searchText);
 
-            return matchesStatus && matchesPriority && matchesSearch;
+            return matchesTab && matchesStatus && matchesPriority && matchesSearch;
         });
-    }, [complaints, statusFilter, priorityFilter, search]);
+    }, [complaints, activeTab, statusFilter, priorityFilter, search]);
 
     const counts = {
         total: complaints.length,
@@ -177,9 +184,6 @@ const OwnerMaintenance = () => {
                 {/* Header */}
                 <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                     <div className="min-w-0">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
-                            Owner Portal / Maintenance
-                        </p>
 
                         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
                             Maintenance Complaints
@@ -276,14 +280,47 @@ const OwnerMaintenance = () => {
 
                 {/* Complaints */}
                 <section className="overflow-hidden rounded-xs border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-[#171717]">
+                    {/* Request navigation */}
+                    <div className="flex flex-wrap items-center gap-2 border-b border-neutral-100 px-4 pt-4 dark:border-neutral-800 sm:px-6 sm:pt-5">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setActiveTab("active");
+                                setStatusFilter("All");
+                            }}
+                            className={`border-b-2 px-3 py-3 text-sm font-medium transition ${
+                                activeTab === "active"
+                                    ? "border-[#f9c83d] text-neutral-900 dark:text-white"
+                                    : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+                            }`}
+                        >
+                            Active Requests ({complaints.filter((c) => c.status !== "Resolved").length})
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setActiveTab("resolved");
+                                setStatusFilter("All");
+                            }}
+                            className={`border-b-2 px-3 py-3 text-sm font-medium transition ${
+                                activeTab === "resolved"
+                                    ? "border-[#f9c83d] text-neutral-900 dark:text-white"
+                                    : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+                            }`}
+                        >
+                            Resolved Requests ({counts.resolved})
+                        </button>
+                    </div>
+
                     <div className="flex flex-col justify-between gap-3 border-b border-neutral-100 p-4 dark:border-neutral-800 sm:flex-row sm:items-center sm:p-6">
                         <div>
                             <h2 className="text-lg font-semibold sm:text-xl">
-                                Tenant Complaints
+                                {activeTab === "resolved" ? "Resolved Requests" : "Active Requests"}
                             </h2>
 
                             <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                                {filteredComplaints.length} complaint(s) found
+                                {filteredComplaints.length} request(s) found
                             </p>
                         </div>
 
@@ -304,11 +341,15 @@ const OwnerMaintenance = () => {
                     ) : filteredComplaints.length === 0 ? (
                         <div className="p-8 text-center sm:p-12">
                             <h3 className="font-semibold">
-                                No complaints found
+                                {activeTab === "resolved"
+                                    ? "No resolved requests yet"
+                                    : "No active requests found"}
                             </h3>
 
                             <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                                Tenant maintenance complaints will appear here.
+                                {activeTab === "resolved"
+                                    ? "Complaints will appear here once you mark them as resolved."
+                                    : "New and ongoing tenant maintenance complaints will appear here."}
                             </p>
                         </div>
                     ) : (
