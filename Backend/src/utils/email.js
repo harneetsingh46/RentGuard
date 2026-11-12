@@ -1,4 +1,3 @@
-
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 const getBrevoConfig = () => {
@@ -13,13 +12,17 @@ const getBrevoConfig = () => {
 };
 
 const escapeHtml = (value = "") =>
-  String(value).replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  })[char]);
+  String(value).replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[char],
+  );
 
 const sendEmail = async ({
   to,
@@ -65,7 +68,7 @@ const sendEmail = async ({
   if (!response.ok) {
     console.error("Brevo email API error:", result);
     throw new Error(
-      result.message || `Brevo email failed with status ${response.status}`
+      result.message || `Brevo email failed with status ${response.status}`,
     );
   }
 
@@ -125,8 +128,8 @@ export const sendMaintenanceEmail = async ({
       priority === "High"
         ? "#dc2626"
         : priority === "Medium"
-        ? "#d97706"
-        : "#16a34a";
+          ? "#d97706"
+          : "#16a34a";
 
     return await sendEmail({
       to: ownerEmail,
@@ -196,8 +199,7 @@ export const sendTenancyNotificationEmails = async ({
           })
         : "N/A";
 
-    const amount = (value) =>
-      `₹${Number(value || 0).toLocaleString("en-IN")}`;
+    const amount = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
     const templates = {
       registered: {
@@ -258,7 +260,7 @@ export const sendTenancyNotificationEmails = async ({
                     ${amount(bill.amount)}
                   </td>
                 </tr>
-              `
+              `,
             )
             .join("")}
         </table>
@@ -304,7 +306,7 @@ export const sendTenancyNotificationEmails = async ({
               <p>Thank you for using RentGuard.</p>
             </div>
           `,
-        })
+        }),
       );
     }
 
@@ -322,7 +324,7 @@ export const sendTenancyNotificationEmails = async ({
               <p>Please log in to your RentGuard dashboard to manage your property.</p>
             </div>
           `,
-        })
+        }),
       );
     }
 
@@ -385,7 +387,7 @@ export const sendPaymentConfirmationEmails = async ({
               ${formatAmount(bill.amount)}
             </td>
           </tr>
-        `
+        `,
       )
       .join("");
 
@@ -441,7 +443,7 @@ export const sendPaymentConfirmationEmails = async ({
               <p>Thank you for using RentGuard.</p>
             </div>
           `,
-        })
+        }),
       );
     }
 
@@ -463,7 +465,7 @@ export const sendPaymentConfirmationEmails = async ({
               <p>This payment has been recorded in your RentGuard account.</p>
             </div>
           `,
-        })
+        }),
       );
     }
 
@@ -486,35 +488,34 @@ export const sendPaymentConfirmationEmails = async ({
 // 5. CONTACT FORM EMAIL
 // ==========================================
 
-export const sendContactEmail = async ({
-  name,
-  email,
-  topic,
-  message,
-}) => {
-  return await sendEmail({
-    to: "singh2harneet@gmail.com",
-    replyTo: email,
-    senderName: "RentGuard Contact",
-    subject: `[RentGuard Contact] ${topic}`,
-    text: [
-      `Name: ${name}`,
-      `Email: ${email}`,
-      `Topic: ${topic}`,
-      "",
-      "Message:",
-      message,
-    ].join("\n"),
-    html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;">
-        <h2 style="color:#d4a017;">New RentGuard Contact Enquiry</h2>
-        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-        <p><strong>Topic:</strong> ${escapeHtml(topic)}</p>
-        <hr />
-        <h3>Message</h3>
-        <p style="white-space:pre-wrap;">${escapeHtml(message)}</p>
-      </div>
-    `,
-  });
+export const sendContactEmail = async ({ name, email, topic, message }) => {
+  try {
+    await sendEmail({
+      to: email, // Visitor's email address
+      subject: `We received your enquiry: ${topic}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <h2>Thank you for contacting RentGuard!</h2>
+
+          <p>Hello ${escapeHtml(name)},</p>
+
+          <p>We have received your enquiry successfully.</p>
+
+          <h3>Your enquiry details:</h3>
+          <p><strong>Topic:</strong> ${escapeHtml(topic)}</p>
+          <p><strong>Message:</strong></p>
+          <p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
+
+          <p>Thank you for reaching out to us.</p>
+          <p>Regards,<br><strong>RentGuard Support Team</strong></p>
+        </div>
+      `,
+      replyTo: BREVO_FROM_EMAIL,
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Contact email error:", error);
+    throw error;
+  }
 };
