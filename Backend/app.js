@@ -1,9 +1,11 @@
+
 import express from "express";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./src/utils/swagger.js";
+
 import userRouter from "./src/routes/user.route.js";
 import propertyRouter from "./src/routes/property.route.js";
 import unitRouter from "./src/routes/unit.route.js";
@@ -16,50 +18,61 @@ import documentRouter from "./src/routes/propertyDocument.routes.js";
 import orderRouter from "./src/routes/order.route.js";
 import maintenanceRouter from "./src/routes/maintenance.route.js";
 import contactRouter from "./src/routes/contact.route.js";
-// import { razorpayWebhook } from "./src/controllers/payment.controller.js";
 
-//config
-const app = express();
+import { razorpayWebhook } from "./src/controllers/payment.controller.js";
+
 dotenv.config();
 
-// Behind a proxy (Render, Heroku, Nginx) set TRUST_PROXY=1 so rate limits see real client IPs
+const app = express();
+
+// Render proxy configuration
 if (process.env.TRUST_PROXY) {
   const trustProxy = process.env.TRUST_PROXY.trim();
   const num = Number(trustProxy);
+
   app.set(
     "trust proxy",
-    !isNaN(num) ? num : trustProxy.toLowerCase() === "true" ? true : trustProxy,
+    !isNaN(num)
+      ? num
+      : trustProxy.toLowerCase() === "true"
+        ? true
+        : trustProxy
   );
 }
 
-//middleware
-app.use(express.json());
-app.use(cookieParser());
+// CORS
 app.use(
   cors({
-    origin: "https://rent-guard-1.vercel.app",
+    origin: [
+      "https://rent-guard-1.vercel.app",
+      "http://localhost:5173",
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  }),
+  })
 );
 
-//web-hook
-// app.post(
-//   "/payment/webhook",
-//   express.raw({ type: "application/json" }),
-//   razorpayWebhook,
-// );
+// IMPORTANT: This route must be before express.json().
+app.post(
+  "/payment/webhook",
+  express.raw({ type: "application/json" }),
+  razorpayWebhook
+);
 
-// Backend health check
+// Normal middleware
+app.use(express.json());
+app.use(cookieParser());
+
+// Health check
 app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
     message: "RentGuard backend is running!",
-    status: " healthy",
+    status: "healthy",
   });
 });
 
-//routes
+// API routes
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use("/user/", userRouter);
 app.use("/property/", propertyRouter);

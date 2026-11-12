@@ -1,13 +1,19 @@
 import mongoose from "mongoose";
 import crypto from "crypto";
 import PDFDocument from "pdfkit";
-import { User } from "../models/user.model.js";
-import { sendPaymentConfirmationEmails } from "../utils/email.js";
+
 import { Payment } from "../models/payment.model.js";
 import { Order } from "../models/order.model.js";
 import { Bill } from "../models/bill.model.js";
 import { Property } from "../models/property.model.js";
+
 import razorpay from "../utils/razorpay.js";
+
+import {
+  checkCapturedPayment,
+  settleCapturedPayment,
+  sendPaidEmails,
+} from "../utils/paymentSettlement.js";
 
 // 1. TENANT: CREATE RAZORPAY PAYMENT ORDER
 
@@ -174,8 +180,6 @@ export const createPaymentOrder = async (req, res) => {
 // 2. TENANT: VERIFY RAZORPAY PAYMENT
 
 export const verifyPayment = async (req, res) => {
-  let session;
-
   try {
     if (req.authRole !== "tenant") {
       return res.status(403).json({
@@ -220,6 +224,15 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
+    if (payment.status === "needs_refund") {
+      return res.status(409).json({
+        success: false,
+        code: "PAYMENT_REQUIRES_REFUND",
+        message:
+          "Payment was received, but its bill reservation is no longer active. Please contact support for a refund.",
+      });
+    }
+
     if (payment.status !== "created") {
       return res.status(400).json({
         success: false,
@@ -231,7 +244,7 @@ export const verifyPayment = async (req, res) => {
       throw new Error("Razorpay secret key is not configured.");
     }
 
-    // Verify Razorpay signature.
+    // Verify Razorpay Checkout signature.
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -250,242 +263,48 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    // Verify payment details directly with Razorpay.
-    const razorpayPayment = await razorpay.payments.fetch(razorpay_payment_id);
+    // Confirm the captured payment directly with Razorpay.
+    const check = await checkCapturedPayment(payment, razorpay_payment_id);
 
-    if (razorpayPayment.order_id !== razorpay_order_id) {
+    if (!check.ok) {
       return res.status(400).json({
         success: false,
-        message: "Payment does not belong to this Order.",
+        message: check.reason || "Payment could not be verified.",
       });
     }
 
-    if (razorpayPayment.currency !== "INR") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid payment currency.",
-      });
-    }
-
-    const expectedAmount = Math.round(payment.amount * 100);
-
-    if (razorpayPayment.amount !== expectedAmount) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment amount does not match.",
-      });
-    }
-
-    if (razorpayPayment.status !== "captured") {
-      return res.status(400).json({
-        success: false,
-        message: "Payment has not been captured.",
-      });
-    }
-
-    // A captured payment may be verified after the reservation expiry.
-    // We still require the Bills to belong to this exact Order.
-    session = await mongoose.startSession();
-
-    let updatedPayment;
-    let updatedOrder;
-    let alreadyPaid = false;
-
-    await session.withTransaction(async () => {
-      const currentPayment = await Payment.findOne({
-        _id: payment._id,
-        tenant: req.user._id,
-        razorpayOrderId: razorpay_order_id,
-      }).session(session);
-
-      if (!currentPayment) {
-        throw new Error("Payment record not found.");
-      }
-
-      // Handle repeated verification safely.
-      if (currentPayment.status === "paid") {
-        alreadyPaid = true;
-        return;
-      }
-
-      if (currentPayment.status !== "created") {
-        throw new Error("Payment is no longer available for verification.");
-      }
-
-      const order = await Order.findOne({
-        _id: currentPayment.order,
-        tenant: req.user._id,
-        status: "pending",
-      }).session(session);
-
-      if (!order) {
-        throw new Error("RentGuard Order not found or is not pending.");
-      }
-
-      const billIds = order.items.map((item) => item.bill);
-
-      // Verify that every Bill is still reserved by this Order.
-      const reservedBills = await Bill.find({
-        _id: { $in: billIds },
-        tenant: req.user._id,
-        property: order.property,
-        unit: order.unit,
-        paymentStatus: "reserved",
-        reservedByOrder: order._id,
-      }).session(session);
-
-      if (
-        billIds.length !== order.items.length ||
-        reservedBills.length !== billIds.length
-      ) {
-        throw new Error(
-          "Some Bills are no longer reserved for this Order. Payment requires manual review.",
-        );
-      }
-
-      const paidAt = new Date();
-
-      // Mark all Bills as paid and release their reservation reference.
-      const billUpdate = await Bill.updateMany(
-        {
-          _id: { $in: billIds },
-          tenant: req.user._id,
-          property: order.property,
-          unit: order.unit,
-          paymentStatus: "reserved",
-          reservedByOrder: order._id,
-        },
-        {
-          $set: {
-            paymentStatus: "paid",
-            paidAt,
-            reservedByOrder: null,
-          },
-        },
-        { session },
-      );
-
-      if (billUpdate.modifiedCount !== billIds.length) {
-        throw new Error("Unable to update all Bills.");
-      }
-
-      // Mark RentGuard Order as paid.
-      updatedOrder = await Order.findOneAndUpdate(
-        {
-          _id: order._id,
-          tenant: req.user._id,
-          status: "pending",
-        },
-        {
-          $set: {
-            status: "paid",
-            razorpayPaymentId: razorpay_payment_id,
-          },
-        },
-        {
-          new: true,
-          session,
-        },
-      );
-
-      if (!updatedOrder) {
-        throw new Error("Unable to update RentGuard Order.");
-      }
-
-      // Mark Payment as paid.
-      updatedPayment = await Payment.findOneAndUpdate(
-        {
-          _id: currentPayment._id,
-          status: "created",
-        },
-        {
-          $set: {
-            razorpayPaymentId: razorpay_payment_id,
-            razorpaySignature: razorpay_signature,
-            status: "paid",
-            paidAt,
-          },
-        },
-        {
-          new: true,
-          session,
-        },
-      );
-
-      if (!updatedPayment) {
-        throw new Error("Unable to update Payment record.");
-      }
+    // Browser verification and webhook use the same settlement function.
+    const outcome = await settleCapturedPayment({
+      paymentId: payment._id,
+      razorpayPaymentId: razorpay_payment_id,
+      razorpaySignature: razorpay_signature,
     });
 
-    if (alreadyPaid) {
-      return res.status(200).json({
-        success: true,
-        message: "Payment already verified.",
+    if (outcome === "needs_refund") {
+      return res.status(409).json({
+        success: false,
+        code: "PAYMENT_REQUIRES_REFUND",
+        message:
+          "Payment was received, but the order or bill reservation is no longer active. Please contact support for a refund.",
       });
     }
 
-    // Send payment confirmation emails after successful database transaction.
-    // Email failures must never undo or fail a verified payment.
-    try {
-      const paymentForEmail = await Payment.findById(updatedPayment._id)
-        .populate("tenant", "fullName email")
-        .populate("unit", "unitName unitType")
-        .populate({
-          path: "order",
-          populate: {
-            path: "items.bill",
-            model: "Bill",
-          },
-        });
-
-      const propertyForEmail = await Property.findById(
-        paymentForEmail.property,
-      );
-
-      const ownerForEmail = propertyForEmail
-        ? await User.findById(propertyForEmail.owner).select("username email")
-        : null;
-
-      if (paymentForEmail && paymentForEmail.tenant) {
-        await sendPaymentConfirmationEmails({
-          tenantEmail: paymentForEmail.tenant.email,
-          tenantName: paymentForEmail.tenant.fullName,
-
-          ownerEmail: ownerForEmail?.email,
-          ownerName: ownerForEmail?.username,
-
-          propertyName: propertyForEmail?.propertyName || "N/A",
-          propertyAddress: propertyForEmail?.address || "N/A",
-          unitName: paymentForEmail.unit?.unitName || "N/A",
-
-          amount: paymentForEmail.amount,
-          paymentId: paymentForEmail.razorpayPaymentId,
-          receiptNumber: `RG-${paymentForEmail._id
-            .toString()
-            .slice(-8)
-            .toUpperCase()}`,
-
-          paidAt: paymentForEmail.paidAt,
-
-          bills: (paymentForEmail.order?.items || [])
-            .filter((item) => item.bill)
-            .map((item) => ({
-              billName: item.bill.billName,
-              category: item.bill.category,
-              amount: item.amount,
-            })),
-        });
-      }
-    } catch (emailError) {
-      console.error(
-        "Unable to prepare payment confirmation emails:",
-        emailError,
-      );
+    // Send confirmation emails only after successful settlement.
+    if (outcome === "paid") {
+      await sendPaidEmails(payment._id);
     }
+
+    const [updatedPayment, updatedOrder] = await Promise.all([
+      Payment.findById(payment._id),
+      Order.findById(payment.order),
+    ]);
 
     return res.status(200).json({
       success: true,
-      message: "Payment verified successfully.",
+      message:
+        outcome === "already_paid"
+          ? "Payment already verified."
+          : "Payment verified successfully.",
       data: {
         payment: updatedPayment,
         order: updatedOrder,
@@ -498,14 +317,11 @@ export const verifyPayment = async (req, res) => {
       success: false,
       message: error.message || "Unable to verify payment.",
     });
-  } finally {
-    if (session) {
-      await session.endSession();
-    }
   }
 };
 
 // 3. TENANT: GET MY PAYMENTS
+
 export const getMyPayments = async (req, res) => {
   try {
     if (req.authRole !== "tenant") {
@@ -541,6 +357,7 @@ export const getMyPayments = async (req, res) => {
 };
 
 // 4. OWNER: GET PROPERTY PAYMENTS
+
 export const getPropertyPayments = async (req, res) => {
   try {
     if (req.authRole !== "owner") {
@@ -596,9 +413,8 @@ export const getPropertyPayments = async (req, res) => {
   }
 };
 
-// SHARED: GENERATE PAYMENT RECEIPT PDF
-
 // SHARED: GENERATE MINIMAL TABLE-STYLE PAYMENT RECEIPT PDF
+
 const generatePaymentReceipt = (res, payment, property) => {
   const doc = new PDFDocument({
     size: "A4",
@@ -642,6 +458,7 @@ const generatePaymentReceipt = (res, payment, property) => {
   const labelColor = "#444444";
 
   res.setHeader("Content-Type", "application/pdf");
+
   res.setHeader(
     "Content-Disposition",
     `attachment; filename="RentGuard-Receipt-${receiptNumber}.pdf"`,
@@ -649,9 +466,7 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   doc.pipe(res);
 
-  // -------------------------------
   // BASIC TABLE HELPERS
-  // -------------------------------
 
   const checkPageSpace = (height) => {
     if (doc.y + height > doc.page.height - 50) {
@@ -701,13 +516,12 @@ const generatePaymentReceipt = (res, payment, property) => {
       checkPageSpace(rowHeight + 2);
 
       const rowY = doc.y;
-
       let cellX = left;
 
       row.forEach((cell, columnIndex) => {
         const cellWidth = columnWidths[columnIndex];
 
-        // Simple table borders
+        // Simple table borders.
         doc
           .lineWidth(0.5)
           .strokeColor(borderColor)
@@ -742,9 +556,7 @@ const generatePaymentReceipt = (res, payment, property) => {
     );
   };
 
-  // -------------------------------
   // RECEIPT HEADER
-  // -------------------------------
 
   doc
     .font("Helvetica-Bold")
@@ -772,9 +584,7 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   doc.y = 95;
 
-  // -------------------------------
   // RECEIPT INFORMATION
-  // -------------------------------
 
   drawSectionTitle("Receipt Information");
 
@@ -789,9 +599,7 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   doc.moveDown(1);
 
-  // -------------------------------
   // PROPERTY DETAILS
-  // -------------------------------
 
   drawSectionTitle("Property Details");
 
@@ -803,9 +611,7 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   doc.moveDown(1);
 
-  // -------------------------------
   // TENANT DETAILS
-  // -------------------------------
 
   drawSectionTitle("Tenant Details");
 
@@ -816,9 +622,7 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   doc.moveDown(1);
 
-  // -------------------------------
   // BILL DETAILS
-  // -------------------------------
 
   drawSectionTitle("Bill Details");
 
@@ -849,11 +653,7 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   doc.moveDown(1);
 
-  // -------------------------------
   // TOTAL AMOUNT
-  // -------------------------------
-
-  const summaryY = doc.y + 5;
 
   checkPageSpace(65);
 
@@ -868,25 +668,26 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   doc.y = finalY + 12;
 
+  const totalY = doc.y;
+
   doc
     .font("Helvetica-Bold")
     .fontSize(11)
     .fillColor(textColor)
-    .text("Total Amount Paid", left, doc.y, {
+    .text("Total Amount Paid", left, totalY, {
       width: pageWidth * 0.55,
-      continued: false,
     });
 
   doc
     .font("Helvetica-Bold")
     .fontSize(11)
     .fillColor(textColor)
-    .text(formatAmount(payment.amount), left, doc.y - 13, {
+    .text(formatAmount(payment.amount), left, totalY, {
       width: pageWidth,
       align: "right",
     });
 
-  doc.moveDown(0.7);
+  doc.y = totalY + 22;
 
   doc
     .moveTo(left, doc.y)
@@ -897,17 +698,13 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   doc.moveDown(0.7);
 
-  // -------------------------------
   // PAYMENT STATUS
-  // -------------------------------
 
   drawTable([["Payment Status", "PAID"]], [pageWidth * 0.5, pageWidth * 0.5]);
 
   doc.moveDown(2);
 
-  // -------------------------------
   // FOOTER
-  // -------------------------------
 
   checkPageSpace(45);
 
@@ -942,6 +739,7 @@ const generatePaymentReceipt = (res, payment, property) => {
 };
 
 // 5. OWNER: DOWNLOAD PAYMENT RECEIPT
+
 export const downloadPaymentReceipt = async (req, res) => {
   try {
     if (req.authRole !== "owner") {
@@ -1013,6 +811,7 @@ export const downloadPaymentReceipt = async (req, res) => {
 };
 
 // 6. TENANT: DOWNLOAD OWN PAYMENT RECEIPT
+
 export const downloadMyPaymentReceipt = async (req, res) => {
   try {
     if (req.authRole !== "tenant") {
@@ -1078,6 +877,7 @@ export const downloadMyPaymentReceipt = async (req, res) => {
 };
 
 // 7. OWNER: DOWNLOAD RECEIPT BY BILL ID
+
 export const downloadBillReceipt = async (req, res) => {
   try {
     if (req.authRole !== "owner") {
@@ -1131,7 +931,7 @@ export const downloadBillReceipt = async (req, res) => {
       });
     }
 
-    // Find the paid payment associated with this bill
+    // Find the paid payment associated with this bill.
     let payment = null;
 
     if (bill.reservedByOrder) {
@@ -1192,5 +992,149 @@ export const downloadBillReceipt = async (req, res) => {
     }
 
     res.destroy(error);
+  }
+};
+
+// 7. RAZORPAY WEBHOOK
+// This handler is called directly by Razorpay, not by a logged-in tenant.
+
+export const razorpayWebhook = async (req, res) => {
+  try {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    if (!webhookSecret) {
+      console.error("RAZORPAY_WEBHOOK_SECRET is not configured.");
+      return res.status(500).json({
+        success: false,
+        message: "Webhook is not configured.",
+      });
+    }
+
+    if (!Buffer.isBuffer(req.body)) {
+      return res.status(400).json({
+        success: false,
+        message: "Webhook raw body is missing.",
+      });
+    }
+
+    const receivedSignature = req.headers["x-razorpay-signature"];
+
+    if (typeof receivedSignature !== "string" || !receivedSignature) {
+      return res.status(400).json({
+        success: false,
+        message: "Webhook signature is missing.",
+      });
+    }
+
+    const expectedSignature = crypto
+      .createHmac("sha256", webhookSecret)
+      .update(req.body)
+      .digest("hex");
+
+    const expectedBuffer = Buffer.from(expectedSignature, "hex");
+    const receivedBuffer = Buffer.from(receivedSignature, "hex");
+
+    if (
+      expectedBuffer.length !== receivedBuffer.length ||
+      !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid webhook signature.",
+      });
+    }
+
+    const eventPayload = JSON.parse(req.body.toString("utf8"));
+    const event = eventPayload.event;
+
+    // Ignore events that are not payment capture events.
+    if (!["payment.captured", "order.paid"].includes(event)) {
+      return res.status(200).json({
+        success: true,
+        message: "Webhook event ignored.",
+      });
+    }
+
+    const razorpayPayment = eventPayload.payload?.payment?.entity;
+
+    if (!razorpayPayment?.id || !razorpayPayment?.order_id) {
+      console.error("Webhook payment details are missing.");
+      return res.status(200).json({
+        success: true,
+        message: "No payment details to process.",
+      });
+    }
+
+    const payment = await Payment.findOne({
+      razorpayOrderId: razorpayPayment.order_id,
+    });
+
+    if (!payment) {
+      console.error(
+        "Webhook received for an unknown Razorpay order:",
+        razorpayPayment.order_id,
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Payment record not found; event logged.",
+      });
+    }
+
+    if (payment.status === "paid") {
+      return res.status(200).json({
+        success: true,
+        message: "Payment already settled.",
+      });
+    }
+
+    if (payment.status === "needs_refund") {
+      return res.status(200).json({
+        success: true,
+        message: "Payment is already flagged for refund.",
+      });
+    }
+
+    // Verify captured amount, currency and order directly with Razorpay.
+    const check = await checkCapturedPayment(payment, razorpayPayment.id);
+
+    if (!check.ok) {
+      console.error("Webhook payment verification failed:", check.reason);
+
+      // A 200 response prevents endless retries for an invalid capture.
+      return res.status(200).json({
+        success: true,
+        message: "Payment did not pass verification.",
+      });
+    }
+
+    const outcome = await settleCapturedPayment({
+      paymentId: payment._id,
+      razorpayPaymentId: razorpayPayment.id,
+    });
+
+    if (outcome === "paid") {
+      await sendPaidEmails(payment._id);
+    }
+
+    if (outcome === "needs_refund") {
+      console.error(
+        "Captured payment requires refund/reconciliation:",
+        payment._id.toString(),
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Webhook processed: ${outcome}`,
+    });
+  } catch (error) {
+    console.error("Razorpay webhook error:", error);
+
+    // Return 500 for unexpected/transient errors so Razorpay can retry.
+    return res.status(500).json({
+      success: false,
+      message: "Webhook processing failed.",
+    });
   }
 };
