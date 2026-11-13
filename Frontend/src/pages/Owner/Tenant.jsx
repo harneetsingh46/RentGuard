@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import apiClient from '../../ApiClient/interceptor.js'
 import { useToast } from "../../common/ToastProvider"
 import Pagination from "../../common/Pagination"
-import { Pencil, Search, Upload, X, FileText, FileImage, LoaderCircle, ReceiptText, Clock3, CheckCircle2 } from "lucide-react"
+import { Pencil, Search, Upload, X, FileText, FileImage, LoaderCircle, ReceiptText, Clock3, CheckCircle2, Eye } from "lucide-react"
 
 const Tenant = () => {
   const [currentPage, setCurrentPage] = useState(1)
@@ -19,6 +19,7 @@ const Tenant = () => {
   const [moveOutRequests, setMoveOutRequests] = useState([])
   const [approvingRequestId, setApprovingRequestId] = useState(null)
   const [approvalRequest, setApprovalRequest] = useState(null)
+  const [viewTenant, setViewTenant] = useState(null)
   const [activeSection, setActiveSection] = useState('active')
 
   const [loading, setLoading] = useState(false)
@@ -636,6 +637,19 @@ const Tenant = () => {
                   )}
                 </dl>
 
+                {activeSection === 'history' && (
+                  <div className="mt-4 border-t border-gray-100 pt-3 dark:border-stone-800">
+                    <button
+                      type="button"
+                      onClick={() => setViewTenant(tenant)}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xs border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                    >
+                      <Eye size={16} />
+                      View Details
+                    </button>
+                  </div>
+                )}
+
                 {activeSection === 'active' && (
                   <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3 dark:border-stone-800">
                     <button
@@ -689,6 +703,9 @@ const Tenant = () => {
                   )}
                   <th className="px-4 py-3 font-semibold">Status</th>
                   {activeSection === 'active' && (
+                    <th className="px-4 py-3 font-semibold">Actions</th>
+                  )}
+                  {activeSection === 'history' && (
                     <th className="px-4 py-3 font-semibold">Actions</th>
                   )}
                 </tr>
@@ -775,6 +792,19 @@ const Tenant = () => {
                         </div>
                       </td>
                     )}
+                    {activeSection === 'history' && (
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => setViewTenant(tenant)}
+                          aria-label={`View details for ${tenant.fullName}`}
+                          className="inline-flex items-center gap-2 rounded-xs border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 dark:border-stone-700 dark:text-gray-200 dark:hover:bg-stone-800"
+                        >
+                          <Eye size={16} />
+                          View Details
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -787,6 +817,78 @@ const Tenant = () => {
             onPageChange={setCurrentPage}
           />
         </>
+      )}
+
+      {/* Tenant history details modal */}
+      {viewTenant && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/60 p-3 backdrop-blur-sm sm:p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setViewTenant(null)
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tenant-history-details-title"
+            className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-2xl overflow-y-auto rounded-xl border border-gray-200 bg-white text-gray-900 shadow-2xl dark:border-stone-700 dark:bg-[#1b1b1b] dark:text-white sm:max-h-[calc(100dvh-2rem)]"
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-stone-800 sm:p-5">
+              <div>
+                <h2 id="tenant-history-details-title" className="text-lg font-semibold sm:text-xl">Tenant Details</h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Previous tenancy information</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewTenant(null)}
+                aria-label="Close tenant details"
+                className="rounded-xs p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-stone-800 dark:hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-gray-200 bg-gray-50 p-4 dark:border-stone-800 dark:bg-[#111111]">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">Tenant Name</p>
+                  <p className="mt-1 text-lg font-semibold">{viewTenant.fullName || 'N/A'}</p>
+                </div>
+                <span className="rounded-xs bg-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:bg-stone-700 dark:text-gray-200">
+                  {viewTenant.isActive ? 'Active' : 'Moved Out'}
+                </span>
+              </div>
+
+              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {[
+                  ['Email', viewTenant.email],
+                  ['Phone', viewTenant.phone],
+                  ['Property', viewTenant.propertyName],
+                  ['Unit', viewTenant.unit?.unitName],
+                  ['Monthly Rent', viewTenant.unit?.rent != null ? `₹${viewTenant.unit.rent}` : null],
+                  ['Address', viewTenant.address],
+                  ['Move-in Date', viewTenant.moveInDate ? new Date(viewTenant.moveInDate).toLocaleDateString('en-IN') : null],
+                  ['Move-out Date', viewTenant.moveOutDate ? new Date(viewTenant.moveOutDate).toLocaleDateString('en-IN') : null],
+                ].map(([label, value]) => (
+                  <div key={label} className="min-w-0 rounded-sm border border-gray-200 p-3 dark:border-stone-800">
+                    <dt className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</dt>
+                    <dd className="mt-1 break-words text-sm font-medium text-gray-900 dark:text-gray-100">{value || 'N/A'}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            <div className="flex justify-end border-t border-gray-200 p-4 dark:border-stone-800 sm:p-5">
+              <button
+                type="button"
+                onClick={() => setViewTenant(null)}
+                className="rounded-xs bg-yellow-300 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-yellow-400"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Move-out approval confirmation modal */}
