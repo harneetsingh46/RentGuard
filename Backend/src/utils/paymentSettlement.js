@@ -201,7 +201,7 @@ export const sendPaidEmails = async (paymentId) => {
     const owner = await mongoose
       .model("User")
       .findById(property.owner)
-      .select("fullName name email");
+      .select("username email");
 
     if (!owner) {
       console.error("Payment email skipped: owner not found.");
@@ -220,7 +220,7 @@ export const sendPaidEmails = async (paymentId) => {
       tenantEmail: payment.tenant?.email,
       tenantName: payment.tenant?.fullName,
       ownerEmail: owner.email,
-      ownerName: owner.fullName || owner.name || "Property Owner",
+      ownerName: owner.username || "Property Owner",
       propertyName: property.propertyName,
       propertyAddress: property.address,
       unitName: payment.unit?.unitName,

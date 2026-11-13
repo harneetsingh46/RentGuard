@@ -4,6 +4,7 @@ import {
   getMyUnpaidBills,
   createOrder,
   getMyOrders,
+  handleCheckoutDismissal,
 } from "../controllers/order.controller.js";
 
 import { protect } from "../utils/protect.js";
@@ -18,5 +19,7 @@ router.post("/create", protect, createOrder);
 
 // Get tenant's order history
 router.get("/my-orders", protect, getMyOrders);
+
+router.post("/:orderId/checkout-dismissed", protect, handleCheckoutDismissal);
 
 export default router;
