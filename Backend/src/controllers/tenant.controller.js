@@ -123,7 +123,14 @@ export const registerSelfTenant = async (req, res) => {
 export const getAvailableProperties = async (req, res) => {
   try {
     const availableUnits = await Unit.find({ status: "available" })
-      .populate("property", "propertyName address owner")
+      .populate({
+        path: "property",
+        select: "propertyName address owner",
+        populate: {
+          path: "owner",
+          select: "username",
+        },
+      })
       .sort({ rent: 1 });
 
     const propertyMap = new Map();
@@ -137,7 +144,12 @@ export const getAvailableProperties = async (req, res) => {
           _id: unit.property._id,
           propertyName: unit.property.propertyName,
           address: unit.property.address,
-          owner: unit.property.owner,
+          owner: unit.property.owner
+            ? {
+                _id: unit.property.owner._id,
+                username: unit.property.owner.username,
+              }
+            : null,
           availableUnits: [],
           availableCount: 0,
         });
