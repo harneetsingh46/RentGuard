@@ -138,17 +138,20 @@ export const getAvailableProperties = async (req, res) => {
           propertyName: unit.property.propertyName,
           address: unit.property.address,
           owner: unit.property.owner,
-          units: [],
+          availableUnits: [],
+          availableCount: 0,
         });
       }
 
-      propertyMap.get(propId).units.push({
+      const propertyListing = propertyMap.get(propId);
+      propertyListing.availableUnits.push({
         _id: unit._id,
         unitName: unit.unitName,
         unitType: unit.unitType,
         rent: unit.rent,
         status: unit.status,
       });
+      propertyListing.availableCount = propertyListing.availableUnits.length;
     }
 
     const listing = Array.from(propertyMap.values());
