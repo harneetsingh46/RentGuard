@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
     ChartNoAxesCombined,
     Users,
+    Menu,
     ShieldCheck,
 } from "lucide-react";
 
