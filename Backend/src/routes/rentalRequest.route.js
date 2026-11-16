@@ -18,7 +18,7 @@ router.post("/", protect, isTenant, createRentalRequest);
 router.get("/my-requests", protect, isTenant, getMyRentalRequests);
 router.patch("/:id/accept", protect, isTenant, acceptApprovedRentalRequest);
 router.patch("/:id/decline", protect, isTenant, declineApprovedRentalRequest);
-router.delete("/:id", protect, isTenant, cancelMyRentalRequest);
+router.patch("/:id/cancel", protect, isTenant, cancelMyRentalRequest);
 
 // --- Owner Routes ---
 router.get("/owner-requests", protect, isOwner, getOwnerRentalRequests);

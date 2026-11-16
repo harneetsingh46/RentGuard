@@ -3,6 +3,7 @@ import { RentalRequest } from "../models/rentalRequest.model.js";
 import { Tenant } from "../models/tenant.model.js";
 import { Unit } from "../models/unit.model.js";
 import { Property } from "../models/property.model.js";
+import { sendRentalApplicationNotification } from "../utils/email.js";
 
 // Helper to mask Aadhaar in responses
 const maskAadhaar = (aadhaarNumber) => {
@@ -31,8 +32,11 @@ export const createRentalRequest = async (req, res) => {
       });
     }
 
-    // Verify unit exists and is available
-    const unit = await Unit.findById(unitId).populate("property");
+    // Verify unit exists and load its owner for the notification.
+    const unit = await Unit.findById(unitId).populate({
+      path: "property",
+      populate: { path: "owner", select: "username email" },
+    });
     if (!unit) {
       return res.status(404).json({
         message: "Unit not found.",
@@ -64,18 +68,37 @@ export const createRentalRequest = async (req, res) => {
       });
     }
 
+    const parsedMoveInDate = moveInDate ? new Date(moveInDate) : null;
+    if (parsedMoveInDate && Number.isNaN(parsedMoveInDate.getTime())) {
+      return res.status(400).json({ message: "Please provide a valid move-in date." });
+    }
+
     const request = await RentalRequest.create({
       tenant: tenant._id,
-      owner: unit.property.owner,
+      owner: unit.property.owner._id,
       property: unit.property._id,
       unit: unit._id,
-      moveInDate: moveInDate ? new Date(moveInDate) : null,
+      moveInDate: parsedMoveInDate,
       message: (message || "").trim(),
       status: "Pending",
     });
 
+    await sendRentalApplicationNotification({
+      event: "submitted",
+      tenantEmail: tenant.email,
+      tenantName: tenant.fullName,
+      ownerEmail: unit.property.owner.email,
+      ownerName: unit.property.owner.username,
+      propertyName: unit.property.propertyName,
+      propertyAddress: unit.property.address,
+      unitName: unit.unitName,
+      rent: unit.rent,
+      moveInDate: parsedMoveInDate,
+      message: request.message,
+    });
+
     return res.status(201).json({
-      message: "Rental request submitted successfully. The property owner has been notified.",
+      message: "Rental request submitted successfully. Email notifications were attempted.",
       data: request,
     });
   } catch (error) {
@@ -133,9 +156,28 @@ export const cancelMyRentalRequest = async (req, res) => {
     request.rejectionReason = "Cancelled by applicant.";
     await request.save();
 
+    const populated = await RentalRequest.findById(request._id)
+      .populate("tenant", "fullName email")
+      .populate("owner", "username email")
+      .populate("property", "propertyName address")
+      .populate("unit", "unitName rent");
+
+    await sendRentalApplicationNotification({
+      event: "cancelled",
+      tenantEmail: populated.tenant?.email,
+      tenantName: populated.tenant?.fullName,
+      ownerEmail: populated.owner?.email,
+      ownerName: populated.owner?.username,
+      propertyName: populated.property?.propertyName,
+      propertyAddress: populated.property?.address,
+      unitName: populated.unit?.unitName,
+      rent: populated.unit?.rent,
+      moveInDate: populated.moveInDate,
+    });
+
     return res.status(200).json({
-      message: "Rental request cancelled successfully.",
-      data: request,
+      message: "Rental request cancelled successfully. An email notification was attempted.",
+      data: populated,
     });
   } catch (error) {
     console.error("Cancel rental request error:", error);
@@ -206,9 +248,28 @@ export const approveRentalRequest = async (req, res) => {
     request.status = "Approved";
     await request.save();
 
+    const populated = await RentalRequest.findById(request._id)
+      .populate("tenant", "fullName email")
+      .populate("property", "propertyName address")
+      .populate("unit", "unitName rent");
+
+    await sendRentalApplicationNotification({
+      event: "approved",
+      tenantEmail: populated.tenant?.email,
+      tenantName: populated.tenant?.fullName,
+      ownerEmail: req.user.email,
+      ownerName: req.user.username,
+      propertyName: populated.property?.propertyName,
+      propertyAddress: populated.property?.address,
+      unitName: populated.unit?.unitName,
+      rent: populated.unit?.rent,
+      moveInDate: populated.moveInDate,
+      message: populated.message,
+    });
+
     return res.status(200).json({
-      message: "Rental request approved. Waiting for tenant to confirm & accept the lease.",
-      data: request,
+      message: "Rental request approved. An email notification was attempted; the tenant must confirm the offer.",
+      data: populated,
     });
   } catch (error) {
     console.error("Approve rental request error:", error);
@@ -245,9 +306,29 @@ export const rejectRentalRequest = async (req, res) => {
     request.rejectionReason = rejectionReason?.trim() || "Application declined by property owner.";
     await request.save();
 
+    const populated = await RentalRequest.findById(request._id)
+      .populate("tenant", "fullName email")
+      .populate("property", "propertyName address")
+      .populate("unit", "unitName rent");
+
+    await sendRentalApplicationNotification({
+      event: "rejected",
+      tenantEmail: populated.tenant?.email,
+      tenantName: populated.tenant?.fullName,
+      ownerEmail: req.user.email,
+      ownerName: req.user.username,
+      propertyName: populated.property?.propertyName,
+      propertyAddress: populated.property?.address,
+      unitName: populated.unit?.unitName,
+      rent: populated.unit?.rent,
+      moveInDate: populated.moveInDate,
+      message: populated.message,
+      rejectionReason: populated.rejectionReason,
+    });
+
     return res.status(200).json({
-      message: "Rental request rejected.",
-      data: request,
+      message: "Rental request rejected. An email notification was attempted.",
+      data: populated,
     });
   } catch (error) {
     console.error("Reject rental request error:", error);
@@ -260,96 +341,145 @@ export const rejectRentalRequest = async (req, res) => {
 // 7. TENANT: CONFIRM & ACCEPT APPROVED LEASE
 // (Activates tenancy, occupies unit, and cancels all other applications)
 export const acceptApprovedRentalRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  let acceptedDetails = null;
+
   try {
     const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid rental request ID." });
+    }
 
-    const request = await RentalRequest.findOne({
-      _id: id,
-      tenant: req.user._id,
+    await session.withTransaction(async () => {
+      const request = await RentalRequest.findOne({
+        _id: id,
+        tenant: req.user._id,
+        status: "Approved",
+      }).session(session);
+
+      if (!request) {
+        const error = new Error("Approved rental request not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      const tenant = await Tenant.findOne({
+        _id: req.user._id,
+        isActive: true,
+      }).session(session);
+
+      if (!tenant) {
+        const error = new Error("Active tenant account not found.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      if (tenant.unit) {
+        const error = new Error("You already have an assigned active tenancy.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      // Atomic claim prevents two applicants accepting the same unit concurrently.
+      const unit = await Unit.findOneAndUpdate(
+        { _id: request.unit, property: request.property, status: "available" },
+        { $set: { status: "occupied" } },
+        { new: true, runValidators: true, session },
+      );
+
+      if (!unit) {
+        const error = new Error("This unit is no longer available.");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      tenant.owner = request.owner;
+      tenant.property = request.property;
+      tenant.unit = request.unit;
+      tenant.isActive = true;
+      tenant.moveInDate = request.moveInDate || new Date();
+      tenant.moveOutDate = null;
+      await tenant.save({ session });
+
+      request.status = "Accepted";
+      await request.save({ session });
+
+      await RentalRequest.updateMany(
+        {
+          tenant: tenant._id,
+          _id: { $ne: request._id },
+          status: { $in: ["Pending", "Approved"] },
+        },
+        {
+          $set: {
+            status: "Cancelled",
+            rejectionReason: "You accepted another rental offer.",
+          },
+        },
+        { session },
+      );
+
+      await RentalRequest.updateMany(
+        {
+          unit: request.unit,
+          _id: { $ne: request._id },
+          status: { $in: ["Pending", "Approved"] },
+        },
+        {
+          $set: {
+            status: "Rejected",
+            rejectionReason: "Unit was leased to another applicant.",
+          },
+        },
+        { session },
+      );
+
+      acceptedDetails = {
+        tenantId: tenant._id,
+        requestId: request._id,
+        ownerId: request.owner,
+        propertyId: request.property,
+        unitId: request.unit,
+        moveInDate: tenant.moveInDate,
+      };
     });
 
-    if (!request) {
-      return res.status(404).json({
-        message: "Rental request not found.",
-      });
-    }
+    const [tenant, owner, property, unit] = await Promise.all([
+      Tenant.findById(acceptedDetails.tenantId).select("fullName email"),
+      mongoose.model("User").findById(acceptedDetails.ownerId).select("username email"),
+      Property.findById(acceptedDetails.propertyId).select("propertyName address"),
+      Unit.findById(acceptedDetails.unitId).select("unitName rent"),
+    ]);
 
-    if (request.status !== "Approved") {
-      return res.status(400).json({
-        message: `This request cannot be accepted. Current status: ${request.status}`,
-      });
-    }
-
-    const unit = await Unit.findById(request.unit);
-    if (!unit || unit.status === "occupied") {
-      return res.status(400).json({
-        message: "This unit has already been occupied.",
-      });
-    }
-
-    // 1. Assign tenant to unit, property & owner
-    const tenant = req.user;
-    tenant.owner = request.owner;
-    tenant.property = request.property;
-    tenant.unit = request.unit;
-    tenant.isActive = true;
-    if (request.moveInDate) {
-      tenant.moveInDate = request.moveInDate;
-    }
-    await tenant.save();
-
-    // 2. Mark unit as occupied
-    unit.status = "occupied";
-    await unit.save();
-
-    // 3. Mark this request as accepted
-    request.status = "Accepted";
-    await request.save();
-
-    // 4. Immediately cancel all other pending or approved requests for this tenant
-    await RentalRequest.updateMany(
-      {
-        tenant: tenant._id,
-        _id: { $ne: request._id },
-        status: { $in: ["Pending", "Approved"] },
-      },
-      {
-        $set: {
-          status: "Cancelled",
-          rejectionReason: "You accepted another rental offer.",
-        },
-      }
-    );
-
-    // 5. Reject any other pending requests for this newly occupied unit
-    await RentalRequest.updateMany(
-      {
-        unit: request.unit,
-        _id: { $ne: request._id },
-        status: { $in: ["Pending", "Approved"] },
-      },
-      {
-        $set: {
-          status: "Rejected",
-          rejectionReason: "Unit was leased to another applicant.",
-        },
-      }
-    );
+    await sendRentalApplicationNotification({
+      event: "accepted",
+      tenantEmail: tenant?.email,
+      tenantName: tenant?.fullName,
+      ownerEmail: owner?.email,
+      ownerName: owner?.username,
+      propertyName: property?.propertyName,
+      propertyAddress: property?.address,
+      unitName: unit?.unitName,
+      rent: unit?.rent,
+      moveInDate: acceptedDetails.moveInDate,
+    });
 
     return res.status(200).json({
       message: "Congratulations! Lease accepted and your tenancy is now active.",
       data: {
-        tenantId: tenant._id,
-        propertyId: tenant.property,
-        unitId: tenant.unit,
-        isActive: tenant.isActive,
+        tenantId: acceptedDetails.tenantId,
+        propertyId: acceptedDetails.propertyId,
+        unitId: acceptedDetails.unitId,
+        isActive: true,
       },
     });
   } catch (error) {
     console.error("Accept rental request error:", error);
-    return res.status(500).json({
+    return res.status(error.statusCode || 500).json({
       message: error.message || "Failed to accept rental offer.",
     });
+  } finally {
+    await session.endSession();
   }
 };
 
@@ -379,9 +509,27 @@ export const declineApprovedRentalRequest = async (req, res) => {
     request.rejectionReason = "Offer declined by applicant.";
     await request.save();
 
+    const populated = await RentalRequest.findById(request._id)
+      .populate("tenant", "fullName email")
+      .populate("property", "propertyName address")
+      .populate("unit", "unitName rent");
+
+    await sendRentalApplicationNotification({
+      event: "declined",
+      tenantEmail: populated.tenant?.email,
+      tenantName: populated.tenant?.fullName,
+      ownerEmail: req.user.email,
+      ownerName: req.user.username,
+      propertyName: populated.property?.propertyName,
+      propertyAddress: populated.property?.address,
+      unitName: populated.unit?.unitName,
+      rent: populated.unit?.rent,
+      moveInDate: populated.moveInDate,
+    });
+
     return res.status(200).json({
-      message: "Offer declined successfully.",
-      data: request,
+      message: "Offer declined successfully. An email notification was attempted.",
+      data: populated,
     });
   } catch (error) {
     console.error("Decline rental request error:", error);

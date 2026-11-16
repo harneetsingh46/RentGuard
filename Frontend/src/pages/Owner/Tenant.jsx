@@ -290,7 +290,7 @@ const Tenant = () => {
     try {
       setProcessingRentalId(rejectModal.requestId)
       await apiClient.patch(`/rental-request/${rejectModal.requestId}/reject`, {
-        reason: rejectModal.reason.trim(),
+        rejectionReason: rejectModal.reason.trim(),
       })
       showToast("Rental application rejected.", "success")
       setRejectModal({ open: false, requestId: null, applicantName: "", reason: "" })
