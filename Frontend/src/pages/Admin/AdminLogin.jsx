@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -50,27 +51,35 @@ const AdminLogin = () => {
     };
 
     return (
-        <main className="fixed inset-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f4f6f9] px-4 py-4 text-black dark:bg-[#111111] dark:text-white">
+        <main className="fixed inset-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f4f6f9] px-4 py-4 text-black dark:bg-[#111111] dark:text-white sm:px-6">
+
             <div className="w-full max-w-md">
 
-                <div className="mb-8 text-center">
+                {/* HEADER */}
+                <div className="mb-6 text-center sm:mb-8">
                     <h1 className="font-serif text-3xl font-medium tracking-tight sm:text-4xl">
                         Admin Portal
                     </h1>
                 </div>
 
-                <div className="border border-gray-200 bg-white p-6 shadow-sm dark:border-[#343434] dark:bg-[#1b1b1b] sm:p-8">
-                    <div className="mb-6 items-center justify-center">
-                        <h2 className="text-xl font-semibold items-center">
-                            Welcome back !
+                {/* LOGIN CARD */}
+                <div className="w-full border border-gray-200 bg-white p-5 shadow-sm dark:border-[#343434] dark:bg-[#1b1b1b] sm:p-8">
+
+                    {/* CARD HEADER */}
+                    <div className="mb-6 text-center">
+                        <h2 className="text-xl font-semibold">
+                            Welcome back!
                         </h2>
 
-                        <p className="mt-1 text-sm text-gray-500 items-center dark:text-gray-400">
+                        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                             Enter your administrator credentials.
                         </p>
                     </div>
 
+                    {/* LOGIN FORM */}
                     <form onSubmit={handleSubmit} className="space-y-5">
+
+                        {/* EMAIL */}
                         <div>
                             <label
                                 htmlFor="admin-email"
@@ -94,6 +103,7 @@ const AdminLogin = () => {
                             />
                         </div>
 
+                        {/* PASSWORD */}
                         <div>
                             <label
                                 htmlFor="admin-password"
@@ -129,6 +139,7 @@ const AdminLogin = () => {
                             </div>
                         </div>
 
+                        {/* ERROR MESSAGE */}
                         {errorMessage && (
                             <p
                                 role="alert"
@@ -138,6 +149,7 @@ const AdminLogin = () => {
                             </p>
                         )}
 
+                        {/* SUBMIT BUTTON */}
                         <button
                             type="submit"
                             disabled={loading}
@@ -145,12 +157,9 @@ const AdminLogin = () => {
                         >
                             {loading ? "Signing in..." : "Sign in as Admin"}
                         </button>
+
                     </form>
                 </div>
-
-                <p className="mt-6 text-center text-xs text-gray-500 dark:text-gray-500">
-                    Restricted access · Authorized administrators only
-                </p>
             </div>
         </main>
     );
