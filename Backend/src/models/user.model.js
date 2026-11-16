@@ -25,6 +25,25 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Sensitive identity fields are excluded from normal queries and API responses.
+    aadhaarNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      select: false,
+      match: /^\\d{12}$/,
+    },
+
+    panNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      uppercase: true,
+      trim: true,
+      select: false,
+      match: /^[A-Z]{5}[0-9]{4}[A-Z]$/,
+    },
+
     // Only owners are Users now
     role: {
       type: String,
