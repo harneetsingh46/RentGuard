@@ -46,7 +46,6 @@ const AdminDashboard = () => {
             title: "Total Owners",
             value: overview?.totalOwners ?? 0,
             description: "Registered property owners",
-            icon: Users,
             color: "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400",
             link: "/admin/owners",
         },
@@ -54,7 +53,6 @@ const AdminDashboard = () => {
             title: "Pending Verification",
             value: overview?.pendingOwners ?? 0,
             description: "Owners awaiting review",
-            icon: Clock,
             color: "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400",
             link: "/admin/owners",
         },
@@ -62,7 +60,6 @@ const AdminDashboard = () => {
             title: "Approved Owners",
             value: overview?.approvedOwners ?? 0,
             description: "Verified property owners",
-            icon: UserCheck,
             color: "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400",
             link: "/admin/owners",
         },
@@ -70,7 +67,6 @@ const AdminDashboard = () => {
             title: "Rejected Owners",
             value: overview?.rejectedOwners ?? 0,
             description: "Owners whose verification was rejected",
-            icon: UserX,
             color: "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400",
             link: "/admin/owners",
         },
@@ -78,7 +74,6 @@ const AdminDashboard = () => {
             title: "Total Tenants",
             value: overview?.totalTenants ?? 0,
             description: "Registered tenants",
-            icon: Users,
             color: "bg-purple-50 text-purple-700 dark:bg-purple-400/10 dark:text-purple-400",
             link: "/admin/tenants",
         },
@@ -257,7 +252,7 @@ const AdminDashboard = () => {
                                 className="flex items-center justify-between gap-4 border border-stone-200 bg-white p-5 transition hover:border-yellow-400 dark:border-neutral-800 dark:bg-neutral-950 sm:p-6"
                             >
                                 <div className="flex items-center gap-4">
-                                    <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-purple-100 text-purple-700 dark:bg-purple-400/10 dark:text-purple-400">
+                                    <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-yellow-300 text-black dark:bg-yellow-400/10 dark:text-yellow-300">
                                         <Users size={22} />
                                     </span>
 
