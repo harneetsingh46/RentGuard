@@ -50,7 +50,7 @@ const AdminLogin = () => {
     };
 
     return (
-        <main className="flex h-screen w-full items-center justify-center overflow-hidden bg-[#f4f6f9] px-4 py-4 text-black dark:bg-[#111111] dark:text-white">
+        <main className="fixed inset-0 flex h-[100dvh] w-full items-center justify-center overflow-hidden bg-[#f4f6f9] px-4 py-4 text-black dark:bg-[#111111] dark:text-white">
             <div className="w-full max-w-md">
 
                 <div className="mb-8 text-center">
