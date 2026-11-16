@@ -3,12 +3,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
     Users,
-    UserCheck,
-    Clock,
-    UserX,
     ArrowRight,
     RefreshCw,
-    ShieldCheck,
 } from "lucide-react";
 import apiClient from "../../ApiClient/interceptor";
 
@@ -86,11 +82,6 @@ const AdminDashboard = () => {
             <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
                     <div className="flex items-center gap-2">
-                        <ShieldCheck
-                            size={22}
-                            className="text-yellow-600 dark:text-yellow-400"
-                        />
-
                         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
                             Administration
                         </span>
@@ -173,8 +164,6 @@ const AdminDashboard = () => {
 
                         <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             {stats.map((stat) => {
-                                const Icon = stat.icon;
-
                                 return (
                                     <Link
                                         key={stat.title}
@@ -192,8 +181,8 @@ const AdminDashboard = () => {
                                                 </p>
                                             </div>
 
-                                            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${stat.color}`}>
-                                                <Icon size={21} strokeWidth={1.8} />
+                                            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${stat.color}`}>
+                                                RG
                                             </span>
                                         </div>
 
@@ -202,10 +191,6 @@ const AdminDashboard = () => {
                                                 {stat.description}
                                             </p>
 
-                                            <ArrowRight
-                                                size={17}
-                                                className="shrink-0 transition-transform group-hover:translate-x-1"
-                                            />
                                         </div>
                                     </Link>
                                 );
@@ -229,10 +214,6 @@ const AdminDashboard = () => {
                                 className="flex items-center justify-between gap-4 border border-stone-200 bg-white p-5 transition hover:border-yellow-400 dark:border-neutral-800 dark:bg-neutral-950 sm:p-6"
                             >
                                 <div className="flex items-center gap-4">
-                                    <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-yellow-100 text-yellow-800 dark:bg-yellow-400/10 dark:text-yellow-400">
-                                        <ShieldCheck size={22} />
-                                    </span>
-
                                     <div>
                                         <h3 className="font-medium">
                                             Review Owners
@@ -243,8 +224,6 @@ const AdminDashboard = () => {
                                         </p>
                                     </div>
                                 </div>
-
-                                <ArrowRight size={19} className="shrink-0" />
                             </Link>
 
                             <Link
