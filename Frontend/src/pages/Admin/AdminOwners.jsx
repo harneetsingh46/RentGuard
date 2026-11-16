@@ -4,14 +4,7 @@ import toast from "react-hot-toast";
 import {
     Search,
     RefreshCw,
-    Clock,
-    CheckCircle2,
-    XCircle,
-    Mail,
-    Phone,
-    CalendarDays,
-    X,
-    UserRound,
+    Users
 } from "lucide-react";
 import apiClient from "../../ApiClient/interceptor";
 
@@ -193,10 +186,10 @@ const AdminOwners = () => {
     };
 
     const filters = [
-        { label: "All Owners", value: "all", icon: UserRound },
-        { label: "Pending", value: "pending", icon: Clock },
-        { label: "Approved", value: "approved", icon: CheckCircle2 },
-        { label: "Rejected", value: "rejected", icon: XCircle },
+        { label: "All Owners", value: "all" },
+        { label: "Pending", value: "pending" },
+        { label: "Approved", value: "approved" },
+        { label: "Rejected", value: "rejected" },
     ];
 
     return (
@@ -233,7 +226,6 @@ const AdminOwners = () => {
             <section className="mt-8">
                 <div className="flex gap-2 overflow-x-auto border-b border-stone-300 dark:border-neutral-800">
                     {filters.map((filter) => {
-                        const Icon = filter.icon;
                         const active = status === filter.value;
 
                         return (
@@ -241,13 +233,11 @@ const AdminOwners = () => {
                                 key={filter.value}
                                 type="button"
                                 onClick={() => setStatus(filter.value)}
-                                className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-sm transition sm:px-5 ${
-                                    active
-                                        ? "border-yellow-400 font-semibold text-black dark:text-white"
-                                        : "border-transparent text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white"
-                                }`}
+                                className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-sm transition sm:px-5 ${active
+                                    ? "border-yellow-400 font-semibold text-black dark:text-white"
+                                    : "border-transparent text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white"
+                                    }`}
                             >
-                                <Icon size={16} />
                                 {filter.label}
                             </button>
                         );
@@ -417,10 +407,6 @@ const AdminOwners = () => {
                             <article key={owner._id} className="p-4 sm:p-5">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="flex min-w-0 items-center gap-3">
-                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-stone-100 text-gray-600 dark:bg-neutral-800 dark:text-gray-300">
-                                            <UserRound size={19} />
-                                        </span>
-
                                         <div className="min-w-0">
                                             <h3 className="truncate font-medium">
                                                 {owner.username || "Unnamed owner"}
@@ -438,12 +424,10 @@ const AdminOwners = () => {
 
                                 <div className="mt-4 grid grid-cols-1 gap-3 text-xs text-gray-500 dark:text-gray-400 min-[400px]:grid-cols-2">
                                     <p className="flex items-center gap-2">
-                                        <Phone size={14} />
                                         {owner.phone || "No phone"}
                                     </p>
 
                                     <p className="flex items-center gap-2">
-                                        <CalendarDays size={14} />
                                         Joined {formatDate(owner.createdAt)}
                                     </p>
                                 </div>
@@ -514,7 +498,7 @@ const AdminOwners = () => {
                                 aria-label="Close dialog"
                                 className="rounded-lg p-2 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-neutral-800"
                             >
-                                <X size={19} />
+                                <span className="text-xl leading-none">×</span>
                             </button>
                         </div>
 
