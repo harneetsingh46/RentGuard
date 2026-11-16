@@ -4,11 +4,8 @@ import {
     Users,
     Search,
     RefreshCw,
-    Phone,
-    CalendarDays,
-    CheckCircle2,
-    XCircle,
-    UserRound,
+    Search,
+    UserRound
 } from "lucide-react";
 import apiClient from "../../ApiClient/interceptor";
 
@@ -174,10 +171,6 @@ const AdminTenants = () => {
                                         {card.value}
                                     </p>
                                 </div>
-
-                                <span className={`flex h-11 w-11 items-center justify-center rounded-lg ${card.color}`}>
-                                    <Icon size={21} />
-                                </span>
                             </div>
 
                             <p className="mt-3 text-xs text-gray-500 dark:text-[#A5A5A5]">
@@ -229,11 +222,10 @@ const AdminTenants = () => {
                             key={filter.value}
                             type="button"
                             onClick={() => setStatus(filter.value)}
-                            className={`shrink-0 border px-4 py-2 text-sm transition ${
-                                status === filter.value
+                            className={`shrink-0 border px-4 py-2 text-sm transition ${status === filter.value
                                     ? "border-yellow-400 bg-yellow-300 font-medium text-black"
                                     : "border-stone-300 bg-white text-gray-600 hover:bg-stone-100 dark:border-neutral-700 dark:bg-neutral-950 dark:text-gray-300 dark:hover:bg-neutral-800"
-                            }`}
+                                }`}
                         >
                             {filter.label}
                         </button>
@@ -401,25 +393,16 @@ const AdminTenants = () => {
                                 </div>
 
                                 <div className="mt-4 space-y-3 text-xs text-gray-500 dark:text-gray-400">
-                                    <p className="flex items-center gap-2">
-                                        <Phone size={14} />
-                                        {tenant.phone || "No phone"}
+                                    <p>
+                                        Phone: {tenant.phone || "No phone"}
                                     </p>
 
-                                    <p className="flex items-center gap-2">
-                                        <CalendarDays size={14} />
-                                        Joined {formatDate(tenant.createdAt)}
+                                    <p>
+                                        Joined: {formatDate(tenant.createdAt)}
                                     </p>
 
-                                    <p className="flex items-center gap-2">
-                                        {tenant.contactVerified ? (
-                                            <CheckCircle2 size={14} className="text-green-600" />
-                                        ) : (
-                                            <XCircle size={14} className="text-amber-600" />
-                                        )}
-
-                                        Contact{" "}
-                                        {tenant.contactVerified
+                                    <p>
+                                        Contact: {tenant.contactVerified
                                             ? "Verified"
                                             : "Not verified"}
                                     </p>
