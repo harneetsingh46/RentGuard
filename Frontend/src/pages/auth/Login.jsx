@@ -94,10 +94,10 @@ export const Login = () => {
     };
 
     const inputClass =
-        "w-full min-w-0 rounded-xs border border-black bg-[#f4f6f9] px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-gray-500 focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 dark:border-[#343434] dark:bg-[#242424] dark:text-[#f5f5f5] dark:placeholder:text-[#aaa] dark:focus:border-yellow-400";
+        "w-full min-w-0 rounded-xs border border-black bg-[#f4f6f9] px-3 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-gray-500 focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 dark:border-[#343434] dark:bg-[#242424] dark:text-[#f5f5f5] dark:placeholder:text-[#aaa] dark:focus:border-yellow-400";
 
     return (
-        <main className="h-[calc(100dvh-146px)] min-h-0 w-full overflow-hidden bg-white p-0 text-black dark:bg-[#111111] dark:text-white">
+        <main className="h-full min-h-0 w-full overflow-hidden bg-white p-0 text-black dark:bg-[#111111] dark:text-white">
             <div className="grid h-full min-h-0 w-full grid-cols-1 overflow-hidden lg:grid-cols-[1.03fr_0.97fr]">
 
                 {/* Left visual panel */}
@@ -130,15 +130,15 @@ export const Login = () => {
                 </section>
 
                 {/* Login form */}
-                <section className="flex h-full min-h-0 items-center justify-center overflow-y-auto px-5 py-4 sm:px-10 lg:px-14 xl:px-20">
+                <section className="flex h-full min-h-0 items-center justify-center overflow-hidden px-4 py-3 sm:px-8 sm:py-4 lg:px-10 xl:px-14">
                     <div className="w-full max-w-md">
 
-                        <header className="mb-6 text-center">
-                            <h1 className="font-serif text-3xl font-medium tracking-tight text-black dark:text-white sm:text-[42px]">
+                        <header className="mb-3 text-center sm:mb-5">
+                            <h1 className="font-serif text-2xl font-medium tracking-tight text-black dark:text-white sm:text-3xl lg:text-[40px]">
                                 Welcome Back!
                             </h1>
 
-                            <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-400">
+                            <p className="mt-1.5 text-xs leading-5 text-gray-600 dark:text-gray-400 sm:mt-2 sm:text-sm">
                                 Sign in securely using a one-time password.
                             </p>
                         </header>
@@ -146,13 +146,13 @@ export const Login = () => {
                         <form
                             onSubmit={otpSent ? handleVerifyOtp : handleRequestOtp}
                             noValidate
-                            className="space-y-5"
+                            className="space-y-3 sm:space-y-4"
                         >
                             {/* Email or phone */}
                             <div>
                                 <label
                                     htmlFor="contact"
-                                    className="mb-2 block text-sm font-medium text-gray-900 dark:text-gray-100"
+                                    className="mb-1.5 block text-xs font-medium text-gray-900 dark:text-gray-100 sm:text-sm"
                                 >
                                     Email 
                                 </label>
@@ -252,7 +252,7 @@ export const Login = () => {
                             </button>
                         </form>
 
-                        <p className="mt-7 text-center text-sm text-gray-600 dark:text-gray-400">
+                        <p className="mt-4 text-center text-xs text-gray-600 dark:text-gray-400 sm:mt-5 sm:text-sm">
                             Don't have an account?{" "}
                             <Link
                                 to="/signup"
