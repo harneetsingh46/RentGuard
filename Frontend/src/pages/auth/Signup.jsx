@@ -6,6 +6,8 @@ const initialOwnerData = {
     username: "",
     email: "",
     phone: "",
+    aadhaarNumber: "",
+    panNumber: "",
 };
 
 const initialTenantData = {
@@ -35,6 +37,8 @@ const validateOwnerSignup = (values) => {
     const username = values.username.trim();
     const email = values.email.trim().toLowerCase();
     const phone = normalizePhone(values.phone);
+    const aadhaar = normalizeAadhaar(values.aadhaarNumber);
+    const pan = (values.panNumber || "").trim().toUpperCase();
 
     if (!username) {
         errors.username = "Username is required.";
@@ -52,6 +56,18 @@ const validateOwnerSignup = (values) => {
         errors.phone = "Phone number is required.";
     } else if (!/^[6-9]\d{9}$/.test(phone)) {
         errors.phone = "Enter a valid 10-digit Indian mobile number.";
+    }
+
+    if (!values.aadhaarNumber.trim()) {
+        errors.aadhaarNumber = "Aadhaar number is required.";
+    } else if (!/^\\d{12}$/.test(aadhaar)) {
+        errors.aadhaarNumber = "Enter a valid 12-digit Aadhaar number.";
+    }
+
+    if (!pan) {
+        errors.panNumber = "PAN number is required.";
+    } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan)) {
+        errors.panNumber = "Enter a valid PAN (e.g. ABCDE1234F).";
     }
 
     return errors;
@@ -119,8 +135,9 @@ const Signup = () => {
         const { name, value } = e.target;
         let formattedValue = value;
         if (name === "aadhaarNumber") {
-            // Keep numeric digits up to 12
-            formattedValue = value.replace(/\D/g, "").slice(0, 12);
+            formattedValue = value.replace(/\\D/g, "").slice(0, 12);
+        } else if (name === "panNumber") {
+            formattedValue = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
         }
         const updated = { ...tenantData, [name]: formattedValue };
         setTenantData(updated);
@@ -158,6 +175,8 @@ const Signup = () => {
                 username: ownerData.username.trim().toLowerCase(),
                 email: ownerData.email.trim().toLowerCase(),
                 phone: normalizePhone(ownerData.phone),
+                aadhaarNumber: normalizeAadhaar(ownerData.aadhaarNumber),
+                panNumber: ownerData.panNumber.trim().toUpperCase(),
             });
 
             setOwnerData(initialOwnerData);
@@ -240,8 +259,8 @@ const Signup = () => {
     const fieldErrorClass = "mt-1 text-[11px] leading-tight text-red-600 dark:text-[#FF8F86]";
 
     return (
-        <main className="h-[calc(100svh-3.5rem)] min-h-0 w-full overflow-hidden bg-[#f3f3f3] bg-[url(/signup.jpg)] bg-cover bg-center px-3 py-2 text-slate-900 dark:bg-[#101010] dark:text-white sm:px-5 sm:py-3">
-            <div className="mx-auto flex h-full w-full max-w-5xl items-center justify-center">
+        <main className="h-[calc(100svh-72px)] min-h-0 w-full overflow-hidden bg-[#f3f3f3] bg-[url(/signup.jpg)] bg-cover bg-center px-3 py-2 text-slate-900 dark:bg-[#101010] dark:text-white sm:px-5 sm:py-3">
+            <div className="mx-auto flex h-full w-full max-w-4xl items-center justify-center">
                 <form
                     onSubmit={handleSubmit}
                     noValidate
@@ -303,19 +322,36 @@ const Signup = () => {
                                 />
                                 {fieldErrors.email && <p className={fieldErrorClass}>{fieldErrors.email}</p>}
                             </div>
-                            <div className="min-w-0 sm:col-span-2">
+                            <div className="min-w-0">
                                 <label htmlFor="phone" className={fieldLabelClass}>Phone</label>
                                 <input
                                     id="phone" type="tel" name="phone"
                                     value={ownerData.phone} onChange={handleOwnerChange}
                                     required autoComplete="tel" inputMode="tel"
-                                    placeholder="Enter 10-digit mobile number" className={inputClass("phone")}
+                                    placeholder="10-digit mobile number" className={inputClass("phone")}
                                 />
-                                <p className="mt-1 text-[10px] leading-tight text-gray-700 dark:text-[#85827D]">
-                                    10-digit Indian mobile number (with or without +91).
-                                </p>
                                 {fieldErrors.phone && <p className={fieldErrorClass}>{fieldErrors.phone}</p>}
                             </div>
+                            <div className="min-w-0">
+                                <label htmlFor="ownerAadhaar" className={fieldLabelClass}>Aadhaar Number</label>
+                                <input
+                                    id="ownerAadhaar" type="text" name="aadhaarNumber"
+                                    value={ownerData.aadhaarNumber} onChange={handleOwnerChange}
+                                    required maxLength={12} inputMode="numeric" autoComplete="off"
+                                    placeholder="12-digit Aadhaar number" className={inputClass("aadhaarNumber")}
+                                />
+                                {fieldErrors.aadhaarNumber && <p className={fieldErrorClass}>{fieldErrors.aadhaarNumber}</p>}
+                            </div>
+                            <div className="min-w-0 sm:col-span-2">
+                                <label htmlFor="ownerPan" className={fieldLabelClass}>PAN Number</label>
+                                <input
+                                    id="ownerPan" type="text" name="panNumber"
+                                    value={ownerData.panNumber} onChange={handleOwnerChange}
+                                    required maxLength={10} autoComplete="off"
+                                    placeholder="ABCDE1234F" className={inputClass("panNumber")}
+                                />
+                                {fieldErrors.panNumber && <p className={fieldErrorClass}>{fieldErrors.panNumber}</p>}
+                            </div>                            </div>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 sm:gap-y-3">
