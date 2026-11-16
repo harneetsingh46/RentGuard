@@ -60,12 +60,12 @@ const AdminLogin = () => {
                 </div>
 
                 <div className="border border-gray-200 bg-white p-6 shadow-sm dark:border-[#343434] dark:bg-[#1b1b1b] sm:p-8">
-                    <div className="mb-6 items-center">
-                        <h2 className="text-xl font-semibold">
+                    <div className="mb-6 items-center justify-center">
+                        <h2 className="text-xl font-semibold items-center">
                             Welcome back !
                         </h2>
 
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <p className="mt-1 text-sm text-gray-500 items-center dark:text-gray-400">
                             Enter your administrator credentials.
                         </p>
                     </div>
