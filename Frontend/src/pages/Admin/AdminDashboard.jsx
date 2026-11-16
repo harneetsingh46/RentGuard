@@ -81,12 +81,6 @@ const AdminDashboard = () => {
             {/* PAGE HEADER */}
             <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-                            Administration
-                        </span>
-                    </div>
-
                     <h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">
                         Admin Overview
                     </h1>

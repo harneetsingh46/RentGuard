@@ -4,7 +4,6 @@ import {
     Users,
     Search,
     RefreshCw,
-    Mail,
     Phone,
     CalendarDays,
     CheckCircle2,
@@ -104,28 +103,24 @@ const AdminTenants = () => {
             title: "Total Tenants",
             value: tenants.length,
             description: "All registered tenant accounts",
-            icon: Users,
             color: "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400",
         },
         {
             title: "Active Tenants",
             value: activeCount,
             description: "Currently active accounts",
-            icon: CheckCircle2,
             color: "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400",
         },
         {
             title: "Inactive Tenants",
             value: inactiveCount,
             description: "Deactivated accounts",
-            icon: XCircle,
             color: "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400",
         },
         {
             title: "Contact Verified",
             value: verifiedCount,
             description: "Tenants with verified contact details",
-            icon: Mail,
             color: "bg-purple-50 text-purple-700 dark:bg-purple-400/10 dark:text-purple-400",
         },
     ];
@@ -136,17 +131,6 @@ const AdminTenants = () => {
             {/* HEADER */}
             <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
-                    <div className="flex items-center gap-2">
-                        <Users
-                            size={21}
-                            className="text-yellow-600 dark:text-yellow-400"
-                        />
-
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-                            Administration
-                        </span>
-                    </div>
-
                     <h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">
                         Tenant Management
                     </h1>

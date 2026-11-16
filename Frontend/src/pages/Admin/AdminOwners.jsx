@@ -4,7 +4,6 @@ import toast from "react-hot-toast";
 import {
     Search,
     RefreshCw,
-    ShieldCheck,
     Clock,
     CheckCircle2,
     XCircle,
@@ -206,15 +205,6 @@ const AdminOwners = () => {
             {/* HEADER */}
             <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
-                    <div className="flex items-center gap-2">
-                        <ShieldCheck
-                            size={21}
-                            className="text-yellow-600 dark:text-yellow-400"
-                        />
-                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-                            Administration
-                        </span>
-                    </div>
 
                     <h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">
                         Owner Verification
