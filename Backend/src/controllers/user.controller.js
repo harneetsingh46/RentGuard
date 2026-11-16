@@ -75,7 +75,7 @@ export const register = async (req, res) => {
 
     if (!username || !email || !phone || !aadhaarNumber || !panNumber) {
       return res.status(400).json({
-        message: "Username, email and phone are required",
+        message: "Username, email, phone, Aadhaar and PAN are required",
       });
     }
 
@@ -123,7 +123,7 @@ export const register = async (req, res) => {
       });
     }
 
-    if (!/^\\d{12}$/.test(normalizedAadhaar)) {
+    if (!/^\d{12}$/.test(normalizedAadhaar)) {
       return res.status(400).json({ message: "Aadhaar number must contain exactly 12 digits." });
     }
 
