@@ -16,6 +16,10 @@ const PublicRoutes = () => {
         if (user.role === "tenant") {
             return <Navigate to="/tenant/dashboard" replace />;
         }
+
+        if (user.role === "admin") {
+            return <Navigate to="/admin/dashboard" replace />;
+        }
     }
 
     return <Outlet />;

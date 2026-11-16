@@ -1,6 +1,11 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { Login } from "../src/pages/auth/Login";
+import AdminLogin from "./pages/Admin/AdminLogin";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import AdminOwners from "./pages/Admin/AdminOwners";
+import AdminTenants from "./pages/Admin/AdminTenants";
+import AdminLayout from "./common/AdminLayout";
 import Layout from "./common/Layout";
 import Signup from "../src/pages/auth/Signup";
 import OwnerDashboard from "../src/pages/Owner/OwnerDashboard";
@@ -53,6 +58,35 @@ const router = createBrowserRouter([
             path: "/contact",
             element: <Contact />,
           },
+          {
+            path: "/admin/login",
+            element: <AdminLogin />,
+          },
+        ],
+      },
+    ],
+  },
+
+  //Admin Protected Routes
+
+  {
+    element: <ProtectedRoutes requiredRole="admin" />,
+    children: [
+      {
+        element: <AdminLayout />,
+        children: [
+          {
+            path: "/admin/dashboard",
+            element: <AdminDashboard />,
+          },
+          {
+            path: "/admin/owners",
+            element: <AdminOwners />,
+          },
+          {
+            path: "/admin/tenants",
+            element: <AdminTenants />,
+          },
         ],
       },
     ],
@@ -95,7 +129,7 @@ const router = createBrowserRouter([
           },
           {
             path: "/owner/maintenance",
-            element: <OwnerMaintenance/>
+            element: <OwnerMaintenance />
           },
         ],
       },

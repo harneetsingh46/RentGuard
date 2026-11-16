@@ -30,6 +30,19 @@ export const AuthProvider = ({ children }) => {
         return loggedInUser;
     };
 
+    // Admin email and password login
+    const adminLogin = async (email, password) => {
+        const response = await apiClient.post("/admin/login", {
+            email,
+            password,
+        });
+
+        const loggedInAdmin = response.data.data;
+        setUser(loggedInAdmin);
+
+        return loggedInAdmin;
+    };
+
     // Get currently logged-in user
     const getUser = async () => {
         try {
@@ -63,6 +76,7 @@ export const AuthProvider = ({ children }) => {
         setUser,
         requestOtp,
         verifyOtp,
+        adminLogin,
         logout,
         loading,
         isAuthenticated,
