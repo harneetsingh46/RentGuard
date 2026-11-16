@@ -121,15 +121,15 @@ const AdminLayout = () => {
                         onClick={closeMenu}
                         className="flex min-w-0 items-center gap-2"
                     >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-yellow-300 text-lg font-semibold text-black sm:h-10 sm:w-10 sm:text-2xl">
+                        <span className="flex h-6 w-7 shrink-0 items-center justify-center rounded-lg bg-yellow-300 text-lg font-semibold text-black sm:h-10 sm:w-10 sm:text-2xl">
                             R
                         </span>
 
-                        <span className="truncate text-lg font-semibold sm:text-2xl">
+                        <span className="truncate text-lg font-medium sm:text-2xl">
                             RentGuard
                         </span>
 
-                        <span className="hidden rounded-md bg-yellow-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-yellow-800 sm:inline-block">
+                        <span className="hidden rounded-sm bg-yellow-200 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-black sm:inline-block">
                             Admin
                         </span>
                     </NavLink>
