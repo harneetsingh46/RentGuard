@@ -1,252 +1,415 @@
 # RentGuard
 
-A rental management platform for property owners and tenants. Owners manage properties, units, tenants, bills and documents. Tenants sign in with an email OTP, view and pay their bills online, raise maintenance complaints, and request move-out.
+RentGuard is a rental management platform designed to simplify property management for property owners and tenants. Owners can manage properties, units, tenants, bills, payments, documents, rental applications and maintenance requests. Tenants can register, browse available rentals, apply for properties, pay bills online and manage their tenancy.
 
-**Live app:** https://rent-guard-1.vercel.app
-**API docs (Swagger):** `/api-docs` on the backend (through the app: `/api/api-docs`)
+**Live Application:** https://rent-guard-1.vercel.app  
+**API Documentation:** `/api-docs` on the backend (through the app: `/api/api-docs`)
 
 ---
 
 ## Features
 
-### Owners
-- Sign up and sign in with an email OTP (no passwords).
-- Create and manage **properties** and **units** (available, occupied, maintenance).
-- Register **tenants** into units and view active tenants and tenant history.
-- Create and edit **bills** for tenants (rent, electricity, water and other charges) with due dates.
-- See **payments** per property and download **PDF receipts**.
-- Approve or reject tenant **move-out requests**. Approval is blocked while the tenant has unpaid or pending bills.
-- Upload and manage **documents** for a property or for a tenant.
-- Review **maintenance complaints** and update their status.
-- Owner dashboard with units, tenants and collection summary.
+### 1. Authentication & Registration
+- Separate registration flows for property owners and tenants.
+- Owner registration with username, email, phone number, Aadhaar and PAN details.
+- Tenant self-registration with personal and contact information.
+- Passwordless authentication using email OTP.
+- Role-based login for owners and tenants.
+- Secure session management using JWT and httpOnly cookies.
+- OTP verification and rate limiting.
 
-### Tenants
-- Sign in with an email OTP.
-- View unpaid bills, select the bills to pay and pay online with **Razorpay**.
-- Payment history and **PDF receipts**.
-- Upload and download personal **documents**.
-- Raise and track **maintenance complaints**.
-- Submit a **move-out request**.
-- Update profile and profile picture.
-- Email notifications for tenancy and payment events.
+### 2. Owner Features
+- Create, view, update and manage properties.
+- Create and manage property units.
+- Track unit availability: Available, Occupied and Maintenance.
+- Register and manage tenants.
+- View active tenants and previous tenant history.
+- Review tenant rental applications.
+- Approve or reject rental applications.
+- Create and manage tenant bills.
+- Manage rent, electricity, water and other charges.
+- View payment activity and download PDF receipts.
+- Upload and manage property and tenant documents.
+- View and manage maintenance complaints.
+- Update complaint status and add owner remarks.
+- Owner dashboard with property, unit, tenant and collection summaries.
 
-### Platform
-- Role-based access (owner, tenant) with session cookies that end immediately on move-out.
-- Rate-limited OTP login and registration.
-- Bills are **reserved** for 15 minutes while an order is being paid, so the same bill cannot be paid twice.
-- Contact form, backend health check and Swagger documentation.
+### 3. Tenant Features
+- Register as a tenant independently.
+- Browse available rental properties and units.
+- View property details, address, rent, unit type and available units.
+- View property owner information.
+- Apply for available rental units.
+- Track rental application status.
+- Accept or decline approved rental offers.
+- View unpaid bills.
+- Select multiple bills for combined payment.
+- Pay bills securely through Razorpay.
+- View recent transactions and payment history.
+- View and download PDF payment receipts.
+- Upload and download personal documents.
+- Submit maintenance complaints with title, category, priority, description and optional photo.
+- Track maintenance complaint status.
+- Update profile information and profile picture.
+- Submit move-out requests.
+
+### 4. Payment Management
+- Razorpay payment gateway integration.
+- Multiple bill selection and combined checkout.
+- Automatic bill reservation during active checkout.
+- Server-side payment signature verification.
+- Payment confirmation through Razorpay.
+- Transaction history for tenants.
+- Payment records and receipts.
+- PDF receipt generation and download.
+- Payment confirmation email notifications.
+- Checkout dismissal handling with a retry flow.
+
+### 5. Maintenance Management
+- Tenants can submit maintenance complaints.
+- Complaints are automatically associated with the tenant, owner, property and unit.
+- Optional photo upload through Cloudinary.
+- Owners receive email notifications for new complaints.
+- Owners can update complaint status:
+  - Pending
+  - In Progress
+  - Resolved
+  - Rejected
+- Owners can add remarks to maintenance complaints.
+- Tenants can track complaint progress.
+
+### 6. Document Management
+- Owners can upload property-level documents.
+- Owners can upload documents for individual tenants.
+- Tenants can upload personal documents.
+- View and download uploaded documents.
+- Delete documents where permitted.
+- Cloudinary integration for file storage.
+
+### 7. Platform Features
+- Role-based access control.
+- Protected API routes.
+- Secure session cookies.
+- Rate-limited authentication and registration.
+- Email notifications.
+- Contact form.
+- Backend health-check endpoint.
+- Swagger API documentation.
+- Responsive UI.
+- Light and dark theme support.
 
 ---
 
-## Tech stack
+## Technology Stack
 
-| Layer | Technology |
+| Layer | Technologies |
 |---|---|
-| Frontend | React, Vite, Tailwind CSS, React Router, Axios, React Hot Toast, Lucide icons |
-| Backend | Node.js, Express 5, Mongoose |
-| Database | MongoDB (a replica set is required, see Setup) |
-| Auth | Email OTP (HMAC-hashed, 5 minutes), JWT in an httpOnly cookie |
-| Payments | Razorpay (order, signature verification, payment fetch) |
-| Email | Brevo transactional email API |
-| Files | Cloudinary and Multer for uploads, PDFKit for receipts |
-| Hosting | Vercel (frontend), Render (backend) |
+| Frontend | React.js, Vite |
+| Styling | Tailwind CSS |
+| Routing | React Router |
+| API Integration | Axios |
+| Notifications | React Hot Toast |
+| Icons | Lucide React |
+| Backend | Node.js, Express.js |
+| Database | MongoDB |
+| ODM | Mongoose |
+| Authentication | JWT, Email OTP |
+| Payment Gateway | Razorpay |
+| Email Service | Brevo |
+| File Storage | Cloudinary |
+| File Uploads | Multer |
+| PDF Generation | PDFKit |
+| Frontend Hosting | Vercel |
+| Backend Hosting | Render |
 
 ---
 
-## Architecture and deployment
+## Application Architecture
 
+```text
+                 ┌──────────────────────┐
+                 │       Users          │
+                 │   Owner / Tenant     │
+                 └──────────┬───────────┘
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │    React Frontend    │
+                 │      Vercel          │
+                 └──────────┬───────────┘
+                            │
+                       API Requests
+                            │
+                            ▼
+                 ┌──────────────────────┐
+                 │    Express Backend   │
+                 │       Render         │
+                 └──────────┬───────────┘
+                            │
+          ┌─────────────────┼──────────────────┐
+          │                 │                  │
+          ▼                 ▼                  ▼
+   ┌────────────┐    ┌────────────┐     ┌────────────┐
+   │  MongoDB   │    │  Razorpay  │     │ Cloudinary │
+   │  Database  │    │  Payments  │     │ File Store │
+   └────────────┘    └────────────┘     └────────────┘
+                            │
+                            ▼
+                     ┌────────────┐
+                     │   Brevo    │
+                     │   Emails   │
+                     └────────────┘
 ```
-Browser ──► Vercel (React SPA)
-              │  /api/*  (rewrite, see Frontend/vercel.json)
-              ▼
-           Render (Express API) ──► MongoDB, Razorpay, Cloudinary, Brevo
-```
-
-- The frontend calls the API through the relative path `/api`. `Frontend/vercel.json` rewrites `/api/*` to the Render service and sends every other path to `index.html` (single-page app).
-- Because requests go through the Vercel domain, the session cookie is first-party.
-- The backend allows CORS only for `https://rent-guard-1.vercel.app`.
-- `GET /` on the backend returns a health response.
-
-### Deploy the frontend (Vercel)
-1. Import the repository and set the **root directory** to `Frontend`.
-2. Framework preset: Vite. Build command `npm run build`, output `dist`.
-3. Add the environment variable `VITE_RAZORPAY_KEY_ID`.
-4. Update the Render URL in `Frontend/vercel.json` if the backend URL changes.
-
-### Deploy the backend (Render)
-1. Create a **Web Service** from the repository with root directory `Backend`.
-2. Build command `npm install`, start command `npm start`.
-3. Add the environment variables listed below.
-4. Set `NODE_ENV=production` and `TRUST_PROXY=1`, so cookies are secure and rate limits see real client IPs.
-5. On Render's free plan the service sleeps when idle, so the first request after a break can be slow.
 
 ---
 
-## Project structure
+## Project Structure
 
-```
+```text
 RentGuard/
+│
 ├── Backend/
-│   ├── app.js                 Express app, CORS, routes, health check, Swagger
-│   ├── server.js              DB connection and server start
+│   ├── app.js
+│   ├── server.js
+│   │
 │   └── src/
-│       ├── config/            policy (OTP, session, rate limits), db, cloudinary
-│       ├── controllers/       user, tenant, property, unit, bill, order, payment,
-│       │                      propertyDocument, maintenance, dashboard, contact
-│       ├── models/            User, Tenant, Property, Unit, Bill, Order, Payment,
-│       │                      PropertyDocument, Maintenance, Otp
-│       ├── routes/            one router per controller
-│       └── utils/             auth/session, OTP, rate limiters, email, receipts,
-│                              cleanup job
+│       ├── config/
+│       │
+│       ├── controllers/
+│       │   ├── user.controller.js
+│       │   ├── tenant.controller.js
+│       │   ├── property.controller.js
+│       │   ├── unit.controller.js
+│       │   ├── bill.controller.js
+│       │   ├── order.controller.js
+│       │   ├── payment.controller.js
+│       │   ├── maintenance.controller.js
+│       │   └── dashboard.controller.js
+│       │
+│       ├── models/
+│       │
+│       ├── routes/
+│       │
+│       └── utils/
+│
 ├── Frontend/
-│   ├── vercel.json
+│   ├── public/
+│   │
 │   └── src/
-│       ├── ApiClient/         Axios instance (baseURL /api)
-│       ├── context/           AuthContext
-│       ├── common/            layouts and shared components
-│       └── pages/             auth, Owner, Tenant, About, Contact, Hero
-└── PROJECT_SPEC.md            design decisions, rules and status
+│       ├── ApiClient/
+│       ├── common/
+│       ├── context/
+│       │
+│       └── pages/
+│           ├── auth/
+│           ├── Owner/
+│           ├── Tenant/
+│           ├── About/
+│           ├── Contact/
+│           └── Hero/
+│
+└── PROJECT_SPEC.md
 ```
 
 ---
 
-## Getting started (local)
+## Getting Started
 
 ### Prerequisites
-- Node.js 18 or later
-- A MongoDB **replica set** (MongoDB Atlas works). Order creation and payment verification use transactions, which a standalone local `mongod` does not support.
-- Accounts and keys for Razorpay (test mode), Cloudinary and Brevo
 
-### 1. Clone and install
+- Node.js 18 or later.
+- MongoDB replica set (MongoDB Atlas recommended).
+- Razorpay account and API credentials.
+- Cloudinary account.
+- Brevo account and API key.
+
+### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/harneetsingh46/RentGuard.git
+
 cd RentGuard
-cd Backend && npm install
-cd ../Frontend && npm install
 ```
 
-### 2. Environment variables
+### 2. Install Backend Dependencies
 
-**`Backend/.env`**
+```bash
+cd Backend
+npm install
+```
 
-| Variable | Purpose |
-|---|---|
-| `PORT` | Port for the API (for example `5000`) |
-| `MONGO_URL` | MongoDB connection string (replica set) |
-| `JWT_SECRET_KEY` | Secret for session tokens |
-| `OTP_SECRET_KEY` | Secret used to hash OTPs |
-| `NODE_ENV` | `development` or `production` |
-| `TRUST_PROXY` | `1` when behind a proxy (Render) |
-| `BREVO_API_KEY` | Brevo API key for emails |
-| `BREVO_FROM_EMAIL` | Verified sender address in Brevo |
-| `RAZORPAY_KEY_ID` | Razorpay key id |
-| `RAZORPAY_KEY_SECRET` | Razorpay key secret |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
-| `CLOUDINARY_API_KEY` | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+### 3. Install Frontend Dependencies
 
-**`Frontend/.env`**
+```bash
+cd ../Frontend
+npm install
+```
 
-| Variable | Purpose |
-|---|---|
-| `VITE_RAZORPAY_KEY_ID` | Razorpay key id (public) |
+### 4. Configure Environment Variables
 
-Never commit `.env` files or secrets.
+Create a `.env` file inside the `Backend` directory.
 
-### 3. Point the frontend at your local API
-The frontend calls `/api`, which on Vercel is rewritten to Render. For local development add a proxy to `Frontend/vite.config.js`:
+```env
+PORT=5000
+MONGO_URL=your_mongodb_connection_string
+
+JWT_SECRET_KEY=your_jwt_secret
+OTP_SECRET_KEY=your_otp_secret
+
+NODE_ENV=development
+TRUST_PROXY=0
+
+BREVO_API_KEY=your_brevo_api_key
+BREVO_FROM_EMAIL=your_verified_sender_email
+
+RAZORPAY_KEY_ID=your_razorpay_key_id
+RAZORPAY_KEY_SECRET=your_razorpay_key_secret
+
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+```
+
+Create a `.env` file inside the `Frontend` directory.
+
+```env
+VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
+```
+
+**Important:** Never commit environment files, API keys or secrets to GitHub.
+
+### 5. Configure Frontend API Proxy
+
+In `Frontend/vite.config.js`, configure the local backend proxy:
 
 ```js
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:5000", // your PORT
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
+server: {
+  proxy: {
+    "/api": {
+      target: "http://localhost:5000",
+      changeOrigin: true,
+      rewrite: (path) => path.replace(/^\/api/, ""),
     },
   },
-});
+},
 ```
-With the proxy, the browser talks only to the Vite server, so the production-only CORS setting is not involved.
 
-### 4. Run
+Keep this inside your existing Vite configuration.
+
+### 6. Run the Backend
+
 ```bash
-# terminal 1
-cd Backend && npm run dev
-
-# terminal 2
-cd Frontend && npm run dev
+cd Backend
+npm run dev
 ```
-Open the URL printed by Vite. In development the OTP email is sent through Brevo, so a valid `BREVO_API_KEY` and sender are needed to sign in.
+
+### 7. Run the Frontend
+
+Open another terminal:
+
+```bash
+cd Frontend
+npm run dev
+```
+
+Open the local URL provided by Vite.
 
 ---
 
-## Authentication flow
+## Main Application Workflows
 
-1. The user enters their email and requests an OTP. The reply is the same whether or not the email is registered.
-2. The OTP is 6 digits, stored only as an HMAC hash, valid for 5 minutes, single use, and locked after 5 wrong attempts.
-3. If one email belongs to several accounts (for example an owner and a tenant), the user chooses which one to enter.
-4. A session cookie is issued: 1 day for owners, 7 days for tenants. Move-out or an account change ends the session at once.
-5. Unverified owner signups are deleted after 24 hours if they own no property.
+### Tenant Rental Application Workflow
 
-## Payment flow
+1. Tenant creates an account.
+2. Tenant logs in using email OTP.
+3. Tenant browses available properties and units.
+4. Tenant selects a unit and submits a rental application.
+5. Owner reviews the application.
+6. Owner approves or rejects the application.
+7. Tenant accepts or declines an approved offer.
+8. On acceptance, the tenancy is activated and the unit becomes occupied.
 
-1. The tenant selects unpaid bills and creates an **order**. The selected bills are reserved inside a transaction and the order expires after 15 minutes.
-2. The backend creates a Razorpay order for the total.
-3. After checkout the backend verifies the signature, fetches the payment from Razorpay, checks order id, currency, amount and captured status, then marks the bills and order paid in one transaction. Repeating the request is safe.
-4. The tenant and the owner can download a PDF receipt, and confirmation emails are sent.
+### Bill Payment Workflow
+
+1. Owner creates bills for the tenant.
+2. Tenant views unpaid bills.
+3. Tenant selects one or multiple bills.
+4. Backend creates an order and reserves the selected bills.
+5. Tenant completes payment using Razorpay.
+6. Backend verifies the payment.
+7. Payment is recorded and bills are updated.
+8. Tenant can view the transaction and download the PDF receipt.
+
+### Maintenance Workflow
+
+1. Tenant submits a maintenance complaint.
+2. Complaint is linked to the relevant property, unit and owner.
+3. Optional complaint photo is uploaded.
+4. Owner receives an email notification.
+5. Owner reviews the complaint and updates its status.
+6. Tenant tracks the complaint status.
 
 ---
 
-## API overview
+## API Documentation
 
-| Prefix | Main endpoints |
+Swagger documentation is available through:
+
+```text
+/api-docs
+```
+
+Main API modules include:
+
+| Module | Functionality |
 |---|---|
-| `/auth` | `POST /request-otp`, `POST /verify-otp`, `GET /me`, `POST /logout` |
-| `/user` | `POST /register` (owner), `GET /get-user`, `PUT /update-profile` |
-| `/property` | `POST /`, `GET /`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
-| `/property/:propertyId/units` | create, list, get, update, delete units |
-| `/property/:propertyId/...` | `POST /units/:unitId/tenants` (register tenant), `GET /tenants`, `GET /tenants/history`, `GET`/`PUT /tenants/:tenantId`, `GET /move-out-requests`, `PATCH /move-out-requests/:tenantId/approve` |
-| `/tenant` | `GET /me`, `GET /dashboard`, `PUT /me/update`, `POST /me/profile-picture`, `POST`/`GET /me/move-out-request`, `POST /logout` |
-| `/bill` | `POST /:propertyId/units/:unitId/tenants/:tenantId`, `GET /:propertyId`, `GET`/`PUT /:propertyId/:billId`, `GET /:propertyId/:billId/receipt` |
-| `/order` | `GET /unpaid-bills`, `POST /create`, `GET /my-orders` |
-| `/payment` | `POST /:orderId/order`, `POST /verify`, `GET /my-payments` (+ receipt), `GET /property/:propertyId` (+ receipts) |
-| `/document` | owner and tenant upload, list, download and delete (`/mine` for the tenant's own documents) |
-| `/maintenance` | `GET /my-complaints`, `GET /owner-complaints`, `GET /complaint/:id`, `PATCH /complaint/:id/status` |
-| `/dashboard` | `GET /owner` |
-| `/contact` | `POST /` |
-
-Full request and response details are in Swagger at `/api-docs`.
+| Authentication | Registration, OTP login, verification and logout |
+| User | Owner profile and account management |
+| Tenant | Tenant registration, profile and tenancy management |
+| Property | Property CRUD operations |
+| Unit | Unit management |
+| Rental Request | Rental applications and approval workflow |
+| Bill | Tenant bill creation and management |
+| Order | Bill selection and payment order creation |
+| Payment | Razorpay verification, transactions and receipts |
+| Document | Document upload, download and management |
+| Maintenance | Complaint submission and status management |
+| Dashboard | Owner dashboard statistics |
+| Contact | Contact form submissions |
 
 ---
 
-## Data model
+## Security and Important Notes
 
-- **User**: owners only (username, email, phone, verification and session version).
-- **Tenant**: one record per tenancy (owner, property, unit, contact details, move-in and move-out dates, move-out request). A returning tenant gets a new record and the old one stays as history.
-- **Property**, **Unit**: owned properties and their units.
-- **Bill**: a charge for a tenant, with a payment status (unpaid, reserved, paid).
-- **Order**: the bills selected for one payment, with an expiry.
-- **Payment**: the Razorpay payment for an order.
-- **PropertyDocument**, **Maintenance**, **Otp**.
+- Passwordless OTP authentication.
+- JWT authentication using httpOnly cookies.
+- Role-based authorization.
+- OTP rate limiting.
+- Server-side Razorpay payment verification.
+- MongoDB transactions for payment settlement.
+- Aadhaar and PAN values must not be exposed in API responses or logs.
+- Never commit secrets or environment files.
+- A MongoDB replica set is required for transaction-based operations.
 
 ---
 
-## Known limitations and roadmap
+## Deployment
 
-- The Razorpay **webhook** is currently disabled, so a payment is recorded only when the checkout returns to the app.
-- Pending orders are not yet cancelled or released automatically when abandoned or expired, and there is no failed-payment retry rule.
-- Monthly reports, cash or partial payments, and overdue handling are not built yet.
-- The legacy `Rent` model still exists and is not used by the payment flow.
-- Local development needs the Vite proxy above, because the CORS origin is fixed to the production domain.
+| Service | Platform |
+|---|---|
+| Frontend | Vercel |
+| Backend | Render |
+| Database | MongoDB Atlas |
+| Payments | Razorpay |
+| Email | Brevo |
+| File Storage | Cloudinary |
 
-More detail on decisions, rules and status is in [`PROJECT_SPEC.md`](./PROJECT_SPEC.md).
+**Live Application:** https://rent-guard-1.vercel.app
 
 ---
 
 ## Author
 
-Built by [harneetsingh46](https://github.com/harneetsingh46).
+**Harneet Singh**
+
+GitHub: https://github.com/harneetsingh46
