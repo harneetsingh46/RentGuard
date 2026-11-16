@@ -14,7 +14,7 @@ const Navbar = () => {
     `relative text-sm p-2 rounded bg-white/0 font-semibold transition-colors duration-200 text-black dark:text-white hover:bg-yellow-300 dark:hover:bg-yellow-300 dark:hover:text-black `
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/10 backdrop-blur-xs font-['Inter','Segoe_UI',sans-serif] shadow-md transition-colors duration-300 dark:border-neutral-800 dark:bg-neutral-950  dark:shadow-2xl ">
+    <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/10 backdrop-blur-xs font-['Inter','Segoe_UI',sans-serif] shadow-md transition-colors duration-300 dark:border-neutral-800 dark:bg-[#1B1B1B]/95  dark:shadow-2xl ">
       <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between px-4 py-4 sm:px-6 md:px-10">
         {/* Logo */}
         <Link
