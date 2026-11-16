@@ -485,7 +485,116 @@ export const sendPaymentConfirmationEmails = async ({
 };
 
 // ==========================================
-// 5. CONTACT FORM EMAIL
+// RENTAL APPLICATION NOTIFICATIONS
+// ==========================================
+
+export const sendRentalApplicationNotification = async ({
+  event,
+  tenantEmail,
+  tenantName,
+  ownerEmail,
+  ownerName,
+  propertyName,
+  propertyAddress,
+  unitName,
+  rent,
+  moveInDate,
+  message,
+  rejectionReason,
+}) => {
+  const templates = {
+    submitted: {
+      subject: "RentGuard - New Rental Application",
+      tenantText: "Your rental application has been submitted successfully.",
+      ownerText: `A new rental application has been submitted by ${escapeHtml(tenantName)}.`,
+    },
+    approved: {
+      subject: "RentGuard - Your Rental Application Was Approved",
+      tenantText: "Good news! The property owner approved your application. Please log in to RentGuard to confirm or decline the lease offer.",
+      ownerText: `You approved the rental application from ${escapeHtml(tenantName)}.`,
+    },
+    rejected: {
+      subject: "RentGuard - Rental Application Update",
+      tenantText: "The property owner has declined your rental application.",
+      ownerText: `You declined the rental application from ${escapeHtml(tenantName)}.`,
+    },
+    accepted: {
+      subject: "RentGuard - Lease Confirmed",
+      tenantText: "You have accepted the rental offer. Your tenancy is now active.",
+      ownerText: `${escapeHtml(tenantName)} accepted your rental offer. The unit is now occupied.`,
+    },
+    declined: {
+      subject: "RentGuard - Rental Offer Declined",
+      tenantText: "You declined the rental offer.",
+      ownerText: `${escapeHtml(tenantName)} declined the rental offer.`,
+    },
+    cancelled: {
+      subject: "RentGuard - Rental Application Cancelled",
+      tenantText: "Your rental application was cancelled.",
+      ownerText: `${escapeHtml(tenantName)} cancelled their rental application.`,
+    },
+  };
+
+  const template = templates[event];
+  if (!template) {
+    console.error("Unsupported rental application email event:", event);
+    return null;
+  }
+
+  const safeDate = moveInDate
+    ? new Date(moveInDate).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "Not specified";
+  const safeAmount = rent === undefined || rent === null
+    ? "Not specified"
+    : `₹${Number(rent).toLocaleString("en-IN")}`;
+
+  const details = `
+    <div style="background:#f8fafc;padding:16px;border-radius:8px;margin:20px 0;">
+      <p><strong>Tenant:</strong> ${escapeHtml(tenantName || "Tenant")}</p>
+      <p><strong>Property:</strong> ${escapeHtml(propertyName || "N/A")}</p>
+      <p><strong>Address:</strong> ${escapeHtml(propertyAddress || "N/A")}</p>
+      <p><strong>Unit:</strong> ${escapeHtml(unitName || "N/A")}</p>
+      <p><strong>Monthly rent:</strong> ${escapeHtml(safeAmount)}</p>
+      <p><strong>Proposed move-in:</strong> ${escapeHtml(safeDate)}</p>
+      ${message ? `<p><strong>Applicant message:</strong><br>${escapeHtml(message).replace(/\\n/g, "<br>")}</p>` : ""}
+      ${rejectionReason ? `<p><strong>Reason:</strong> ${escapeHtml(rejectionReason)}</p>` : ""}
+    </div>
+  `;
+
+  const baseStyle = "font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:25px;color:#333;line-height:1.6;";
+  const emails = [];
+
+  if (tenantEmail) {
+    emails.push(sendEmail({
+      to: tenantEmail,
+      subject: template.subject,
+      html: `<div style="${baseStyle}"><h2 style="color:#d4a017;">RentGuard</h2><p>Hello ${escapeHtml(tenantName || "Tenant")},</p><p>${template.tenantText}</p>${details}<p>Thank you for using RentGuard.</p></div>`,
+    }));
+  }
+
+  if (ownerEmail) {
+    emails.push(sendEmail({
+      to: ownerEmail,
+      subject: template.subject,
+      html: `<div style="${baseStyle}"><h2 style="color:#d4a017;">RentGuard</h2><p>Hello ${escapeHtml(ownerName || "Property Owner")},</p><p>${template.ownerText}</p>${details}<p>Please log in to your RentGuard dashboard to manage this application.</p></div>`,
+    }));
+  }
+
+  const results = await Promise.allSettled(emails);
+  results.forEach((result) => {
+    if (result.status === "rejected") {
+      console.error("Rental application notification email failed:", result.reason);
+    }
+  });
+  return results;
+};
+
+// ==========================================
+// 6. CONTACT FORM EMAIL
 // ==========================================
 
 export const sendContactEmail = async ({ name, email, topic, message }) => {
