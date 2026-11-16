@@ -50,27 +50,19 @@ const AdminLogin = () => {
     };
 
     return (
-        <main className="flex min-h-screen w-full items-center justify-center bg-[#f4f6f9] px-4 py-8 text-black dark:bg-[#111111] dark:text-white">
+        <main className="flex h-screen w-full items-center justify-center overflow-hidden bg-[#f4f6f9] px-4 py-4 text-black dark:bg-[#111111] dark:text-white">
             <div className="w-full max-w-md">
 
                 <div className="mb-8 text-center">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400">
-                        RentGuard
-                    </p>
-
                     <h1 className="font-serif text-3xl font-medium tracking-tight sm:text-4xl">
                         Admin Portal
                     </h1>
-
-                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                        Sign in to manage and monitor RentGuard.
-                    </p>
                 </div>
 
                 <div className="border border-gray-200 bg-white p-6 shadow-sm dark:border-[#343434] dark:bg-[#1b1b1b] sm:p-8">
-                    <div className="mb-6">
+                    <div className="mb-6 items-center">
                         <h2 className="text-xl font-semibold">
-                            Welcome back
+                            Welcome back !
                         </h2>
 
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
