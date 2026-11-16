@@ -60,7 +60,7 @@ const validateOwnerSignup = (values) => {
 
     if (!values.aadhaarNumber.trim()) {
         errors.aadhaarNumber = "Aadhaar number is required.";
-    } else if (!/^\\d{12}$/.test(aadhaar)) {
+    } else if (!/^\d{12}$/.test(aadhaar)) {
         errors.aadhaarNumber = "Enter a valid 12-digit Aadhaar number.";
     }
 
@@ -120,7 +120,13 @@ const Signup = () => {
 
     const handleOwnerChange = (e) => {
         const { name, value } = e.target;
-        const updated = { ...ownerData, [name]: value };
+        let formattedValue = value;
+        if (name === "aadhaarNumber") {
+            formattedValue = value.replace(/\D/g, "").slice(0, 12);
+        } else if (name === "panNumber") {
+            formattedValue = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
+        }
+        const updated = { ...ownerData, [name]: formattedValue };
         setOwnerData(updated);
         setErrorMessage("");
 
@@ -351,7 +357,7 @@ const Signup = () => {
                                     placeholder="ABCDE1234F" className={inputClass("panNumber")}
                                 />
                                 {fieldErrors.panNumber && <p className={fieldErrorClass}>{fieldErrors.panNumber}</p>}
-                            </div>                            </div>
+                            </div>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 sm:gap-y-3">
