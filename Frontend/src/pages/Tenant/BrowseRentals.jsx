@@ -318,6 +318,11 @@ const BrowseRentals = () => {
                             <MapPin className="h-3.5 w-3.5 shrink-0" />
                             {prop.address}
                           </p>
+                          <p className="mt-1 text-xs text-stone-500 dark:text-[#A5A5A5]">
+                            Owner: <span className="font-semibold text-stone-700 dark:text-stone-300">
+                              {prop.owner?.username || "Not available"}
+                            </span>
+                          </p>
                         </div>
                         <span className="rounded-xs bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800">
                           {prop.availableCount} {prop.availableCount === 1 ? "unit" : "units"} available
