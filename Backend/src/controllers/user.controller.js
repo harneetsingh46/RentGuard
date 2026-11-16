@@ -69,13 +69,13 @@ const clearCookieOptions = {
 
 export const register = async (req, res) => {
   try {
-    const { username, email, phone } = req.body;
+    const { username, email, phone, aadhaarNumber, panNumber } = req.body;
 
     // Validate required fields
 
-    if (!username || !email || !phone) {
+    if (!username || !email || !phone || !aadhaarNumber || !panNumber) {
       return res.status(400).json({
-        message: "Username, email and phone are required",
+        message: "Username, email, phone, Aadhaar and PAN are required",
       });
     }
 
@@ -84,7 +84,9 @@ export const register = async (req, res) => {
     if (
       typeof username !== "string" ||
       typeof email !== "string" ||
-      typeof phone !== "string"
+      typeof phone !== "string" ||
+      typeof aadhaarNumber !== "string" ||
+      typeof panNumber !== "string"
     ) {
       return res.status(400).json({
         message: "Invalid registration details",
@@ -94,6 +96,8 @@ export const register = async (req, res) => {
     const normalizedUsername = username.trim().toLowerCase();
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedPhone = phone.trim();
+    const normalizedAadhaar = aadhaarNumber.replace(/\\D/g, "");
+    const normalizedPan = panNumber.trim().toUpperCase();
 
     // Username validation
 
@@ -119,19 +123,29 @@ export const register = async (req, res) => {
       });
     }
 
-    // Check duplicate username, email or phone
+    if (!/^\d{12}$/.test(normalizedAadhaar)) {
+      return res.status(400).json({ message: "Aadhaar number must contain exactly 12 digits." });
+    }
+
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(normalizedPan)) {
+      return res.status(400).json({ message: "Please enter a valid PAN number." });
+    }
+
+    // Check duplicate username, email, phone or identity numbers
 
     const existingUser = await User.findOne({
       $or: [
         { username: normalizedUsername },
         { email: normalizedEmail },
         { phone: normalizedPhone },
+        { aadhaarNumber: normalizedAadhaar },
+        { panNumber: normalizedPan },
       ],
     });
 
     if (existingUser) {
       return res.status(409).json({
-        message: "Username, email or phone already exists",
+        message: "Username, email, phone, Aadhaar or PAN already exists",
       });
     }
 
@@ -141,6 +155,8 @@ export const register = async (req, res) => {
       username: normalizedUsername,
       email: normalizedEmail,
       phone: normalizedPhone,
+      aadhaarNumber: normalizedAadhaar,
+      panNumber: normalizedPan,
       role: "owner",
       isActive: true,
       tokenVersion: 0,
@@ -161,7 +177,7 @@ export const register = async (req, res) => {
   } catch (error) {
     if (error.code === 11000) {
       return res.status(409).json({
-        message: "Username, email or phone already exists",
+        message: "Username, email, phone, Aadhaar or PAN already exists",
       });
     }
 
