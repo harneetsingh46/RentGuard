@@ -156,9 +156,28 @@ export const cancelMyRentalRequest = async (req, res) => {
     request.rejectionReason = "Cancelled by applicant.";
     await request.save();
 
+    const populated = await RentalRequest.findById(request._id)
+      .populate("tenant", "fullName email")
+      .populate("owner", "username email")
+      .populate("property", "propertyName address")
+      .populate("unit", "unitName rent");
+
+    await sendRentalApplicationNotification({
+      event: "cancelled",
+      tenantEmail: populated.tenant?.email,
+      tenantName: populated.tenant?.fullName,
+      ownerEmail: populated.owner?.email,
+      ownerName: populated.owner?.username,
+      propertyName: populated.property?.propertyName,
+      propertyAddress: populated.property?.address,
+      unitName: populated.unit?.unitName,
+      rent: populated.unit?.rent,
+      moveInDate: populated.moveInDate,
+    });
+
     return res.status(200).json({
-      message: "Rental request cancelled successfully.",
-      data: request,
+      message: "Rental request cancelled successfully. An email notification was attempted.",
+      data: populated,
     });
   } catch (error) {
     console.error("Cancel rental request error:", error);
