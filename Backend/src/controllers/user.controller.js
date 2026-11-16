@@ -124,11 +124,15 @@ export const register = async (req, res) => {
     }
 
     if (!/^\d{12}$/.test(normalizedAadhaar)) {
-      return res.status(400).json({ message: "Aadhaar number must contain exactly 12 digits." });
+      return res
+        .status(400)
+        .json({ message: "Aadhaar number must contain exactly 12 digits." });
     }
 
     if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(normalizedPan)) {
-      return res.status(400).json({ message: "Please enter a valid PAN number." });
+      return res
+        .status(400)
+        .json({ message: "Please enter a valid PAN number." });
     }
 
     // Check duplicate username, email, phone or identity numbers
@@ -165,13 +169,15 @@ export const register = async (req, res) => {
     // Registration does not automatically log in
 
     return res.status(201).json({
-      message: "Owner registered successfully. Please login using OTP.",
+      message:
+        "Registration successful! Your account is pending verification. Our team will contact you after reviewing your details. You can log in using OTP.",
       user: {
         _id: user._id,
         username: user.username,
         email: user.email,
         phone: user.phone,
         role: user.role,
+        verificationStatus: user.verificationStatus,
       },
     });
   } catch (error) {
@@ -525,6 +531,14 @@ export const verifyOtp = async (req, res) => {
           email: account.email,
           phone: account.phone,
           role: selectedRole,
+
+          ...(selectedRole === "owner"
+            ? {
+                verificationStatus: account.verificationStatus || "pending",
+                verificationRejectionReason:
+                  account.verificationRejectionReason || null,
+              }
+            : {}),
         },
       });
   } catch (error) {
@@ -553,9 +567,17 @@ export const getUser = async (req, res) => {
         phone: user.phone,
         role,
         isActive: user.isActive,
+
         ...(role === "owner"
-          ? { verifiedAt: user.verifiedAt }
-          : { contactVerified: user.contactVerified }),
+          ? {
+              verifiedAt: user.verifiedAt,
+              verificationStatus: user.verificationStatus || "pending",
+              verificationRejectionReason:
+                user.verificationRejectionReason || null,
+            }
+          : {
+              contactVerified: user.contactVerified,
+            }),
       },
     });
   } catch (error) {

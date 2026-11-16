@@ -55,6 +55,30 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // Admin verification status for property owners
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+      index: true,
+    },
+
+    verificationReviewedAt: {
+      type: Date,
+      default: null,
+    },
+
+    verificationReviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: null,
+    },
+
+    verificationRejectionReason: {
+      type: String,
+      default: null,
+      trim: true,
+    },
 
     // Null until the owner verifies their first OTP
     verifiedAt: {

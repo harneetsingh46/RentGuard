@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./src/utils/swagger.js";
-
+import adminRouter from "./src/routes/admin.route.js";
 import userRouter from "./src/routes/user.route.js";
 import propertyRouter from "./src/routes/property.route.js";
 import unitRouter from "./src/routes/unit.route.js";
@@ -75,6 +75,7 @@ app.get("/", (req, res) => {
 
 // API routes
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/admin/", adminRouter);
 app.use("/user/", userRouter);
 app.use("/property/", propertyRouter);
 app.use("/property/", unitRouter);
