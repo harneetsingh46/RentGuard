@@ -90,7 +90,7 @@ const AdminLayout = () => {
             {/* TOP NAVBAR */}
             <header className="sticky top-0 z-50 w-full border-b border-black/10 bg-white dark:border-[#373737] dark:bg-[#1B1B1B]">
 
-                <div className="flex h-16 items-center justify-between gap-3 px-4 sm:h-20 sm:px-6 lg:px-10">
+                <div className="flex h-16 items-end justify-between gap-3 px-4 sm:h-20 sm:px-6 lg:px-10">
 
                     {/* LOGO */}
                     <NavLink
