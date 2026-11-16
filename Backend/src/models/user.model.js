@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
       select: false,
-      match: /^\\d{12}$/,
+      match: /^\d{12}$/,
     },
 
     panNumber: {
