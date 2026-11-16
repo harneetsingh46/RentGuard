@@ -181,9 +181,6 @@ const AdminDashboard = () => {
                                                 </p>
                                             </div>
 
-                                            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${stat.color}`}>
-                                                RG
-                                            </span>
                                         </div>
 
                                         <div className="mt-5 flex items-center justify-between gap-2">
@@ -214,6 +211,9 @@ const AdminDashboard = () => {
                                 className="flex items-center justify-between gap-4 border border-stone-200 bg-white p-5 transition hover:border-yellow-400 dark:border-neutral-800 dark:bg-neutral-950 sm:p-6"
                             >
                                 <div className="flex items-center gap-4">
+                                    <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-yellow-300 text-black dark:bg-yellow-400/10 dark:text-yellow-300">
+                                        <Users size={22} />
+                                    </span>
                                     <div>
                                         <h3 className="font-medium">
                                             Review Owners
@@ -224,6 +224,7 @@ const AdminDashboard = () => {
                                         </p>
                                     </div>
                                 </div>
+                                <ArrowRight size={19} className="shrink-0" />
                             </Link>
 
                             <Link
