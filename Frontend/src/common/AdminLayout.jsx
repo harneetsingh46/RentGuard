@@ -5,6 +5,7 @@ import {
     ChartNoAxesCombined,
     Users,
     Menu,
+    X,
     ShieldCheck,
 } from "lucide-react";
 
