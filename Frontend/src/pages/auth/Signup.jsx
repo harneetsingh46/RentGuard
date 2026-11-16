@@ -281,7 +281,7 @@ const Signup = () => {
                         </p>
                     </div>
 
-                    <div className="mb-2 grid grid-cols-2 gap-1 rounded-lg bg-black/10 p-1 dark:bg-black/40 sm:mb-3">
+                    <div className="mb-2 grid grid-cols-2 gap-1 rounded-sm bg-black/10 p-1 dark:bg-black/40 sm:mb-3">
                         <button
                             type="button"
                             onClick={() => handleRoleSwitch("owner")}
@@ -425,7 +425,7 @@ const Signup = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="mt-3 w-full rounded-lg bg-yellow-300 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:bg-[#F7C744] disabled:cursor-not-allowed disabled:opacity-60 sm:mt-4 sm:py-3"
+                        className="mt-3 w-full rounded-sm bg-yellow-300 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:bg-[#F7C744] disabled:cursor-not-allowed disabled:opacity-60 sm:mt-4 sm:py-3"
                     >
                         {loading
                             ? "Creating account..."
