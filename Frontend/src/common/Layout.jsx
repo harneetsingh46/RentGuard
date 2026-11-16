@@ -5,16 +5,18 @@ import Footer from "../components/Footer";
 const Layout = () => {
   const { pathname } = useLocation();
   const isSignupPage = pathname === "/signup";
+  const isLoginPage = pathname === "/login";
+  const isAuthPage = isSignupPage || isLoginPage;
 
   return (
-    <div className={isSignupPage ? "flex h-[100svh] flex-col overflow-hidden" : "flex min-h-screen flex-col"}>
+    <div className={isAuthPage ? "flex h-[100svh] flex-col overflow-hidden" : "flex min-h-screen flex-col"}>
       <Navbar />
 
-      <main className={isSignupPage ? "min-h-0 flex-1 overflow-hidden" : "flex"}>
+      <main className={isAuthPage ? "min-h-0 flex-1 overflow-hidden" : "flex"}>
         <Outlet />
       </main>
 
-      {!isSignupPage && <Footer />}
+      {!isAuthPage && <Footer />}
     </div>
   );
 };
