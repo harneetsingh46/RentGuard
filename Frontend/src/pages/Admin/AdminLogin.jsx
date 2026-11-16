@@ -56,7 +56,7 @@ const AdminLogin = () => {
             <div className="w-full max-w-md">
 
                 {/* HEADER */}
-                <div className="mb-6 text-center sm:mb-8">
+                <div className="mb-6 my-2 text-center sm:mb-8">
                     <h1 className="font-serif text-3xl font-medium tracking-tight sm:text-4xl">
                         Admin Portal
                     </h1>
