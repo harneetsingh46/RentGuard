@@ -1,7 +1,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import apiClient from "../../ApiClient/interceptor";
+import {
+  Building2,
+  CheckCircle2,
+  Clock3,
+  Search,
+  FileCheck,
+  AlertCircle,
+  X,
+  UserCheck,
+} from "lucide-react";
 
 const TenantDashboard = () => {
   const [dashboard, setDashboard] = useState(null);
@@ -11,6 +22,9 @@ const TenantDashboard = () => {
   const [submittingMoveOutRequest, setSubmittingMoveOutRequest] = useState(false);
   const [moveOutRequestError, setMoveOutRequestError] = useState("");
   const [approvedOffer, setApprovedOffer] = useState(null);
+  const [myApplications, setMyApplications] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ open: false, request: null });
+  const [processingConfirm, setProcessingConfirm] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,6 +84,7 @@ const TenantDashboard = () => {
 
         if (results[4].status === "fulfilled") {
           const myApps = results[4].value.data.data || [];
+          setMyApplications(myApps);
           const approved = myApps.find((a) => a.status === "Approved");
           setApprovedOffer(approved || null);
         }
@@ -100,6 +115,54 @@ const TenantDashboard = () => {
       );
     } finally {
       setSubmittingMoveOutRequest(false);
+    }
+  };
+
+  const handleConfirmAcceptLease = async (requestToConfirm) => {
+    const target = requestToConfirm || confirmModal.request;
+    if (!target?._id) return;
+
+    try {
+      setProcessingConfirm(true);
+      const res = await apiClient.patch(`/rental-request/${target._id}/accept`);
+      toast.success(
+        res.data.message ||
+          "Congratulations! Lease confirmed. Other applications have been cancelled."
+      );
+      setConfirmModal({ open: false, request: null });
+      await fetchDashboardData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to confirm lease.");
+    } finally {
+      setProcessingConfirm(false);
+    }
+  };
+
+  const handleDeclineOffer = async (requestId) => {
+    if (!window.confirm("Are you sure you want to decline this rental offer?")) return;
+
+    try {
+      setProcessingConfirm(true);
+      await apiClient.patch(`/rental-request/${requestId}/decline`);
+      toast.success("Rental offer declined.");
+      setConfirmModal({ open: false, request: null });
+      await fetchDashboardData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to decline offer.");
+    } finally {
+      setProcessingConfirm(false);
+    }
+  };
+
+  const handleCancelApplication = async (requestId) => {
+    if (!window.confirm("Are you sure you want to cancel this application?")) return;
+
+    try {
+      await apiClient.patch(`/rental-request/${requestId}/cancel`);
+      toast.success("Application cancelled successfully.");
+      await fetchDashboardData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to cancel application.");
     }
   };
 
@@ -172,16 +235,16 @@ const TenantDashboard = () => {
   const unit = dashboard?.unit;
 
   const propertyName =
-    property?.propertyName || property?.name || "Your property";
+    property?.propertyName || property?.name || (unit ? "Property" : "Not assigned");
 
   const unitName =
     unit?.unitName ||
     unit?.unitNumber ||
     unit?.name ||
     unit?.number ||
-    "Unit details";
+    (unit ? "Unit" : "Not assigned");
 
-  const fullAddress = property?.address || "Address not available";
+  const fullAddress = property?.address || (unit ? "Address not available" : "Not currently leasing");
 
   // Calculate total outstanding amount
   const outstandingAmount = useMemo(
@@ -310,11 +373,11 @@ const TenantDashboard = () => {
 
             <div className="min-w-0">
               <p className="text-sm font-medium">
-                {propertyName} · {unitName}
+                {unit ? `${propertyName} · ${unitName}` : "No assigned unit"}
               </p>
 
               <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-[#A5A5A5]">
-                {fullAddress}
+                {unit ? fullAddress : "Not currently leasing a property"}
               </p>
             </div>
           </div>
@@ -380,10 +443,17 @@ const TenantDashboard = () => {
                   Your rental overview
                 </p>
 
-                <span className="inline-flex items-center gap-2 bg-[#3b3420] px-3 py-1.5 text-xs text-[#f9c83d]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#f9c83d]" />
-                  Active tenancy
-                </span>
+                {unit ? (
+                  <span className="inline-flex items-center gap-2 bg-[#3b3420] px-3 py-1.5 text-xs text-[#f9c83d]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#f9c83d]" />
+                    Active tenancy
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-2 bg-stone-800 px-3 py-1.5 text-xs text-stone-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-stone-400" />
+                    No active lease
+                  </span>
+                )}
               </div>
 
               <div className="mt-8">
@@ -397,7 +467,7 @@ const TenantDashboard = () => {
                   <p className="text-xs text-stone-400">Property</p>
 
                   <p className="mt-2 text-base font-medium">
-                    {propertyName}
+                    {unit ? propertyName : "Not assigned"}
                   </p>
                 </div>
 
@@ -405,7 +475,7 @@ const TenantDashboard = () => {
                   <p className="text-xs text-stone-400">Unit</p>
 
                   <p className="mt-2 text-base font-medium">
-                    {unitName}
+                    {unit ? unitName : "Not assigned"}
                   </p>
                 </div>
               </div>
@@ -624,8 +694,9 @@ const TenantDashboard = () => {
             </div>
 
             <p className="mt-3 text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
-              View your rental charges, outstanding bills and payment
-              information.
+              {unit
+                ? "View your rental charges, outstanding bills and payment information."
+                : "Once your rental application is approved and confirmed, your bills and rent schedule will appear here."}
             </p>
 
             {/* Outstanding Bills */}
@@ -645,7 +716,7 @@ const TenantDashboard = () => {
               </p>
 
               <p className="mt-2 text-xs text-stone-500 dark:text-[#A5A5A5]">
-                Total amount awaiting payment.
+                {unit ? "Total amount awaiting payment." : "No outstanding bills (No active lease)."}
               </p>
             </div>
 
@@ -666,18 +737,28 @@ const TenantDashboard = () => {
               </p>
             </div>
 
-            {/* Pay Bills Button */}
-            <Link
-              to="/tenant/bills"
-              className="mt-4 flex w-full items-center justify-center gap-2 bg-[#f9c83d] px-5 py-3.5 text-sm font-medium text-[#171717] transition hover:bg-[#edbb2f]"
-            >
-              Pay Rent & Bills →
-            </Link>
+            {/* Pay Bills / Browse Button */}
+            {unit ? (
+              <Link
+                to="/tenant/bills"
+                className="mt-4 flex w-full items-center justify-center gap-2 bg-[#f9c83d] px-5 py-3.5 text-sm font-medium text-[#171717] transition hover:bg-[#edbb2f]"
+              >
+                Pay Rent & Bills →
+              </Link>
+            ) : (
+              <Link
+                to="/tenant/rentals"
+                className="mt-4 flex w-full items-center justify-center gap-2 bg-[#f9c83d] px-5 py-3.5 text-sm font-medium text-[#171717] transition hover:bg-[#edbb2f]"
+              >
+                Browse Available Properties →
+              </Link>
+            )}
           </aside>
         </div>
 
-        {/* Move-out request */}
-        <section className="mt-5 w-full min-w-0 border border-stone-200 bg-white p-4 sm:mt-7 sm:p-6 dark:border-neutral-800 dark:bg-[#171717] sm:p-6">
+        {/* Move-out request (only applicable when tenant has an active assigned unit) */}
+        {unit && (
+          <section className="mt-5 w-full min-w-0 border border-stone-200 bg-white p-4 sm:mt-7 sm:p-6 dark:border-neutral-800 dark:bg-[#171717] sm:p-6">
           <div className="flex min-w-0 flex-col justify-between gap-3 sm:flex-row sm:items-start">
             <div>
               <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500 dark:text-[#A5A5A5]">
@@ -769,6 +850,7 @@ const TenantDashboard = () => {
             </div>
           )}
         </section>
+        )}
 
         {/* Footer */}
         <footer className="mt-8 flex flex-col justify-between gap-2 border-t border-stone-200 py-5 text-xs text-stone-500 sm:flex-row sm:items-center dark:border-neutral-800 dark:text-[#A5A5A5]">
