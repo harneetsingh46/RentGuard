@@ -273,7 +273,7 @@ const Signup = () => {
                     className="w-full max-h-full overflow-hidden rounded-xs border border-white/20 bg-white/55 p-3 shadow-xl backdrop-blur-md dark:border-[#373737] dark:bg-[#1B1B1B]/95 sm:p-5 lg:p-6"
                 >
                     <div className="mb-2 text-center sm:mb-3">
-                        <h1 className="text-xl font-semibold tracking-tight text-black dark:text-[#F1F0ED] sm:text-2xl lg:text-3xl">
+                        <h1 className="text-xl font-meduim tracking-tight text-black dark:text-[#F1F0ED] sm:text-2xl lg:text-3xl">
                             CREATE AN ACCOUNT
                         </h1>
                         <p className="mt-0.5 text-xs font-medium text-gray-900 dark:text-yellow-300 sm:text-sm">
@@ -285,7 +285,7 @@ const Signup = () => {
                         <button
                             type="button"
                             onClick={() => handleRoleSwitch("owner")}
-                            className={`rounded-xs py-1.5 text-xs font-semibold transition sm:py-2 sm:text-sm ${
+                            className={`rounded-xs py-1.5 text-xs font-meduim transition sm:py-2 sm:text-sm ${
                                 role === "owner"
                                     ? "bg-white text-black shadow dark:bg-neutral-800 dark:text-yellow-400"
                                     : "text-gray-700 hover:text-black dark:text-neutral-400 dark:hover:text-white"
@@ -296,7 +296,7 @@ const Signup = () => {
                         <button
                             type="button"
                             onClick={() => handleRoleSwitch("tenant")}
-                            className={`rounded-xs py-1.5 text-xs font-semibold transition sm:py-2 sm:text-sm ${
+                            className={`rounded-xs py-1.5 text-xs font-meduim transition sm:py-2 sm:text-sm ${
                                 role === "tenant"
                                     ? "bg-white text-black shadow dark:bg-neutral-800 dark:text-yellow-400"
                                     : "text-gray-700 hover:text-black dark:text-neutral-400 dark:hover:text-white"
@@ -425,7 +425,7 @@ const Signup = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="mt-3 w-full rounded-xs bg-yellow-300 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:bg-[#F7C744] disabled:cursor-not-allowed disabled:opacity-60 sm:mt-4 sm:py-3"
+                        className="mt-3 w-full rounded-xs bg-yellow-300 px-4 py-2.5 text-sm font-meduim text-black transition hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:bg-[#F7C744] disabled:cursor-not-allowed disabled:opacity-60 sm:mt-4 sm:py-3"
                     >
                         {loading
                             ? "Creating account..."
@@ -436,7 +436,7 @@ const Signup = () => {
 
                     <p className="mt-2 text-center text-xs font-medium text-black dark:text-[#F1F0ED] sm:mt-3 sm:text-sm">
                         Already have an account?{" "}
-                        <Link to="/login" className="font-semibold hover:underline">Login</Link>
+                        <Link to="/login" className="font-meduim hover:underline">Login</Link>
                     </p>
                 </form>
             </div>
