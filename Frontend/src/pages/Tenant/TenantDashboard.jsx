@@ -10,6 +10,7 @@ const TenantDashboard = () => {
   const [moveOutRequest, setMoveOutRequest] = useState(null);
   const [submittingMoveOutRequest, setSubmittingMoveOutRequest] = useState(false);
   const [moveOutRequestError, setMoveOutRequestError] = useState("");
+  const [approvedOffer, setApprovedOffer] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -30,6 +31,7 @@ const TenantDashboard = () => {
           apiClient.get("/order/unpaid-bills"),
           apiClient.get("/payment/my-payments"),
           apiClient.get("/tenant/me/move-out-request"),
+          apiClient.get("/rental-request/my-requests"),
         ]);
 
         // Dashboard information is required
@@ -64,6 +66,12 @@ const TenantDashboard = () => {
             results[3].reason?.response?.data?.message ||
             "Unable to load your move-out request status."
           );
+        }
+
+        if (results[4].status === "fulfilled") {
+          const myApps = results[4].value.data.data || [];
+          const approved = myApps.find((a) => a.status === "Approved");
+          setApprovedOffer(approved || null);
         }
       } catch (err) {
         console.error("Tenant dashboard error:", err);
@@ -311,6 +319,53 @@ const TenantDashboard = () => {
             </div>
           </div>
         </header>
+
+        {/* Approved Offer Action Banner */}
+        {approvedOffer && (
+          <div className="mb-6 rounded-xs border-2 border-yellow-400 bg-yellow-50 p-5 shadow-md dark:border-yellow-500 dark:bg-yellow-950/40">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-yellow-800 dark:text-yellow-400">
+                  Application Approved!
+                </p>
+                <h2 className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
+                  The owner has approved your rental request for {approvedOffer.unit?.unitName} at {approvedOffer.property?.propertyName}
+                </h2>
+                <p className="mt-1 text-xs text-gray-700 dark:text-gray-300">
+                  Confirm your lease now to activate your tenancy and move in.
+                </p>
+              </div>
+              <Link
+                to="/tenant/rentals"
+                className="inline-flex shrink-0 items-center justify-center rounded-xs bg-yellow-300 px-5 py-2.5 text-xs font-bold text-black hover:bg-yellow-400 shadow"
+              >
+                Review & Confirm Lease &rarr;
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* No active unit / self-registered tenant banner */}
+        {!unit && (
+          <div className="mb-6 rounded-xs border border-stone-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#171717]">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Ready to rent a property?
+                </h2>
+                <p className="mt-1 text-sm text-stone-500 dark:text-[#A5A5A5]">
+                  You don't have an active lease assigned yet. Explore available listings and send a request directly to owners.
+                </p>
+              </div>
+              <Link
+                to="/tenant/rentals"
+                className="inline-flex shrink-0 items-center justify-center rounded-xs bg-yellow-300 px-5 py-2.5 text-xs font-bold text-black hover:bg-yellow-400 shadow"
+              >
+                Browse Available Properties &rarr;
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Main Two Column Layout */}
         <div className="grid min-w-0 grid-cols-1 items-start gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,0.95fr)] xl:gap-7">

@@ -10,6 +10,7 @@ import {
   X,
   UserRound,
   LogOut,
+  Building2,
 } from "lucide-react";
 
 import ThemeToggle from "../components/ThemeToggle";
@@ -29,6 +30,11 @@ const TenantLayout = () => {
       label: "Overview",
       path: "/tenant/dashboard",
       icon: ChartNoAxesCombined,
+    },
+    {
+      label: "Find Rentals",
+      path: "/tenant/rentals",
+      icon: Building2,
     },
     {
       label: "Bills & Transactions",

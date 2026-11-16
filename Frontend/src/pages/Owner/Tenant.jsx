@@ -31,6 +31,9 @@ const Tenant = () => {
   const [tenants, setTenants] = useState([])
   const [history, setHistory] = useState([])
   const [moveOutRequests, setMoveOutRequests] = useState([])
+  const [rentalRequests, setRentalRequests] = useState([])
+  const [processingRentalId, setProcessingRentalId] = useState(null)
+  const [rejectModal, setRejectModal] = useState({ open: false, requestId: null, applicantName: "", reason: "" })
 
   const [approvingRequestId, setApprovingRequestId] = useState(null)
   const [approvalRequest, setApprovalRequest] = useState(null)
@@ -126,6 +129,15 @@ const Tenant = () => {
       setTenants(results.flatMap((item) => item.activeTenants))
       setHistory(results.flatMap((item) => item.pastTenants))
       setMoveOutRequests(results.flatMap((item) => item.requests))
+
+      // Fetch rental requests for owner's properties
+      try {
+        const rentalRequestsRes = await apiClient.get('/rental-request/owner-requests')
+        setRentalRequests(rentalRequestsRes.data.data || [])
+      } catch (reqErr) {
+        console.error('Error fetching rental requests:', reqErr)
+        setRentalRequests([])
+      }
     } catch (err) {
       console.error('Error fetching tenants:', err)
 
@@ -258,6 +270,38 @@ const Tenant = () => {
     }
   }
 
+  // Approve rental application
+  const approveRentalRequest = async (requestId) => {
+    try {
+      setProcessingRentalId(requestId)
+      await apiClient.patch(`/rental-request/${requestId}/approve`)
+      showToast("Rental application approved! The tenant has been notified to confirm.", "success")
+      await getTenants()
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to approve application.", "error")
+    } finally {
+      setProcessingRentalId(null)
+    }
+  }
+
+  // Reject rental application
+  const confirmRejectRentalRequest = async () => {
+    if (!rejectModal.requestId) return
+    try {
+      setProcessingRentalId(rejectModal.requestId)
+      await apiClient.patch(`/rental-request/${rejectModal.requestId}/reject`, {
+        reason: rejectModal.reason.trim(),
+      })
+      showToast("Rental application rejected.", "success")
+      setRejectModal({ open: false, requestId: null, applicantName: "", reason: "" })
+      await getTenants()
+    } catch (err) {
+      showToast(err.response?.data?.message || "Failed to reject application.", "error")
+    } finally {
+      setProcessingRentalId(null)
+    }
+  }
+
   const displayedTenants =
     activeSection === 'history' ? history : tenants
 
@@ -343,11 +387,28 @@ const Tenant = () => {
     )
   }, [moveOutRequests, safeRequestPage])
 
+  const rentalTotalPages = Math.ceil(rentalRequests.length / PAGE_SIZE)
+  const safeRentalPage = Math.min(
+    currentPage,
+    Math.max(rentalTotalPages, 1)
+  )
+
+  const paginatedRentalRequests = useMemo(() => {
+    const startIndex = (safeRentalPage - 1) * PAGE_SIZE
+
+    return rentalRequests.slice(
+      startIndex,
+      startIndex + PAGE_SIZE
+    )
+  }, [rentalRequests, safeRentalPage])
+
   useEffect(() => {
     const totalPages =
       activeSection === 'requests'
         ? Math.ceil(moveOutRequests.length / PAGE_SIZE)
-        : Math.ceil(filteredTenants.length / PAGE_SIZE)
+        : activeSection === 'applications'
+          ? Math.ceil(rentalRequests.length / PAGE_SIZE)
+          : Math.ceil(filteredTenants.length / PAGE_SIZE)
 
     const maxPage = Math.max(totalPages, 1)
 
@@ -359,6 +420,7 @@ const Tenant = () => {
     currentPage,
     filteredTenants.length,
     moveOutRequests.length,
+    rentalRequests.length,
   ])
 
   const selectSearchTenant = (tenant) => {
@@ -629,10 +691,154 @@ const Tenant = () => {
             ).length
           })
         </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setCurrentPage(1)
+            setActiveSection('applications')
+            setError('')
+            setSuccess('')
+          }}
+          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${
+            activeSection === 'applications'
+              ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400'
+              : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+          }`}
+        >
+          Rental Applications ({
+            rentalRequests.filter(
+              (request) => request.status === 'Pending'
+            ).length
+          })
+        </button>
       </div>
 
-      {/* Move-out requests */}
-      {activeSection === 'requests' ? (
+      {/* Applications section */}
+      {activeSection === 'applications' ? (
+        loading ? (
+          <p className="text-gray-600 dark:text-gray-300">
+            Loading rental applications...
+          </p>
+        ) : rentalRequests.length === 0 ? (
+          <div className="rounded-xs border border-gray-200 bg-white p-8 text-center dark:border-stone-800 dark:bg-[#1b1b1b]">
+            <Clock3 className="mx-auto text-gray-400" size={28} />
+
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+              There are no rental applications for your properties right now.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              {paginatedRentalRequests.map((request) => (
+                <article
+                  key={request._id}
+                  className="rounded-xs border border-gray-200 bg-white p-4 shadow-sm dark:border-stone-800 dark:bg-[#1b1b1b] sm:p-5"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {request.tenant?.fullName || "Applicant"}
+                      </h2>
+
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        {request.property?.propertyName || "Property"} · {request.unit?.unitName || "Unit"} (₹{Number(request.unit?.rent || 0).toLocaleString("en-IN")}/mo)
+                      </p>
+                    </div>
+
+                    <span className={`rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${
+                      request.status === "Pending"
+                        ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
+                        : request.status === "Approved"
+                        ? "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400"
+                        : request.status === "Accepted"
+                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400"
+                        : "bg-gray-100 text-gray-700 dark:bg-stone-800 dark:text-stone-300"
+                    }`}>
+                      {request.status === "Approved" ? "Approved · Awaiting Tenant Confirmation" : request.status}
+                    </span>
+                  </div>
+
+                  <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Phone
+                      </dt>
+                      <dd className="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">
+                        {request.tenant?.phone || "—"}
+                      </dd>
+                    </div>
+
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Email
+                      </dt>
+                      <dd className="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+                        {request.tenant?.email || "—"}
+                      </dd>
+                    </div>
+
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Aadhaar Number
+                      </dt>
+                      <dd className="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">
+                        {request.tenant?.aadhaarNumber || "Protected"}
+                      </dd>
+                    </div>
+
+                    <div>
+                      <dt className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        Proposed Move-in
+                      </dt>
+                      <dd className="mt-1 text-sm font-medium text-gray-800 dark:text-gray-200">
+                        {request.moveInDate ? new Date(request.moveInDate).toLocaleDateString() : "Immediate"}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  {request.message && (
+                    <div className="mt-3 rounded bg-gray-50 p-3 text-xs text-gray-700 dark:bg-stone-800/60 dark:text-stone-300">
+                      <span className="font-semibold">Note from applicant:</span> {request.message}
+                    </div>
+                  )}
+
+                  {request.status === "Pending" && (
+                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 pt-3 dark:border-stone-800">
+                      <button
+                        type="button"
+                        onClick={() => setRejectModal({ open: true, requestId: request._id, applicantName: request.tenant?.fullName || "Applicant", reason: "" })}
+                        disabled={processingRentalId === request._id}
+                        className="rounded-xs border border-red-300 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30 disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => approveRentalRequest(request._id)}
+                        disabled={processingRentalId === request._id}
+                        className="inline-flex items-center gap-1.5 rounded-xs bg-yellow-300 px-4 py-1.5 text-xs font-semibold text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <CheckCircle2 size={14} />
+                        {processingRentalId === request._id ? "Approving..." : "Approve Application"}
+                      </button>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+
+            <Pagination
+              currentPage={safeRentalPage}
+              totalItems={rentalRequests.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setCurrentPage}
+            />
+          </>
+        )
+      ) : activeSection === 'requests' ? (
         loading ? (
           <p className="text-gray-600 dark:text-gray-300">
             Loading move-out requests...
@@ -1548,6 +1754,63 @@ const Tenant = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Rental Application Modal */}
+      {rejectModal.open && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onClick={() => {
+            if (!processingRentalId) setRejectModal({ open: false, requestId: null, applicantName: "", reason: "" })
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md rounded-xs border border-gray-200 bg-white p-5 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Reject Rental Application
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Are you sure you want to reject the application from <span className="font-medium text-gray-800 dark:text-white">{rejectModal.applicantName}</span>?
+            </p>
+
+            <div className="mt-4">
+              <label htmlFor="rejectReason" className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                Reason for Rejection <span className="text-gray-400">(optional)</span>
+              </label>
+              <textarea
+                id="rejectReason"
+                rows={3}
+                value={rejectModal.reason}
+                onChange={(e) => setRejectModal(prev => ({ ...prev, reason: e.target.value }))}
+                placeholder="e.g. Unit is already booked or move-in date conflicts."
+                className="mt-1 w-full rounded border border-gray-300 bg-white p-2.5 text-sm outline-none focus:border-yellow-400 dark:border-stone-700 dark:bg-stone-900 dark:text-white"
+              />
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRejectModal({ open: false, requestId: null, applicantName: "", reason: "" })}
+                disabled={Boolean(processingRentalId)}
+                className="rounded-xs border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRejectRentalRequest}
+                disabled={Boolean(processingRentalId)}
+                className="rounded-xs bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {processingRentalId ? "Rejecting..." : "Confirm Reject"}
+              </button>
+            </div>
           </div>
         </div>
       )}

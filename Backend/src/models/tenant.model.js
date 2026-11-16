@@ -2,23 +2,23 @@ import mongoose from "mongoose";
 
 const tenantSchema = new mongoose.Schema(
   {
-    // Owner who created this tenancy
+    // Owner who manages this tenancy (null until request is approved & accepted)
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
     },
 
     property: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Property",
-      required: true,
+      default: null,
     },
 
     unit: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Unit",
-      required: true,
+      default: null,
     },
 
     fullName: {
@@ -29,7 +29,7 @@ const tenantSchema = new mongoose.Schema(
 
     address: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
     },
 
@@ -109,21 +109,22 @@ const tenantSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// One active tenant per unit
+// One active tenant per unit (only when unit is assigned)
 tenantSchema.index(
   { unit: 1 },
   {
     unique: true,
-    partialFilterExpression: { isActive: true },
+    partialFilterExpression: { isActive: true, unit: { $type: "objectId" } },
   },
 );
 
-// Prevent duplicate active Aadhaar under the same owner
+// Prevent duplicate active Aadhaar
 tenantSchema.index(
-  { owner: 1, aadhaarNumber: 1 },
+  { aadhaarNumber: 1 },
   {
     unique: true,
     partialFilterExpression: { isActive: true },
+    name: "unique_active_tenant_aadhaar",
   },
 );
 
@@ -138,12 +139,13 @@ tenantSchema.index(
   },
 );
 
-// Prevent duplicate active phone under the same owner
+// Prevent duplicate active phone
 tenantSchema.index(
-  { owner: 1, phone: 1 },
+  { phone: 1 },
   {
     unique: true,
     partialFilterExpression: { isActive: true },
+    name: "unique_active_tenant_phone",
   },
 );
 

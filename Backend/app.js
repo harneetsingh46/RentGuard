@@ -18,6 +18,7 @@ import documentRouter from "./src/routes/propertyDocument.routes.js";
 import orderRouter from "./src/routes/order.route.js";
 import maintenanceRouter from "./src/routes/maintenance.route.js";
 import contactRouter from "./src/routes/contact.route.js";
+import rentalRequestRouter from "./src/routes/rentalRequest.route.js";
 
 import { razorpayWebhook } from "./src/controllers/payment.controller.js";
 
@@ -87,5 +88,6 @@ app.use("/document/", documentRouter);
 app.use("/order", orderRouter);
 app.use("/maintenance/", maintenanceRouter);
 app.use("/contact/", contactRouter);
+app.use("/rental-request/", rentalRequestRouter);
 
 export default app;

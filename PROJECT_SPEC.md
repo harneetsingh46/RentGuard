@@ -21,7 +21,7 @@ We are redesigning it:
 8. **Documents:** owners and tenants can both upload (already implemented in the repo; only the login identity changes).
 
 **Current focus:** close the payment gaps (webhook, cancel and expiry release, failure rules), Bill guards, owner payment history, reports and the dashboard.
-**Parked:** tenant registration (see section 6). Do not finalize it until the project owner reopens it.
+**Tenant registration & rental request flow:** implemented (see section 6).
 
 ---
 
@@ -168,22 +168,53 @@ Atomic sequence per year for receipt numbers.
 
 ---
 
-## 6. Tenant registration (PARKED, proposal only)
+## 6. Tenant Self-Registration & Rental Request Workflow (IMPLEMENTED)
 
-Proposed flow: the owner picks an available unit and enters name, address, Aadhaar, email, phone. The server normalizes input (email lowercase; phone 10 digits starting 6 to 9, +91 removed; Aadhaar without spaces or dashes) and checks, in order:
-1. The user is an owner who owns the unit's property.
-2. Input is valid; Aadhaar is 12 digits and does not start with 0 or 1.
-3. The unit is available.
-4. The owner is not using their own email or phone for a tenant.
-5. This owner has no **active** tenant with the same Aadhaar, email or phone.
-6. **Cross-owner contact check:** no active tenancy at another owner has the same email or phone with a **different** Aadhaar (neutral message "contact unavailable").
-7. The unique `{ unit }` index stops two requests racing for one unit.
+Tenants now register themselves rather than owners manually creating tenant accounts. The full end-to-end workflow is:
 
-Then the Tenant record is created, the unit becomes occupied, and the tenant gets an invitation (through the OTP channel).
+1. **Tenant Self-Registration (`POST /tenant/register-self`):**
+   - Tenant selects "Tenant" role on `/signup` and enters:
+     - `fullName` (min 3 chars)
+     - `email` (normalized, lowercase)
+     - `phone` (10-digit Indian mobile starting 6-9)
+     - `aadhaarNumber` (12 numeric digits; stored securely, masked in responses as `XXXX-XXXX-1234`)
+     - `address` (optional current residence)
+   - Tenant record is created with `unit: null`, `property: null`, `owner: null`, `isActive: true`.
+   - Tenant logs in via email OTP.
 
-Proposed **contact confirmation:** a new tenancy is `pending`. At first OTP login the contact holder sees only owner, property and unit, and must Accept or Decline. Decline marks it `declined` so the owner can fix the contact. A returning tenant with the same Aadhaar, email and phone as an earlier confirmed tenancy is confirmed automatically. Editing a contact resets to `pending` and ends the tenant's sessions. A contact is free again once its person has no active tenancy.
+2. **Browse Available Properties & Units (`GET /tenant/available-listings`):**
+   - Logged-in tenant navigates to `/tenant/rentals` ("Find Rentals").
+   - Aggregates all properties that have units with `status === "available"`.
+   - Shows property name, address, available count, unit name, rent (₹/mo), and unit type.
 
-Same person under two owners is allowed. Reuse after move-out is allowed (a new record is created). **Open questions:** see section 13.
+3. **Submit Rental Application (`POST /rental-request`):**
+   - Tenant clicks "Apply to Rent" on an available unit.
+   - Enters target move-in date and optional message for the owner.
+   - Creates a `RentalRequest` record with `status: "Pending"`.
+   - Prevents duplicate pending/approved applications for the same unit.
+
+4. **Owner Review & Approval (`GET /rental-request/owner-requests`, `PATCH /rental-request/:id/approve`):**
+   - Owner views applications under the "Rental Applications" tab in `/owner/tenants`.
+   - Displays applicant name, contact, masked Aadhaar, proposed move-in date, and notes.
+   - Owner clicks "Approve Application": status transitions to `"Approved"`.
+   - Alternatively, owner clicks "Reject" (optional reason provided): status transitions to `"Rejected"`.
+
+5. **Tenant Confirmation & Multi-Offer Cancellation Modal (`PATCH /rental-request/:id/accept`):**
+   - When an application is approved, tenant receives an approval banner and a confirmation modal.
+   - Explains that confirming will activate tenancy and automatically cancel all other pending or approved applications.
+   - Tenant clicks **"Confirm & Accept Lease"**:
+     - Assigns tenant to the unit (`tenant.unit = unitId`, `tenant.property = propId`, `tenant.owner = ownerId`).
+     - Updates unit `status = "occupied"`.
+     - Marks request `status = "Accepted"`.
+     - **Immediately cancels all other pending or approved rental requests by this tenant** (`status = "Cancelled"`).
+     - **Rejects any other competing applicant requests for that same unit** (`status = "Rejected"`).
+     - Tenant dashboard immediately unlocks active tenancy view.
+   - Tenant can also decline an offer via `PATCH /rental-request/:id/decline`.
+
+6. **Owner UX Cleanup in `Owner/Property.jsx`:**
+   - Removed manual "Add Tenant" modal and buttons from available units.
+   - Available units display an "Available for Rent" indicator.
+   - Occupied units retain "View Tenant" for inspecting active tenant details.
 
 ---
 

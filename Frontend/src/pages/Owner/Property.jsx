@@ -15,13 +15,6 @@ const emptyUnit = {
     rent: "",
 };
 
-const emptyTenant = {
-    fullName: "",
-    address: "",
-    aadhaarNumber: "",
-    email: "",
-    phone: "",
-};
 
 const Property = () => {
     // Property state
@@ -42,12 +35,7 @@ const Property = () => {
     const [unitModalOpen, setUnitModalOpen] = useState(false);
     const [isEditingUnit, setIsEditingUnit] = useState(false);
 
-    // tenant state
-    const [tenant, setTenant] = useState(emptyTenant);
-    const [tenantFieldErrors, setTenantFieldErrors] = useState({});
-
-    // Tenant modal state
-    const [tenantModalOpen, setTenantModalOpen] = useState(false);
+    // Tenant details modal state
     const [tenantDetailsOpen, setTenantDetailsOpen] = useState(false);
     const [tenantDetails, setTenantDetails] = useState(null);
     const [tenantDetailsLoading, setTenantDetailsLoading] = useState(false);
@@ -59,7 +47,6 @@ const Property = () => {
     const [submitting, setSubmitting] = useState(false);
     const [, setErrorState] = useState("");
     const [, setUnitErrorState] = useState("");
-    const [, setTenantErrorState] = useState("");
     const [, setSuccessState] = useState("");
 
     // Keep existing validation logic while showing all messages as toast notifications.
@@ -69,10 +56,6 @@ const Property = () => {
     };
     const setUnitError = (message) => {
         setUnitErrorState(message);
-        if (message) toast.error(message);
-    };
-    const setTenantError = (message) => {
-        setTenantErrorState(message);
         if (message) toast.error(message);
     };
     const setSuccess = (message) => {
@@ -441,26 +424,6 @@ const Property = () => {
 
 
 
-    // Tenant form input
-    const handleTenantChange = (e) => {
-        const { name, value } = e.target;
-        setTenant((current) => ({ ...current, [name]: value }));
-        setTenantFieldErrors((current) => ({ ...current, [name]: "" }));
-    };
-
-    // Open add Tenant modal
-
-    const openAddTenantForm = (item) => {
-        if (!item || item.status !== "available") return;
-
-        setSelectedUnit(item);
-        setTenant({ ...emptyTenant });
-        setTenantFieldErrors({});
-        setTenantError("");
-        setSuccess("");
-        setTenantModalOpen(true);
-    };
-
     // Find and show the active tenant assigned to an occupied unit
     const openTenantDetails = async (unitItem) => {
         if (!selectedProperty?._id || !unitItem?._id) return;
@@ -499,91 +462,6 @@ const Property = () => {
         setTenantDetailsOpen(false);
         setTenantDetails(null);
         setTenantDetailsError("");
-    };
-
-    // Close Tenant modal
-    const closeTenantForm = () => {
-        if (submitting) return;
-
-        setTenantModalOpen(false);
-        setTenant({ ...emptyTenant });
-        setTenantFieldErrors({});
-        setSelectedUnit(null);
-        setTenantError("");
-    };
-
-    // Register a tenant for the selected available unit
-    // Register tenant with form validation
-    const handleTenantSubmit = async (e) => {
-        e.preventDefault();
-
-        if (!selectedProperty?._id || !selectedUnit?._id) {
-            toast.error("Please select a property and an available unit first.");
-            return;
-        }
-
-        const formData = {
-            fullName: tenant.fullName.trim(),
-            address: tenant.address.trim(),
-            aadhaarNumber: tenant.aadhaarNumber.trim(),
-            email: tenant.email.trim().toLowerCase(),
-            phone: tenant.phone.trim(),
-        };
-
-        const errors = {};
-        if (!formData.fullName) errors.fullName = "Full name is required.";
-        else if (formData.fullName.length < 2 || formData.fullName.length > 100) {
-            errors.fullName = "Full name must be between 2 and 100 characters.";
-        } else if (formData.fullName === '') {
-            errors.fullName = "Full name cannot be empty";
-        }
-
-        if (!formData.address) errors.address = "Address is required.";
-        else if (formData.address.length < 5 || formData.address.length > 250) {
-            errors.address = "Address must be between 5 and 250 characters.";
-        }
-
-        if (!formData.aadhaarNumber) errors.aadhaarNumber = "Aadhaar number is required.";
-        else if (!/^\d{12}$/.test(formData.aadhaarNumber)) {
-            errors.aadhaarNumber = "Aadhaar number must contain exactly 12 digits.";
-        }
-
-        if (!formData.email) errors.email = "Email is required.";
-        else if (formData.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email)) {
-            errors.email = "Enter a valid email address, such as name@example.com.";
-        }
-
-        if (!formData.phone) errors.phone = "Phone number is required.";
-        else if (!/^[6-9]\d{9}$/.test(formData.phone)) {
-            errors.phone = "Enter a valid 10-digit Indian mobile number.";
-        }
-
-        setTenantFieldErrors(errors);
-        if (Object.keys(errors).length > 0) {
-            toast.error("Please correct the highlighted fields.");
-            return;
-        }
-
-        try {
-            setSubmitting(true);
-            setTenantError("");
-
-            await apiClient.post(
-                `/property/${selectedProperty._id}/units/${selectedUnit._id}/tenants`,
-                formData
-            );
-
-            setTenantModalOpen(false);
-            setTenant({ ...emptyTenant });
-            setTenantFieldErrors({});
-            setSelectedUnit(null);
-            toast.success("Tenant registered successfully!");
-            await getUnits(selectedProperty._id);
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to register tenant.");
-        } finally {
-            setSubmitting(false);
-        }
     };
 
     return (
@@ -838,13 +716,9 @@ const Property = () => {
                                             {/* Actions */}
                                             <div className="flex flex-wrap justify-end gap-1">
                                                 {item.status === "available" && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openAddTenantForm(item)}
-                                                        className="rounded-xs bg-yellow-300 px-3 py-1 text-sm font-medium text-black hover:bg-yellow-400"
-                                                    >
-                                                        Add Tenant
-                                                    </button>
+                                                    <span className="inline-flex items-center rounded-xs bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800">
+                                                        Available for Rent
+                                                    </span>
                                                 )}
                                                 {item.status === "occupied" && (
                                                     <button
@@ -1131,221 +1005,6 @@ const Property = () => {
                 </div>
             )}
 
-            {/* tenant modal */}
-            {tenantModalOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 backdrop-blur-sm sm:p-4"
-                    onClick={closeTenantForm}
-                >
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="tenant-form-title"
-                        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-xs border border-gray-200 bg-white shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b]"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex shrink-0 items-center justify-between border-b border-gray-200 p-4 dark:border-stone-800 sm:p-6">
-                            <div className="min-w-0">
-                                <h2
-                                    id="tenant-form-title"
-                                    className="text-2xl px-0 py-2 font-semibold w-full text-gray-900 dark:text-white"
-                                >
-                                    Add Tenant
-                                </h2>
-
-                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    Unit: {selectedUnit?.unitName}
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={closeTenantForm}
-                                disabled={submitting}
-                                aria-label="Close Tenant form"
-                                className="rounded-sm p-2 text-xl text-gray-500 hover:bg-gray-100 hover:text-black disabled:opacity-50 dark:text-gray-400 dark:hover:bg-yellow-300 dark:hover:text-black"
-                            >
-                                &times;
-                            </button>
-                        </div>
-
-                        <form noValidate onSubmit={handleTenantSubmit} className="min-h-0 overflow-y-auto p-4 sm:p-6 md:p-8 md:pt-5">
-                            <div className="mb-5">
-                                <label
-                                    htmlFor="fullName"
-                                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
-                                >
-                                    Full Name
-                                </label>
-
-                                <input
-                                    id="fullName"
-                                    name="fullName"
-                                    type="text"
-                                    value={tenant.fullName}
-                                    onChange={handleTenantChange}
-                                    placeholder="e.g. Harneet Singh"
-                                    minLength={2}
-                                    maxLength={100}
-                                    required
-                                    disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
-                                />
-                                {tenantFieldErrors.fullName && (
-                                    <p className="mt-1 text-sm text-red-600" role="alert">
-                                        {tenantFieldErrors.fullName}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="mb-6">
-                                <label
-                                    htmlFor="address"
-                                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
-                                >
-                                    Address
-                                </label>
-
-                                <input
-                                    id="address"
-                                    name="address"
-                                    type="text"
-                                    value={tenant.address}
-                                    onChange={handleTenantChange}
-                                    placeholder="Enter tenant's address"
-                                    autoComplete="street-address"
-                                    minLength={5}
-                                    maxLength={250}
-                                    required
-                                    disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
-                                />
-                                {tenantFieldErrors.address && (
-                                    <p className="mt-1 text-sm text-red-600" role="alert">
-                                        {tenantFieldErrors.address}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="mb-6">
-                                <label
-                                    htmlFor="aadhaarNumber"
-                                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
-                                >
-                                    Aadhaar Number
-                                </label>
-
-                                <input
-                                    id="aadhaarNumber"
-                                    name="aadhaarNumber"
-                                    type="text"
-                                    inputMode="numeric"
-                                    pattern="[0-9]{12}"
-                                    maxLength={12}
-                                    value={tenant.aadhaarNumber}
-                                    onChange={(e) => {
-                                        const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 12);
-                                        setTenant((current) => ({
-                                            ...current,
-                                            aadhaarNumber: digitsOnly,
-                                        }));
-                                        setTenantFieldErrors((current) => ({ ...current, aadhaarNumber: "" }));
-                                    }}
-                                    placeholder="Enter 12-digit Aadhaar number"
-                                    required
-                                    disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
-                                />
-                                {tenantFieldErrors.aadhaarNumber && (
-                                    <p className="mt-1 text-sm text-red-600" role="alert">
-                                        {tenantFieldErrors.aadhaarNumber}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="mb-6">
-                                <label
-                                    htmlFor="email"
-                                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
-                                >
-                                    Email
-                                </label>
-
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    value={tenant.email}
-                                    onChange={handleTenantChange}
-                                    placeholder="e.g. example@gmail.com"
-                                    maxLength={254}
-                                    autoComplete="email"
-                                    required
-                                    disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
-                                />
-                                {tenantFieldErrors.email && (
-                                    <p className="mt-1 text-sm text-red-600" role="alert">
-                                        {tenantFieldErrors.email}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="mb-6">
-                                <label
-                                    htmlFor="phone"
-                                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
-                                >
-                                    Phone Number
-                                </label>
-
-                                <input
-                                    id="phone"
-                                    name="phone"
-                                    type="tel"
-                                    inputMode="numeric"
-                                    value={tenant.phone}
-                                    onChange={(e) => {
-                                        const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 10);
-                                        setTenant((current) => ({ ...current, phone: digitsOnly }));
-                                        setTenantFieldErrors((current) => ({ ...current, phone: "" }));
-                                    }}
-                                    placeholder="Enter 10-digit mobile number"
-                                    maxLength={10}
-                                    autoComplete="tel-national"
-                                    required
-                                    disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
-                                />
-                                {tenantFieldErrors.phone && (
-                                    <p className="mt-1 text-sm text-red-600" role="alert">
-                                        {tenantFieldErrors.phone}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                                <button
-                                    type="button"
-                                    onClick={closeTenantForm}
-                                    disabled={submitting}
-                                    className="rounded-xs border border-gray-300 px-5 py-3 font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-yellow-300 dark:text-gray-200 dark:hover:bg-stone-800"
-                                >
-                                    Cancel
-                                </button>
-
-                                <button
-                                    type="submit"
-                                    disabled={submitting}
-                                    className="rounded-xs bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    Save Tenant
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
 
             {/* View Tenant Details Modal */}
             {tenantDetailsOpen && (

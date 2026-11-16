@@ -36,6 +36,135 @@ const safeTenantData = (tenant) => {
   return data;
 };
 
+// SELF-REGISTER TENANT
+export const registerSelfTenant = async (req, res) => {
+  try {
+    const { fullName, email, phone, aadhaarNumber, address } = req.body;
+
+    if (!fullName || !email || !phone || !aadhaarNumber) {
+      return res.status(400).json({
+        message: "Full name, email, phone, and Aadhaar number are required.",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPhone = phone.replace(/\D/g, "").slice(-10);
+    const normalizedAadhaar = aadhaarNumber.replace(/\D/g, "");
+
+    // Email validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail)) {
+      return res.status(400).json({
+        message: "Please enter a valid email address.",
+      });
+    }
+
+    // Phone validation (10 digits starting with 6-9)
+    if (!/^[6-9]\d{9}$/.test(normalizedPhone)) {
+      return res.status(400).json({
+        message: "Please enter a valid 10-digit mobile number.",
+      });
+    }
+
+    // Aadhaar validation (12 digits, does not start with 0 or 1)
+    if (!/^[2-9]\d{11}$/.test(normalizedAadhaar)) {
+      return res.status(400).json({
+        message: "Please enter a valid 12-digit Aadhaar number.",
+      });
+    }
+
+    // Check if an active tenant already exists with this email, phone or aadhaar
+    const existing = await Tenant.findOne({
+      isActive: true,
+      $or: [
+        { email: normalizedEmail },
+        { phone: normalizedPhone },
+        { aadhaarNumber: normalizedAadhaar },
+      ],
+    });
+
+    if (existing) {
+      return res.status(409).json({
+        message: "An active tenant account with this email, phone, or Aadhaar already exists.",
+      });
+    }
+
+    const tenant = await Tenant.create({
+      fullName: fullName.trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
+      aadhaarNumber: normalizedAadhaar,
+      address: (address || "").trim(),
+      owner: null,
+      property: null,
+      unit: null,
+      isActive: true,
+      tokenVersion: 0,
+      contactVerified: false,
+    });
+
+    return res.status(201).json({
+      message: "Tenant registration successful! Please login with OTP.",
+      data: safeTenantData(tenant),
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "An account with these details already exists.",
+      });
+    }
+    console.error("Self register tenant error:", error);
+    return res.status(500).json({
+      message: error.message || "Failed to register tenant.",
+    });
+  }
+};
+
+// GET AVAILABLE PROPERTIES WITH UNITS FOR TENANTS TO BROWSE
+export const getAvailableProperties = async (req, res) => {
+  try {
+    const availableUnits = await Unit.find({ status: "available" })
+      .populate("property", "propertyName address owner")
+      .sort({ rent: 1 });
+
+    const propertyMap = new Map();
+
+    for (const unit of availableUnits) {
+      if (!unit.property) continue;
+      const propId = unit.property._id.toString();
+
+      if (!propertyMap.has(propId)) {
+        propertyMap.set(propId, {
+          _id: unit.property._id,
+          propertyName: unit.property.propertyName,
+          address: unit.property.address,
+          owner: unit.property.owner,
+          units: [],
+        });
+      }
+
+      propertyMap.get(propId).units.push({
+        _id: unit._id,
+        unitName: unit.unitName,
+        unitType: unit.unitType,
+        rent: unit.rent,
+        status: unit.status,
+      });
+    }
+
+    const listing = Array.from(propertyMap.values());
+
+    return res.status(200).json({
+      message: "Available properties fetched successfully.",
+      data: listing,
+    });
+  } catch (error) {
+    console.error("Get available properties error:", error);
+    return res.status(500).json({
+      message: "Failed to fetch available properties.",
+    });
+  }
+};
+
 // REGISTER TENANT
 
 export const registerTenant = async (req, res) => {

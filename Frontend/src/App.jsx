@@ -23,6 +23,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Maintenance from "./pages/Tenant/Maintenance";
 import OwnerMaintenance from "./pages/Owner/OwnerMaintenance";
+import BrowseRentals from "./pages/Tenant/BrowseRentals";
 
 const router = createBrowserRouter([
   // Public pages: Navbar + page + Footer
@@ -111,6 +112,10 @@ const router = createBrowserRouter([
           {
             path: "/tenant/dashboard",
             element: <TenantDashboard />,
+          },
+          {
+            path: "/tenant/rentals",
+            element: <BrowseRentals />,
           },
           {
             path: "/tenant/bills",

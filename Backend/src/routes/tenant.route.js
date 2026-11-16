@@ -1,6 +1,8 @@
 import express from "express";
 
 import {
+  registerSelfTenant,
+  getAvailableProperties,
   getMyProfile,
   getOneTenant,
   getAllTenants,
@@ -21,6 +23,10 @@ import { uploadImage } from "../config/multer.js";
 import { protect } from "../utils/protect.js";
 
 const router = express.Router();
+
+// Public tenant registration & listings
+router.post("/register-self", registerSelfTenant);
+router.get("/available-listings", getAvailableProperties);
 
 router.post("/:propertyId/units/:unitId/tenants", protect, registerTenant);
 
