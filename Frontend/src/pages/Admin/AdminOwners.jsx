@@ -92,6 +92,19 @@ const AdminOwners = () => {
         });
     };
 
+    // FORMAT DATE AND TIME
+    const formatDateTime = (date) => {
+        if (!date) return "—";
+
+        return new Date(date).toLocaleString("en-IN", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
     // STATUS STYLE
     const statusStyle = (value) => {
         switch (value) {
@@ -199,6 +212,52 @@ const AdminOwners = () => {
         { label: "Approved", value: "approved" },
         { label: "Rejected", value: "rejected" },
     ];
+
+    // REVIEW DETAILS
+    const ReviewDetails = ({ owner }) => {
+        const reviewer = owner.verificationReviewedBy;
+
+        if (!owner.verificationReviewedAt) {
+            return (
+                <p className="text-xs text-gray-400">
+                    Not reviewed yet
+                </p>
+            );
+        }
+
+        return (
+            <div className="space-y-1.5">
+                <div>
+                    <p className="text-sm font-medium">
+                        {reviewer?.name || "Admin"}
+                    </p>
+
+                    {reviewer?.email && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {reviewer.email}
+                        </p>
+                    )}
+                </div>
+
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {formatDateTime(owner.verificationReviewedAt)}
+                </p>
+
+                {owner.verificationStatus === "rejected" &&
+                    owner.verificationRejectionReason && (
+                        <div className="mt-2 max-w-xs border-l-2 border-red-400 pl-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">
+                                Rejection reason
+                            </p>
+
+                            <p className="mt-1 whitespace-normal break-words text-xs text-gray-600 dark:text-gray-300">
+                                {owner.verificationRejectionReason}
+                            </p>
+                        </div>
+                    )}
+            </div>
+        );
+    };
 
     return (
         <div className="min-h-full w-full bg-[#f2f2f1] px-4 py-6 text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED] sm:px-6 sm:py-8 lg:px-10">
@@ -348,6 +407,7 @@ const AdminOwners = () => {
                                     <th className="px-5 py-4 font-medium">Contact</th>
                                     <th className="px-5 py-4 font-medium">Registered</th>
                                     <th className="px-5 py-4 font-medium">Status</th>
+                                    <th className="px-5 py-4 font-medium">Review Details</th>
                                     <th className="px-5 py-4 text-right font-medium">Actions</th>
                                 </tr>
                             </thead>
@@ -384,6 +444,10 @@ const AdminOwners = () => {
                                             <span className={`inline-flex rounded-full px-3 py-1.5 text-xs font-medium capitalize ${statusStyle(owner.verificationStatus)}`}>
                                                 {owner.verificationStatus || "pending"}
                                             </span>
+                                        </td>
+
+                                        <td className="min-w-[210px] px-5 py-5">
+                                            <ReviewDetails owner={owner} />
                                         </td>
 
                                         <td className="px-5 py-5">
@@ -440,13 +504,22 @@ const AdminOwners = () => {
                                 </div>
 
                                 <div className="mt-4 grid grid-cols-1 gap-3 text-xs text-gray-500 dark:text-gray-400 min-[400px]:grid-cols-2">
-                                    <p className="flex items-center gap-2">
+                                    <p>
                                         {owner.phone || "No phone"}
                                     </p>
 
-                                    <p className="flex items-center gap-2">
+                                    <p>
                                         Joined {formatDate(owner.createdAt)}
                                     </p>
+                                </div>
+
+                                {/* REVIEW DETAILS */}
+                                <div className="mt-4 border-t border-stone-200 pt-4 dark:border-neutral-800">
+                                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                        Review Details
+                                    </p>
+
+                                    <ReviewDetails owner={owner} />
                                 </div>
 
                                 <div className="mt-4 flex gap-2">

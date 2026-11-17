@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { Tenant } from "../models/tenant.model.js";
@@ -15,8 +14,7 @@ const getCookieOptions = () => ({
 });
 
 // Escape special characters before using user input in a regex
-const escapeRegex = (value) =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // ADMIN LOGIN
 export const adminLogin = async (req, res) => {
@@ -44,10 +42,7 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    const passwordMatches = await bcrypt.compare(
-      password,
-      admin.passwordHash
-    );
+    const passwordMatches = await bcrypt.compare(password, admin.passwordHash);
 
     if (!passwordMatches) {
       return res.status(401).json({
@@ -139,13 +134,11 @@ export const getAllOwners = async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(
       50,
-      Math.max(1, parseInt(req.query.limit, 10) || 10)
+      Math.max(1, parseInt(req.query.limit, 10) || 10),
     );
 
     const search =
-      typeof req.query.search === "string"
-        ? req.query.search.trim()
-        : "";
+      typeof req.query.search === "string" ? req.query.search.trim() : "";
 
     const status = req.query.status;
 
@@ -153,10 +146,7 @@ export const getAllOwners = async (req, res) => {
       role: "owner",
     };
 
-    if (
-      status &&
-      ["pending", "approved", "rejected"].includes(status)
-    ) {
+    if (status && ["pending", "approved", "rejected"].includes(status)) {
       filter.verificationStatus = status;
     }
 
@@ -175,8 +165,9 @@ export const getAllOwners = async (req, res) => {
     const [owners, total] = await Promise.all([
       User.find(filter)
         .select(
-          "username email phone isActive verificationStatus verificationReviewedAt verificationReviewedBy verificationRejectionReason verifiedAt createdAt"
+          "username email phone isActive verificationStatus verificationReviewedAt verificationReviewedBy verificationRejectionReason verifiedAt createdAt",
         )
+        .populate("verificationReviewedBy", "name email")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -261,8 +252,7 @@ export const reviewOwner = async (req, res) => {
         email: owner.email,
         verificationStatus: owner.verificationStatus,
         verificationReviewedAt: owner.verificationReviewedAt,
-        verificationRejectionReason:
-          owner.verificationRejectionReason,
+        verificationRejectionReason: owner.verificationRejectionReason,
       },
     });
   } catch (error) {
@@ -280,13 +270,11 @@ export const getAllTenants = async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(
       50,
-      Math.max(1, parseInt(req.query.limit, 10) || 10)
+      Math.max(1, parseInt(req.query.limit, 10) || 10),
     );
 
     const search =
-      typeof req.query.search === "string"
-        ? req.query.search.trim()
-        : "";
+      typeof req.query.search === "string" ? req.query.search.trim() : "";
 
     const status = req.query.status;
 
@@ -319,9 +307,7 @@ export const getAllTenants = async (req, res) => {
       verifiedTenants,
     ] = await Promise.all([
       Tenant.find(filter)
-        .select(
-          "fullName email phone isActive contactVerified createdAt"
-        )
+        .select("fullName email phone isActive contactVerified createdAt")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
