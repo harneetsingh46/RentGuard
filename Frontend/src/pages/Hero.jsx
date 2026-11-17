@@ -1,82 +1,89 @@
+
 import { Link } from "react-router-dom";
 
 const features = [
   {
     number: "01",
     icon: "⌂",
-    title: "Property management",
+    title: "Property & Unit Management",
     description:
-      "Keep property details, rental units, and occupancy information organized in one place.",
+      "Create properties, manage rental units, track occupancy, and keep property information organized.",
   },
   {
     number: "02",
     icon: "₹",
-    title: "Rent tracking",
+    title: "Bills & Online Payments",
     description:
-      "See rent payments, outstanding balances, and upcoming dues without searching through records.",
+      "Manage rent and utility bills, pay securely through Razorpay, and access payment history and PDF receipts.",
   },
   {
     number: "03",
-    icon: "↗",
-    title: "Payment visibility",
+    icon: "♧",
+    title: "Tenant & Rental Management",
     description:
-      "Get a clearer picture of payment activity and your rental income.",
+      "Manage tenant records, browse available rentals, submit applications, and handle rental offers.",
   },
   {
     number: "04",
     icon: "▤",
-    title: "Document organization",
-    description: "Keep important rental documents easier to find and manage.",
+    title: "Document Management",
+    description:
+      "Upload, organize, view, and download important property and tenant documents.",
   },
   {
     number: "05",
-    icon: "♧",
-    title: "Tenant management",
+    icon: "⚙",
+    title: "Maintenance Management",
     description:
-      "Keep tenant details connected to the properties and rental units they belong to.",
+      "Submit maintenance complaints, attach photographs, track progress, and manage repair requests.",
   },
   {
     number: "06",
     icon: "✓",
-    title: "One shared workspace",
+    title: "Secure Account Management",
     description:
-      "Give owners and tenants a more organized way to manage their rental responsibilities.",
+      "Use email OTP authentication, role-based access, owner verification, and dedicated dashboards.",
   },
 ];
 
 const steps = [
   {
     number: "01",
-    title: "Set up your workspace",
+    title: "Create your account",
     description:
-      "Create your account and organize your rental properties and units.",
+      "Register as a property owner or tenant and access your dedicated RentGuard workspace.",
   },
   {
     number: "02",
-    title: "Connect your rentals",
+    title: "Manage your rental activities",
     description:
-      "Manage tenant details, rental information, and payment records in one place.",
+      "Owners can manage properties, tenants, bills, and maintenance. Tenants can browse rentals, apply, and manage their tenancy.",
   },
   {
     number: "03",
-    title: "Stay on top of things",
+    title: "Stay organized and connected",
     description:
-      "Review rent status, monitor outstanding balances, and keep records organized.",
+      "Track payments, download receipts, manage documents, and stay updated with rental notifications.",
   },
 ];
 
 const Home = () => {
   return (
     <div className="overflow-hidden w-full bg-[#F8F7F2] text-[#171717] transition-colors duration-300 dark:bg-[#101010] dark:text-[#F1F0ED]">
-      {/* Hero — refined, minimal, and responsive */}
+      {/* Hero */}
       <section className="relative isolate overflow-hidden px-5 pb-16 pt-14 sm:px-8 sm:pb-20 sm:pt-16 lg:px-16 lg:pb-28 lg:pt-24">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-28 top-12 -z-10 h-72 w-72 rounded-full bg-yellow-300/15 blur-3xl sm:h-96 sm:w-96 dark:bg-yellow-400/[0.07]" />
-        
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-28 top-12 -z-10 h-72 w-72 rounded-full bg-yellow-300/15 blur-3xl sm:h-96 sm:w-96 dark:bg-yellow-400/[0.07]"
+        />
 
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 lg:gap-14">
           <div className="hero-enter min-w-0">
             <p className="mb-5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-600 sm:mb-6 sm:text-sm dark:text-neutral-400">
-              <span className="h-px w-20 bg-yellow-500" aria-hidden="true" />
+              <span
+                className="h-px w-20 bg-yellow-500"
+                aria-hidden="true"
+              />
               Rental management, made clearer
             </p>
 
@@ -86,44 +93,89 @@ const Home = () => {
               without the{" "}
               <span className="hero-highlight relative inline-block text-[#D99D00] dark:text-[#F7C744]">
                 chaos.
-                <span aria-hidden="true" className="absolute bottom-1 left-0 -z-10 h-2.5 w-full -rotate-1 rounded-sm bg-yellow-300/45 sm:bottom-1.5 sm:h-3.5" />
+                <span
+                  aria-hidden="true"
+                  className="absolute bottom-1 left-0 -z-10 h-2.5 w-full -rotate-1 rounded-sm bg-yellow-300/45 sm:bottom-1.5 sm:h-3.5"
+                />
               </span>
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-7 text-neutral-600 sm:text-lg sm:leading-8 dark:text-neutral-400">
-              Keep property details, rent tracking, tenant information, and
-              important documents in one organized workspace.
+              Manage properties, rental applications, bills, online payments,
+              maintenance requests, and important documents in one organized
+              workspace.
             </p>
 
             <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-              <Link to="/signup" className="group inline-flex w-full items-center justify-center gap-3 rounded-xl bg-yellow-300 px-6 py-3.5 font-semibold text-black shadow-sm transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-yellow-400 hover:shadow-lg hover:shadow-yellow-500/15 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 sm:w-auto sm:px-7 sm:py-4 dark:focus-visible:ring-offset-black">
+              <Link
+                to="/signup"
+                className="group inline-flex w-full items-center justify-center gap-3 rounded-xl bg-yellow-300 px-6 py-3.5 font-semibold text-black shadow-sm transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-yellow-400 hover:shadow-lg hover:shadow-yellow-500/15 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 sm:w-auto sm:px-7 sm:py-4 dark:focus-visible:ring-offset-black"
+              >
                 Get started
-                <span aria-hidden="true" className="inline-block transition-transform duration-300 group-hover:translate-x-1">→</span>
+                <span
+                  aria-hidden="true"
+                  className="inline-block transition-transform duration-300 group-hover:translate-x-1"
+                >
+                  →
+                </span>
               </Link>
 
-              <a href="#features" className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-black/10 bg-white/50 px-6 py-3.5 font-medium transition duration-300 hover:-translate-y-0.5 hover:border-yellow-400/60 hover:bg-white hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:w-auto sm:px-7 sm:py-4 dark:border-white/15 dark:bg-white/[0.03] dark:hover:border-yellow-300/40 dark:hover:bg-white/[0.06]">
+              <a
+                href="#features"
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-black/10 bg-white/50 px-6 py-3.5 font-medium transition duration-300 hover:-translate-y-0.5 hover:border-yellow-400/60 hover:bg-white hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:w-auto sm:px-7 sm:py-4 dark:border-white/15 dark:bg-white/[0.03] dark:hover:border-yellow-300/40 dark:hover:bg-white/[0.06]"
+              >
                 Explore features
-                <span aria-hidden="true" className="text-neutral-500 transition-transform duration-300 group-hover:translate-y-0.5 group-hover:text-yellow-600 dark:group-hover:text-yellow-300">↓</span>
+                <span
+                  aria-hidden="true"
+                  className="text-neutral-500 transition-transform duration-300 group-hover:translate-y-0.5 group-hover:text-yellow-600 dark:group-hover:text-yellow-300"
+                >
+                  ↓
+                </span>
               </a>
             </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-neutral-600 sm:mt-10 sm:gap-x-6 dark:text-neutral-400">
-              {["Owner workspace", "Tenant access", "Organized records"].map((item) => (
-                <span key={item} className="group inline-flex items-center gap-2 transition-colors duration-200 hover:text-neutral-950 dark:hover:text-white">
-                  <span className="text-sm text-yellow-600 transition-transform duration-200 group-hover:scale-110 dark:text-yellow-300" aria-hidden="true">✓</span>
-                  {item}
-                </span>
-              ))}
+              {["Owner workspace", "Tenant access", "Organized records"].map(
+                (item) => (
+                  <span
+                    key={item}
+                    className="group inline-flex items-center gap-2 transition-colors duration-200 hover:text-neutral-950 dark:hover:text-white"
+                  >
+                    <span
+                      className="text-sm text-yellow-600 transition-transform duration-200 group-hover:scale-110 dark:text-yellow-300"
+                      aria-hidden="true"
+                    >
+                      ✓
+                    </span>
+                    {item}
+                  </span>
+                )
+              )}
             </div>
           </div>
 
           <div className="hero-preview-wrap group relative mx-auto w-full min-w-0 max-w-2xl lg:max-w-none">
-            <div aria-hidden="true" className="pointer-events-none absolute -inset-3 rounded-2xl bg-yellow-400/[0.07] opacity-0 blur-2xl transition-opacity duration-500 dark:bg-yellow-400/[0.09]" />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -inset-3 rounded-2xl bg-yellow-400/[0.07] opacity-0 blur-2xl transition-opacity duration-500 dark:bg-yellow-400/[0.09]"
+            />
+
             <div className="hero-preview group relative overflow-hidden rounded-2xl border border-white/[0.09] bg-white p-1.5 shadow-[0_18px_55px_-38px_rgba(0,0,0,0.35)] transition-all duration-500 ease-out hover:-translate-y-1 hover:border-yellow-400/30 hover:shadow-[0_24px_65px_-35px_rgba(65,45,100,0.28)] sm:rounded-3xl sm:p-2 dark:border-white/10 dark:bg-neutral-900 dark:hover:border-yellow-300/20">
-              <img src="/RentGuard-Hero.png" alt="RentGuard property management dashboard displayed on a laptop" className="h-auto w-full rounded-xl object-cover transition-transform duration-700 ease-out group-hover:scale-[1.008] sm:rounded-2xl" />
+              <img
+                src="/RentGuard-Hero.png"
+                alt="RentGuard property management dashboard displayed on a laptop"
+                className="h-auto w-full rounded-xl object-cover transition-transform duration-700 ease-out group-hover:scale-[1.008] sm:rounded-2xl"
+              />
             </div>
+
             <div className="mt-4 flex items-center justify-between gap-4 px-1 text-xs text-neutral-500 sm:text-sm dark:text-neutral-400">
-              <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-yellow-500" aria-hidden="true" />One clear view of your rentals</span>
+              <span className="flex items-center gap-2">
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-yellow-500"
+                  aria-hidden="true"
+                />
+                One clear view of your rentals
+              </span>
               <span className="hidden sm:inline">RentGuard workspace</span>
             </div>
           </div>
@@ -140,9 +192,11 @@ const Home = () => {
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-neutral-600 dark:text-yellow-300">
               Everything in one place
             </p>
+
             <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
               Less admin. More clarity.
             </h2>
+
             <p className="mt-5 text-base leading-7 text-neutral-600 dark:text-neutral-400 sm:text-lg">
               The essential tools to help you keep rental information organized
               and make everyday property management simpler.
@@ -159,12 +213,16 @@ const Home = () => {
                   <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-300/40 text-2xl text-black transition group-hover:bg-yellow-300 group-hover:text-black dark:bg-yellow-300/15 dark:text-yellow-300">
                     {feature.icon}
                   </span>
+
                   <span className="text-sm text-yellow-300">
                     {feature.number}
                   </span>
                 </div>
 
-                <h3 className="mt-6 text-xl font-semibold">{feature.title}</h3>
+                <h3 className="mt-6 text-xl font-semibold">
+                  {feature.title}
+                </h3>
+
                 <p className="mt-3 leading-7 text-neutral-600 dark:text-neutral-400">
                   {feature.description}
                 </p>
@@ -181,12 +239,14 @@ const Home = () => {
       >
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-yellow     -700  dark:text-white">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-yellow-700 dark:text-white">
               How it works
             </p>
+
             <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl dark:text-yellow-300">
               A simpler way to manage rentals.
             </h2>
+
             <p className="mt-5 leading-7 text-neutral-600 dark:text-neutral-400">
               Start with the essentials and build an organized rental workspace
               around your needs.
@@ -199,7 +259,11 @@ const Home = () => {
                 <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-yellow-300 text-lg font-semibold text-black">
                   {step.number}
                 </span>
-                <h3 className="mt-5 text-xl font-semibold">{step.title}</h3>
+
+                <h3 className="mt-5 text-xl font-semibold">
+                  {step.title}
+                </h3>
+
                 <p className="mt-3 leading-7 text-neutral-600 dark:text-neutral-400">
                   {step.description}
                 </p>
@@ -215,45 +279,115 @@ const Home = () => {
         className="px-6 py-20 sm:px-10 lg:px-16 lg:py-24"
       >
         <div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-2">
+          {/* Owner Card */}
           <article className="rounded-3xl bg-[#171717] p-8 text-white sm:p-10 lg:p-12">
             <span className="inline-flex rounded-full bg-yellow-300 px-3 py-1 text-xs font-semibold text-black">
               FOR PROPERTY OWNERS
             </span>
+
             <h2 className="mt-7 max-w-md text-3xl font-semibold tracking-tight sm:text-4xl">
-              Your properties. Your records. One workspace.
+              Manage your properties. Simplify your operations.
             </h2>
+
             <p className="mt-5 max-w-lg leading-7 text-neutral-300">
-              Organize properties, manage tenant information, and review rental
-              payment records from your owner workspace.
+              Take control of your rental business with tools to manage
+              properties, units, tenants, rental applications, bills, payments,
+              documents, and maintenance requests.
             </p>
-            <Link
-              to="/signup"
-              className="mt-8 inline-flex items-center gap-2 rounded-xs bg-yellow-300 px-5 py-3 font-semibold text-black transition hover:bg-yellow-400"
-            >
-              Create an owner account <span aria-hidden="true">→</span>
-            </Link>
+
+            <ul className="mt-7 space-y-3 text-sm text-neutral-300">
+              {[
+                "Manage properties, units, and occupancy",
+                "Register tenants and manage rental applications",
+                "Create bills and track payment collections",
+                "Manage documents and maintenance complaints",
+                "Monitor rental performance through your dashboard",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3">
+                  <span className="text-yellow-300" aria-hidden="true">
+                    ✓
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                to="/signup"
+                className="inline-flex items-center gap-2 rounded-xl bg-yellow-300 px-5 py-3 font-semibold text-black transition hover:bg-yellow-400"
+              >
+                Sign up <span aria-hidden="true">→</span>
+              </Link>
+
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-5 py-3 font-semibold text-white transition hover:border-yellow-300 hover:bg-white/5"
+              >
+                Login <span aria-hidden="true">→</span>
+              </Link>
+            </div>
+
+            <p className="mt-4 text-xs text-neutral-400">
+              Owner accounts require RentGuard verification before property
+              management.
+            </p>
           </article>
 
+          {/* Tenant Card */}
           <article
             id="for-tenants"
             className="rounded-3xl border border-black/10 bg-white p-8 sm:p-10 lg:p-12 dark:border-white/10 dark:bg-[#1B1B1B]"
           >
-            <span className="inline-flex rounded-full bg-yellow-300/40 px-3 py-1 text-xs font-semibold text-neutral-800 group-hover:text-black dark:bg-yellow-300/15 dark:text-yellow-300">
+            <span className="inline-flex rounded-full bg-yellow-300/40 px-3 py-1 text-xs font-semibold text-neutral-800 dark:bg-yellow-300/15 dark:text-yellow-300">
               FOR TENANTS
             </span>
+
             <h2 className="mt-7 max-w-md text-3xl font-semibold tracking-tight sm:text-4xl">
-              Rental information, without the confusion.
+              Your rental journey, all in one place.
             </h2>
+
             <p className="mt-5 max-w-lg leading-7 text-neutral-600 dark:text-neutral-400">
-              Access your rental workspace and keep track of the information
-              your property owner makes available to you.
+              Find rental opportunities, manage your tenancy, pay bills, access
+              receipts, organize documents, and stay connected with your
+              property owner.
             </p>
-            <Link
-              to="/login"
-              className="mt-8 inline-flex items-center gap-2 rounded-xx border border-black/10 px-5 py-3 font-semibold transition hover:border-yellow-500 hover:bg-yellow-300/20 dark:border-white/15"
-            >
-              Tenant login <span aria-hidden="true">→</span>
-            </Link>
+
+            <ul className="mt-7 space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
+              {[
+                "Browse available properties and submit applications",
+                "Track rental applications and tenancy details",
+                "View and pay bills securely online",
+                "Access recent transactions and download receipts",
+                "Manage documents and maintenance complaints",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-3">
+                  <span
+                    className="text-yellow-600 dark:text-yellow-300"
+                    aria-hidden="true"
+                  >
+                    ✓
+                  </span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                to="/signup"
+                className="inline-flex items-center gap-2 rounded-xl bg-yellow-300 px-5 py-3 font-semibold text-black transition hover:bg-yellow-400"
+              >
+                Sign up <span aria-hidden="true">→</span>
+              </Link>
+
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 rounded-xl border border-black/10 px-5 py-3 font-semibold transition hover:border-yellow-500 hover:bg-yellow-300/20 dark:border-white/15 dark:text-white"
+              >
+                Login <span aria-hidden="true">→</span>
+              </Link>
+            </div>
           </article>
         </div>
       </section>
@@ -271,12 +405,14 @@ const Home = () => {
               <p className="text-sm font-semibold uppercase tracking-[0.15em] text-black/60">
                 Your rental workspace starts here
               </p>
+
               <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-                Make rental management feel manageable.
+                Everything your rental needs, in one place.
               </h2>
+
               <p className="mt-4 max-w-xl leading-7 text-black/70">
-                Bring your rental information together and take the next step
-                toward a more organized workflow.
+                Whether you own rental properties or are looking for a place to
+                call home, RentGuard helps make every rental activity simpler.
               </p>
             </div>
 
