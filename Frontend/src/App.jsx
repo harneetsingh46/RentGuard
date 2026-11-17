@@ -58,11 +58,18 @@ const router = createBrowserRouter([
             path: "/contact",
             element: <Contact />,
           },
-          {
-            path: "/admin/login",
-            element: <AdminLogin />,
-          },
         ],
+      },
+    ],
+  },
+
+  // Admin Login: standalone page without public Navbar/Footer
+  {
+    element: <PublicRoutes />,
+    children: [
+      {
+        path: "/admin/login",
+        element: <AdminLogin />,
       },
     ],
   },

@@ -1,3 +1,4 @@
+
 import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { Tenant } from "../models/tenant.model.js";
@@ -12,6 +13,10 @@ const getCookieOptions = () => ({
   path: "/",
   maxAge: 24 * 60 * 60 * 1000,
 });
+
+// Escape special characters before using user input in a regex
+const escapeRegex = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // ADMIN LOGIN
 export const adminLogin = async (req, res) => {
@@ -121,6 +126,7 @@ export const getAdminOverview = async (req, res) => {
     });
   } catch (error) {
     console.error("Admin overview error:", error);
+
     return res.status(500).json({
       message: "Unable to fetch admin overview.",
     });
@@ -130,9 +136,22 @@ export const getAdminOverview = async (req, res) => {
 // GET ALL OWNERS
 export const getAllOwners = async (req, res) => {
   try {
-    const { status } = req.query;
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(req.query.limit, 10) || 10)
+    );
 
-    const filter = { role: "owner" };
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim()
+        : "";
+
+    const status = req.query.status;
+
+    const filter = {
+      role: "owner",
+    };
 
     if (
       status &&
@@ -141,19 +160,44 @@ export const getAllOwners = async (req, res) => {
       filter.verificationStatus = status;
     }
 
-    const owners = await User.find(filter)
-      .select(
-        "username email phone isActive verificationStatus verificationReviewedAt verificationRejectionReason verifiedAt createdAt"
-      )
-      .sort({ createdAt: -1 })
-      .lean();
+    if (search) {
+      const searchRegex = new RegExp(escapeRegex(search), "i");
+
+      filter.$or = [
+        { username: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [owners, total] = await Promise.all([
+      User.find(filter)
+        .select(
+          "username email phone isActive verificationStatus verificationReviewedAt verificationReviewedBy verificationRejectionReason verifiedAt createdAt"
+        )
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      User.countDocuments(filter),
+    ]);
 
     return res.status(200).json({
       message: "Owners fetched successfully.",
       data: owners,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     });
   } catch (error) {
     console.error("Get owners error:", error);
+
     return res.status(500).json({
       message: "Unable to fetch owners.",
     });
@@ -223,6 +267,7 @@ export const reviewOwner = async (req, res) => {
     });
   } catch (error) {
     console.error("Review owner error:", error);
+
     return res.status(500).json({
       message: "Unable to review owner.",
     });
@@ -232,19 +277,83 @@ export const reviewOwner = async (req, res) => {
 // GET ALL TENANTS
 export const getAllTenants = async (req, res) => {
   try {
-    const tenants = await Tenant.find({})
-      .select(
-        "fullName email phone isActive contactVerified createdAt"
-      )
-      .sort({ createdAt: -1 })
-      .lean();
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(req.query.limit, 10) || 10)
+    );
+
+    const search =
+      typeof req.query.search === "string"
+        ? req.query.search.trim()
+        : "";
+
+    const status = req.query.status;
+
+    const filter = {};
+
+    if (status === "active") {
+      filter.isActive = true;
+    } else if (status === "inactive") {
+      filter.isActive = false;
+    }
+
+    if (search) {
+      const searchRegex = new RegExp(escapeRegex(search), "i");
+
+      filter.$or = [
+        { fullName: searchRegex },
+        { email: searchRegex },
+        { phone: searchRegex },
+      ];
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [
+      tenants,
+      total,
+      totalTenants,
+      activeTenants,
+      inactiveTenants,
+      verifiedTenants,
+    ] = await Promise.all([
+      Tenant.find(filter)
+        .select(
+          "fullName email phone isActive contactVerified createdAt"
+        )
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      Tenant.countDocuments(filter),
+
+      Tenant.countDocuments({}),
+      Tenant.countDocuments({ isActive: true }),
+      Tenant.countDocuments({ isActive: false }),
+      Tenant.countDocuments({ contactVerified: true }),
+    ]);
 
     return res.status(200).json({
       message: "Tenants fetched successfully.",
       data: tenants,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      summary: {
+        totalTenants,
+        activeTenants,
+        inactiveTenants,
+        verifiedTenants,
+      },
     });
   } catch (error) {
     console.error("Get tenants error:", error);
+
     return res.status(500).json({
       message: "Unable to fetch tenants.",
     });

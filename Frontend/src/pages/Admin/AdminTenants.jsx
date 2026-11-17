@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     Users,
     Search,
@@ -15,14 +15,68 @@ const AdminTenants = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [limit] = useState(10);
+    const [total, setTotal] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
+    // Global summary counts
+    const [summary, setSummary] = useState({
+        totalTenants: 0,
+        activeTenants: 0,
+        inactiveTenants: 0,
+        verifiedTenants: 0,
+    });
+
+    // FETCH TENANTS
     const fetchTenants = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
 
-            const response = await apiClient.get("/admin/tenants");
+            const params = {
+                page,
+                limit,
+                search: search.trim(),
+            };
+
+            if (status !== "all") {
+                params.status = status;
+            }
+
+            const response = await apiClient.get("/admin/tenants", {
+                params,
+            });
+
+            const pagination = response.data.pagination;
+            const nextTotalPages = pagination?.totalPages || 0;
+
+            // Handle a page that no longer exists
+            if (nextTotalPages === 0 && page !== 1) {
+                setPage(1);
+                return;
+            }
+
+            if (nextTotalPages > 0 && page > nextTotalPages) {
+                setPage(nextTotalPages);
+                return;
+            }
 
             setTenants(response.data.data || []);
+            setTotal(pagination?.total || 0);
+            setTotalPages(nextTotalPages);
+
+            setSummary({
+                totalTenants:
+                    response.data.summary?.totalTenants || 0,
+                activeTenants:
+                    response.data.summary?.activeTenants || 0,
+                inactiveTenants:
+                    response.data.summary?.inactiveTenants || 0,
+                verifiedTenants:
+                    response.data.summary?.verifiedTenants || 0,
+            });
         } catch (error) {
             console.error("Fetch tenants error:", error);
 
@@ -33,47 +87,13 @@ const AdminTenants = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [page, limit, search, status]);
 
     useEffect(() => {
         fetchTenants();
     }, [fetchTenants]);
 
-    const filteredTenants = useMemo(() => {
-        const query = search.trim().toLowerCase();
-
-        return tenants.filter((tenant) => {
-            const matchesSearch =
-                !query ||
-                [
-                    tenant.fullName,
-                    tenant.email,
-                    tenant.phone,
-                ]
-                    .filter(Boolean)
-                    .some((value) =>
-                        String(value).toLowerCase().includes(query)
-                    );
-
-            const matchesStatus =
-                status === "all" ||
-                (status === "active" && tenant.isActive) ||
-                (status === "inactive" && !tenant.isActive);
-
-            return matchesSearch && matchesStatus;
-        });
-    }, [tenants, search, status]);
-
-    const activeCount = tenants.filter(
-        (tenant) => tenant.isActive
-    ).length;
-
-    const inactiveCount = tenants.length - activeCount;
-
-    const verifiedCount = tenants.filter(
-        (tenant) => tenant.contactVerified
-    ).length;
-
+    // FORMAT DATE
     const formatDate = (date) => {
         if (!date) return "—";
 
@@ -84,40 +104,39 @@ const AdminTenants = () => {
         });
     };
 
+    // ACCOUNT STATUS STYLE
     const accountStatus = (isActive) =>
         isActive
             ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
             : "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400";
 
+    // VERIFICATION STATUS STYLE
     const verificationStatus = (isVerified) =>
         isVerified
             ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
             : "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400";
 
+    // SUMMARY CARDS
     const summaryCards = [
         {
             title: "Total Tenants",
-            value: tenants.length,
+            value: summary.totalTenants,
             description: "All registered tenant accounts",
-            color: "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400",
         },
         {
             title: "Active Tenants",
-            value: activeCount,
+            value: summary.activeTenants,
             description: "Currently active accounts",
-            color: "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400",
         },
         {
             title: "Inactive Tenants",
-            value: inactiveCount,
+            value: summary.inactiveTenants,
             description: "Deactivated accounts",
-            color: "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400",
         },
         {
             title: "Contact Verified",
-            value: verifiedCount,
+            value: summary.verifiedTenants,
             description: "Tenants with verified contact details",
-            color: "bg-purple-50 text-purple-700 dark:bg-purple-400/10 dark:text-purple-400",
         },
     ];
 
@@ -152,8 +171,13 @@ const AdminTenants = () => {
 
             {/* SUMMARY CARDS */}
             <section className="mt-8 grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 xl:grid-cols-4">
-                {summaryCards.map((card) => {
-                    const Icon = card.icon;
+                {summaryCards.map((card, index) => {
+                    const colors = [
+                        "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400",
+                        "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400",
+                        "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400",
+                        "bg-purple-50 text-purple-700 dark:bg-purple-400/10 dark:text-purple-400",
+                    ];
 
                     return (
                         <div
@@ -167,9 +191,16 @@ const AdminTenants = () => {
                                     </p>
 
                                     <p className="mt-3 text-3xl font-medium tracking-tight">
-                                        {card.value}
+                                        {card.value.toLocaleString("en-IN")}
                                     </p>
                                 </div>
+
+                                <span className={`flex h-9 w-9 items-center justify-center rounded-full ${colors[index]}`}>
+                                    {index === 0 && <Users size={18} />}
+                                    {index === 1 && <UserRound size={18} />}
+                                    {index === 2 && <UserRound size={18} />}
+                                    {index === 3 && <Users size={18} />}
+                                </span>
                             </div>
 
                             <p className="mt-3 text-xs text-gray-500 dark:text-[#A5A5A5]">
@@ -202,15 +233,17 @@ const AdminTenants = () => {
                         <input
                             type="search"
                             value={search}
-                            onChange={(event) =>
-                                setSearch(event.target.value)
-                            }
+                            onChange={(event) => {
+                                setSearch(event.target.value);
+                                setPage(1);
+                            }}
                             placeholder="Search name, email or phone..."
                             className="w-full border border-stone-300 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-yellow-400 dark:border-neutral-700 dark:bg-neutral-950"
                         />
                     </div>
                 </div>
 
+                {/* STATUS FILTERS */}
                 <div className="mt-5 flex gap-2 overflow-x-auto">
                     {[
                         { label: "All Tenants", value: "all" },
@@ -220,17 +253,29 @@ const AdminTenants = () => {
                         <button
                             key={filter.value}
                             type="button"
-                            onClick={() => setStatus(filter.value)}
-                            className={`shrink-0 border px-4 py-2 text-sm transition ${status === filter.value
+                            onClick={() => {
+                                setStatus(filter.value);
+                                setPage(1);
+                            }}
+                            className={`shrink-0 border px-4 py-2 text-sm transition ${
+                                status === filter.value
                                     ? "border-yellow-400 bg-yellow-300 font-medium text-black"
                                     : "border-stone-300 bg-white text-gray-600 hover:bg-stone-100 dark:border-neutral-700 dark:bg-neutral-950 dark:text-gray-300 dark:hover:bg-neutral-800"
-                                }`}
+                            }`}
                         >
                             {filter.label}
                         </button>
                     ))}
                 </div>
             </section>
+
+            {/* RESULTS COUNT */}
+            {!loading && !error && (
+                <p className="mt-5 text-sm text-gray-500 dark:text-[#A5A5A5]">
+                    {total.toLocaleString("en-IN")}{" "}
+                    {total === 1 ? "tenant" : "tenants"} found
+                </p>
+            )}
 
             {/* ERROR */}
             {error && (
@@ -263,7 +308,7 @@ const AdminTenants = () => {
             )}
 
             {/* EMPTY STATE */}
-            {!loading && !error && filteredTenants.length === 0 && (
+            {!loading && !error && tenants.length === 0 && (
                 <div className="mt-6 border border-stone-200 bg-white px-5 py-16 text-center dark:border-neutral-800 dark:bg-neutral-950">
                     <Users
                         size={35}
@@ -277,13 +322,15 @@ const AdminTenants = () => {
                     <p className="mt-2 text-sm text-gray-500 dark:text-[#A5A5A5]">
                         {search
                             ? "Try changing your search."
-                            : "There are no tenants in this category yet."}
+                            : status !== "all"
+                                ? `There are no ${status} tenants.`
+                                : "There are no registered tenants yet."}
                     </p>
                 </div>
             )}
 
             {/* TENANT TABLE */}
-            {!loading && !error && filteredTenants.length > 0 && (
+            {!loading && !error && tenants.length > 0 && (
                 <section className="mt-6 overflow-hidden border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
 
                     {/* DESKTOP TABLE */}
@@ -314,7 +361,7 @@ const AdminTenants = () => {
                             </thead>
 
                             <tbody>
-                                {filteredTenants.map((tenant) => (
+                                {tenants.map((tenant) => (
                                     <tr
                                         key={tenant._id}
                                         className="border-b border-stone-100 last:border-0 dark:border-neutral-800"
@@ -364,7 +411,7 @@ const AdminTenants = () => {
 
                     {/* MOBILE CARDS */}
                     <div className="divide-y divide-stone-200 md:hidden dark:divide-neutral-800">
-                        {filteredTenants.map((tenant) => (
+                        {tenants.map((tenant) => (
                             <article
                                 key={tenant._id}
                                 className="p-4 sm:p-5"
@@ -412,11 +459,55 @@ const AdminTenants = () => {
                 </section>
             )}
 
-            {/* RESULTS FOOTER */}
-            {!loading && !error && filteredTenants.length > 0 && (
-                <p className="mt-4 text-xs text-gray-500 dark:text-[#A5A5A5]">
-                    Showing {filteredTenants.length} of {tenants.length} registered tenants.
-                </p>
+            {/* PAGINATION */}
+            {!loading && !error && total > 0 && (
+                <section className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+                    <p className="text-sm text-gray-500 dark:text-[#A5A5A5]">
+                        Showing{" "}
+                        <span className="font-medium text-black dark:text-white">
+                            {(page - 1) * limit + 1}
+                        </span>
+                        {" "}to{" "}
+                        <span className="font-medium text-black dark:text-white">
+                            {Math.min(page * limit, total)}
+                        </span>
+                        {" "}of{" "}
+                        <span className="font-medium text-black dark:text-white">
+                            {total}
+                        </span>
+                        {" "}tenants
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setPage((prev) => Math.max(1, prev - 1))
+                            }
+                            disabled={page === 1 || loading}
+                            className="border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:hover:bg-neutral-800"
+                        >
+                            Previous
+                        </button>
+
+                        <span className="px-3 text-sm text-gray-600 dark:text-gray-300">
+                            Page {page} of {totalPages}
+                        </span>
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setPage((prev) =>
+                                    Math.min(totalPages, prev + 1)
+                                )
+                            }
+                            disabled={page >= totalPages || loading}
+                            className="border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:hover:bg-neutral-800"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </section>
             )}
 
             <footer className="mt-10 border-t border-stone-200 py-5 text-xs text-stone-500 dark:border-neutral-800 dark:text-[#A5A5A5]">

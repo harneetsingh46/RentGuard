@@ -345,7 +345,7 @@ const TenantDashboard = () => {
         <header className="mb-6 flex flex-col justify-between gap-4 sm:mb-9 sm:gap-6 lg:flex-row lg:items-center">
           <div>
             <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500 dark:text-[#A5A5A5]">
-              Tenant Portal
+              RentGuard / Tenant Portal
             </p>
 
             <h1 className="mt-3 text-2xl font-normal leading-tight tracking-tight [overflow-wrap:anywhere] sm:mt-4 sm:text-4xl lg:text-[42px]">

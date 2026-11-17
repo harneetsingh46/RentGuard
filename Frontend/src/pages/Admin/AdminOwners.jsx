@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import {
     Search,
@@ -20,18 +20,49 @@ const AdminOwners = () => {
     const [rejectionReason, setRejectionReason] = useState("");
     const [rejecting, setRejecting] = useState(false);
 
+    // Pagination
+    const [page, setPage] = useState(1);
+    const [limit] = useState(10);
+    const [total, setTotal] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
+    // FETCH OWNERS
     const fetchOwners = useCallback(async () => {
         try {
             setLoading(true);
             setError("");
 
-            const params = status === "all" ? {} : { status };
+            const params = {
+                page,
+                limit,
+                search: search.trim(),
+            };
+
+            if (status !== "all") {
+                params.status = status;
+            }
 
             const response = await apiClient.get("/admin/owners", {
                 params,
             });
 
+            const pagination = response.data.pagination;
+            const nextTotalPages = pagination?.totalPages || 0;
+
+            // Handle deleted or removed records on the current page
+            if (nextTotalPages === 0 && page !== 1) {
+                setPage(1);
+                return;
+            }
+
+            if (nextTotalPages > 0 && page > nextTotalPages) {
+                setPage(nextTotalPages);
+                return;
+            }
+
             setOwners(response.data.data || []);
+            setTotal(pagination?.total || 0);
+            setTotalPages(nextTotalPages);
         } catch (error) {
             console.error("Fetch owners error:", error);
 
@@ -42,31 +73,15 @@ const AdminOwners = () => {
         } finally {
             setLoading(false);
         }
-    }, [status]);
+    }, [page, limit, search, status]);
 
     useEffect(() => {
         fetchOwners();
     }, [fetchOwners]);
 
-    const filteredOwners = useMemo(() => {
-        const query = search.trim().toLowerCase();
+    const filteredOwners = owners;
 
-        if (!query) return owners;
-
-        return owners.filter((owner) =>
-            [
-                owner.username,
-                owner.email,
-                owner.phone,
-                owner.verificationStatus,
-            ]
-                .filter(Boolean)
-                .some((value) =>
-                    String(value).toLowerCase().includes(query)
-                )
-        );
-    }, [owners, search]);
-
+    // FORMAT DATE
     const formatDate = (date) => {
         if (!date) return "—";
 
@@ -77,6 +92,7 @@ const AdminOwners = () => {
         });
     };
 
+    // STATUS STYLE
     const statusStyle = (value) => {
         switch (value) {
             case "approved":
@@ -90,6 +106,7 @@ const AdminOwners = () => {
         }
     };
 
+    // APPROVE OWNER
     const handleApprove = async (owner) => {
         const confirmed = window.confirm(
             `Are you sure you want to approve ${owner.username || "this owner"}?`
@@ -120,12 +137,14 @@ const AdminOwners = () => {
         }
     };
 
+    // OPEN REJECTION DIALOG
     const openRejectDialog = (owner) => {
         setSelectedOwner(owner);
         setRejectionReason("");
         setRejecting(false);
     };
 
+    // CLOSE REJECTION DIALOG
     const closeRejectDialog = () => {
         if (rejecting) return;
 
@@ -133,6 +152,7 @@ const AdminOwners = () => {
         setRejectionReason("");
     };
 
+    // REJECT OWNER
     const handleReject = async (event) => {
         event.preventDefault();
 
@@ -172,19 +192,7 @@ const AdminOwners = () => {
         }
     };
 
-    const counts = {
-        all: owners.length,
-        pending: owners.filter(
-            (owner) => owner.verificationStatus === "pending"
-        ).length,
-        approved: owners.filter(
-            (owner) => owner.verificationStatus === "approved"
-        ).length,
-        rejected: owners.filter(
-            (owner) => owner.verificationStatus === "rejected"
-        ).length,
-    };
-
+    // FILTERS
     const filters = [
         { label: "All Owners", value: "all" },
         { label: "Pending", value: "pending" },
@@ -198,7 +206,6 @@ const AdminOwners = () => {
             {/* HEADER */}
             <section className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
-
                     <h1 className="mt-2 text-3xl font-medium tracking-tight sm:text-4xl">
                         Owner Verification
                     </h1>
@@ -232,11 +239,15 @@ const AdminOwners = () => {
                             <button
                                 key={filter.value}
                                 type="button"
-                                onClick={() => setStatus(filter.value)}
-                                className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-sm transition sm:px-5 ${active
-                                    ? "border-yellow-400 font-semibold text-black dark:text-white"
-                                    : "border-transparent text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white"
-                                    }`}
+                                onClick={() => {
+                                    setStatus(filter.value);
+                                    setPage(1);
+                                }}
+                                className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-sm transition sm:px-5 ${
+                                    active
+                                        ? "border-yellow-400 font-semibold text-black dark:text-white"
+                                        : "border-transparent text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white"
+                                }`}
                             >
                                 {filter.label}
                             </button>
@@ -256,7 +267,10 @@ const AdminOwners = () => {
                     <input
                         type="search"
                         value={search}
-                        onChange={(event) => setSearch(event.target.value)}
+                        onChange={(event) => {
+                            setSearch(event.target.value);
+                            setPage(1);
+                        }}
                         placeholder="Search name, email or phone..."
                         className="w-full border border-stone-300 bg-white py-3 pl-10 pr-4 text-sm outline-none transition focus:border-yellow-400 dark:border-neutral-700 dark:bg-neutral-950"
                     />
@@ -265,9 +279,9 @@ const AdminOwners = () => {
                 <p className="text-sm text-gray-500 dark:text-[#A5A5A5]">
                     Showing{" "}
                     <span className="font-semibold text-black dark:text-white">
-                        {filteredOwners.length}
+                        {total}
                     </span>{" "}
-                    {filteredOwners.length === 1 ? "owner" : "owners"}
+                    {total === 1 ? "owner" : "owners"}
                 </p>
             </section>
 
@@ -348,6 +362,7 @@ const AdminOwners = () => {
                                             <p className="font-medium">
                                                 {owner.username || "Unnamed owner"}
                                             </p>
+
                                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                                 ID: {owner._id}
                                             </p>
@@ -355,6 +370,7 @@ const AdminOwners = () => {
 
                                         <td className="px-5 py-5">
                                             <p>{owner.email || "—"}</p>
+
                                             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                                 {owner.phone || "No phone"}
                                             </p>
@@ -411,6 +427,7 @@ const AdminOwners = () => {
                                             <h3 className="truncate font-medium">
                                                 {owner.username || "Unnamed owner"}
                                             </h3>
+
                                             <p className="mt-1 break-all text-xs text-gray-500 dark:text-gray-400">
                                                 {owner.email || "—"}
                                             </p>
@@ -457,6 +474,51 @@ const AdminOwners = () => {
                                 </div>
                             </article>
                         ))}
+                    </div>
+                </section>
+            )}
+
+            {/* PAGINATION */}
+            {!loading && !error && total > 0 && (
+                <section className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
+                    <p className="text-sm text-gray-500 dark:text-[#A5A5A5]">
+                        Showing{" "}
+                        <span className="font-medium text-black dark:text-white">
+                            {(page - 1) * limit + 1}
+                        </span>
+                        {" "}to{" "}
+                        <span className="font-medium text-black dark:text-white">
+                            {Math.min(page * limit, total)}
+                        </span>
+                        {" "}of{" "}
+                        <span className="font-medium text-black dark:text-white">
+                            {total}
+                        </span>
+                        {" "}owners
+                    </p>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                            disabled={page === 1 || loading}
+                            className="border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:hover:bg-neutral-800"
+                        >
+                            Previous
+                        </button>
+
+                        <span className="px-3 text-sm text-gray-600 dark:text-gray-300">
+                            Page {page} of {totalPages}
+                        </span>
+
+                        <button
+                            type="button"
+                            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                            disabled={page >= totalPages || loading}
+                            className="border border-stone-300 bg-white px-4 py-2 text-sm transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:hover:bg-neutral-800"
+                        >
+                            Next
+                        </button>
                     </div>
                 </section>
             )}
