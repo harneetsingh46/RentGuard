@@ -71,7 +71,7 @@ const Home = () => {
       {/* Hero — refined, minimal, and responsive */}
       <section className="relative isolate overflow-hidden px-5 pb-16 pt-14 sm:px-8 sm:pb-20 sm:pt-16 lg:px-16 lg:pb-28 lg:pt-24">
         <div aria-hidden="true" className="pointer-events-none absolute -right-28 top-12 -z-10 h-72 w-72 rounded-full bg-yellow-300/15 blur-3xl sm:h-96 sm:w-96 dark:bg-yellow-400/[0.07]" />
-        
+
 
         <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 lg:gap-14">
           <div className="hero-enter min-w-0">
@@ -209,23 +209,34 @@ const Home = () => {
         </div>
       </section>
 
+
       {/* Separate owner and tenant benefits */}
       <section
         id="for-owners"
         className="px-6 py-20 sm:px-10 lg:px-16 lg:py-24"
       >
         <div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-2">
+          {/* Owner card */}
           <article className="rounded-3xl bg-[#171717] p-8 text-white sm:p-10 lg:p-12">
             <span className="inline-flex rounded-full bg-yellow-300 px-3 py-1 text-xs font-semibold text-black">
               FOR PROPERTY OWNERS
             </span>
+
             <h2 className="mt-7 max-w-md text-3xl font-semibold tracking-tight sm:text-4xl">
-              Your properties. Your records. One workspace.
+              Your properties. Your tenants. One workspace.
             </h2>
+
             <p className="mt-5 max-w-lg leading-7 text-neutral-300">
-              Organize properties, manage tenant information, and review rental
-              payment records from your owner workspace.
+              Manage properties and tenants, create bills, review payment
+              records, organize documents, and handle tenant maintenance
+              requests from your owner workspace.
             </p>
+
+            <p className="mt-4 max-w-lg text-sm leading-6 text-neutral-400">
+              Create your account and complete owner verification before
+              getting started with property management.
+            </p>
+
             <Link
               to="/signup"
               className="mt-8 inline-flex items-center gap-2 rounded-xs bg-yellow-300 px-5 py-3 font-semibold text-black transition hover:bg-yellow-400"
@@ -234,20 +245,25 @@ const Home = () => {
             </Link>
           </article>
 
+          {/* Tenant card */}
           <article
             id="for-tenants"
             className="rounded-3xl border border-black/10 bg-white p-8 sm:p-10 lg:p-12 dark:border-white/10 dark:bg-[#1B1B1B]"
           >
-            <span className="inline-flex rounded-full bg-yellow-300/40 px-3 py-1 text-xs font-semibold text-neutral-800 group-hover:text-black dark:bg-yellow-300/15 dark:text-yellow-300">
+            <span className="inline-flex rounded-full bg-yellow-300/40 px-3 py-1 text-xs font-semibold text-neutral-800 dark:bg-yellow-300/15 dark:text-yellow-300">
               FOR TENANTS
             </span>
+
             <h2 className="mt-7 max-w-md text-3xl font-semibold tracking-tight sm:text-4xl">
-              Rental information, without the confusion.
+              Everything about your rental, in one place.
             </h2>
+
             <p className="mt-5 max-w-lg leading-7 text-neutral-600 dark:text-neutral-400">
-              Access your rental workspace and keep track of the information
-              your property owner makes available to you.
+              Access your rental details, view and pay bills, download
+              payment receipts, manage your documents, and submit
+              maintenance requests whenever something needs attention.
             </p>
+
             <Link
               to="/login"
               className="mt-8 inline-flex items-center gap-2 rounded-xx border border-black/10 px-5 py-3 font-semibold transition hover:border-yellow-500 hover:bg-yellow-300/20 dark:border-white/15"
@@ -257,6 +273,7 @@ const Home = () => {
           </article>
         </div>
       </section>
+
 
       {/* CTA */}
       <section className="px-6 pb-20 sm:px-10 lg:px-16 lg:pb-24">

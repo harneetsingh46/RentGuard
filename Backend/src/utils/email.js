@@ -616,60 +616,6 @@ export const sendContactEmail = async ({ name, email, topic, message }) => {
 };
 
 
-// OWNER REGISTRATION NOTIFICATION EMAIL
-
-export const sendOwnerRegistrationNotification = async ({
-  username,
-  email,
-  phone,
-  registeredAt,
-}) => {
-  try {
-    const adminEmail = "rentguard26@gmail.com";
-
-    const formattedDate = new Date(registeredAt || Date.now()).toLocaleString(
-      "en-IN",
-      {
-        dateStyle: "medium",
-        timeStyle: "short",
-      },
-    );
-
-    return await sendEmail({
-      to: adminEmail,
-      senderName: "RentGuard Notifications",
-      subject: "New Property Owner Registration - RentGuard",
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:25px;color:#333;line-height:1.6;">
-          <h2 style="color:#d4a017;">RentGuard</h2>
-          <h3>New Property Owner Registration</h3>
-
-          <p>A new property owner has registered on RentGuard.</p>
-
-          <div style="background:#f8fafc;padding:18px;border-radius:8px;margin:20px 0;">
-            <p><strong>Owner Name:</strong> ${escapeHtml(username)}</p>
-            <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-            <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
-            <p><strong>Registration Date:</strong> ${escapeHtml(formattedDate)}</p>
-            <p><strong>Verification Status:</strong>
-              <span style="color:#d97706;font-weight:bold;">Pending</span>
-            </p>
-          </div>
-
-          <p>Please log in to the RentGuard Admin Panel to review this owner's registration and verification details.</p>
-
-          <p style="color:#6b7280;font-size:13px;">
-            This is an automated notification from RentGuard.
-          </p>
-        </div>
-      `,
-    });
-  } catch (error) {
-    console.error("Owner registration notification failed:", error.message);
-    return null;
-  }
-};
-
 // OWNER AND TENANT SIGNUP EMAILS
 
 export const sendSignupEmails = async ({
