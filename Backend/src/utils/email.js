@@ -804,3 +804,84 @@ export const sendSignupEmails = async ({
 
   return results;
 };
+
+
+// OWNER APPROVAL CONFIRMATION EMAIL
+
+export const sendOwnerApprovalEmail = async ({
+  ownerName,
+  ownerEmail,
+  approvedAt,
+}) => {
+  try {
+    if (!ownerEmail) {
+      throw new Error("Owner email is required.");
+    }
+
+    const formattedDate = new Date(approvedAt || Date.now()).toLocaleString(
+      "en-IN",
+      {
+        dateStyle: "medium",
+        timeStyle: "short",
+      },
+    );
+
+    return await sendEmail({
+      to: ownerEmail,
+      senderName: "RentGuard",
+      subject: "Congratulations! Your RentGuard Owner Account Is Approved",
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:25px;color:#333;line-height:1.6;">
+          <h2 style="color:#d4a017;">RentGuard</h2>
+
+          <h3 style="color:#15803d;">Owner Account Approved!</h3>
+
+          <p>Hello ${escapeHtml(ownerName || "Property Owner")},</p>
+
+          <p>
+            Good news! Our RentGuard team has successfully reviewed
+            and approved your property owner account.
+          </p>
+
+          <div style="background:#f0fdf4;padding:18px;border-radius:8px;margin:20px 0;">
+            <p>
+              <strong>Account Name:</strong>
+              ${escapeHtml(ownerName || "Property Owner")}
+            </p>
+            <p>
+              <strong>Email:</strong>
+              ${escapeHtml(ownerEmail)}
+            </p>
+            <p>
+              <strong>Verification Status:</strong>
+              <span style="color:#15803d;font-weight:bold;">Approved</span>
+            </p>
+            <p>
+              <strong>Approval Date:</strong>
+              ${escapeHtml(formattedDate)}
+            </p>
+          </div>
+
+          <p>
+            You can now access the owner features of RentGuard,
+            including adding and managing your properties,
+            units, tenants, and rental bills.
+          </p>
+
+          <p>
+            Log in to your RentGuard account to get started.
+          </p>
+
+          <p>
+            Congratulations, and thank you for choosing RentGuard!
+          </p>
+
+          <p>Regards,<br /><strong>RentGuard Team</strong></p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error("Owner approval email failed:", error.message);
+    return null;
+  }
+};

@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { Admin } from "../models/admin.model.js";
 import genToken from "../utils/genToken.js";
 import { OwnerVerificationLog } from "../models/ownerVerificationLog.model.js";
+import { sendOwnerApprovalEmail } from "../utils/email.js";
 
 const getCookieOptions = () => ({
   httpOnly: true,
@@ -254,6 +255,15 @@ export const reviewOwner = async (req, res) => {
       reviewedAt,
     });
 
+    // Send approval confirmation to the owner
+    if (status === "approved") {
+      await sendOwnerApprovalEmail({
+        ownerName: owner.username,
+        ownerEmail: owner.email,
+        approvedAt: reviewedAt,
+      });
+    }
+
     return res.status(200).json({
       message:
         status === "approved"
@@ -422,7 +432,6 @@ export const getAllTenants = async (req, res) => {
     });
   }
 };
-
 
 // GET OWNER VERIFICATION DETAILS
 export const getOwnerVerificationDetails = async (req, res) => {
