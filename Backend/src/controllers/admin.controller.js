@@ -422,3 +422,44 @@ export const getAllTenants = async (req, res) => {
     });
   }
 };
+
+
+// GET OWNER VERIFICATION DETAILS
+export const getOwnerVerificationDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid owner ID.",
+      });
+    }
+
+    const owner = await User.findOne({
+      _id: id,
+      role: "owner",
+    })
+      .select(
+        "+aadhaarNumber +panNumber username email phone isActive verificationStatus verificationReviewedAt verificationReviewedBy verificationRejectionReason verifiedAt createdAt",
+      )
+      .populate("verificationReviewedBy", "name email")
+      .lean();
+
+    if (!owner) {
+      return res.status(404).json({
+        message: "Owner not found.",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Owner verification details fetched successfully.",
+      data: owner,
+    });
+  } catch (error) {
+    console.error("Get owner verification details error:", error);
+
+    return res.status(500).json({
+      message: "Unable to fetch owner verification details.",
+    });
+  }
+};

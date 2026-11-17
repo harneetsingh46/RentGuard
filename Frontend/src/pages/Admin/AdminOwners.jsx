@@ -4,7 +4,8 @@ import toast from "react-hot-toast";
 import {
     Search,
     RefreshCw,
-    Users
+    Users,
+    ShieldCheck,
 } from "lucide-react";
 import apiClient from "../../ApiClient/interceptor";
 
@@ -15,6 +16,15 @@ const AdminOwners = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [processingId, setProcessingId] = useState(null);
+
+    // Owner details and approval confirmation modals
+    const [detailsOwner, setDetailsOwner] = useState(null);
+    const [detailsLoading, setDetailsLoading] = useState(false);
+    const [detailsError, setDetailsError] = useState("");
+    const [showAadhaar, setShowAadhaar] = useState(false);
+    const [showPan, setShowPan] = useState(false);
+    const [approvalOwner, setApprovalOwner] = useState(null);
+    const [approving, setApproving] = useState(false);
 
     const [selectedOwner, setSelectedOwner] = useState(null);
     const [rejectionReason, setRejectionReason] = useState("");
@@ -127,33 +137,57 @@ const AdminOwners = () => {
         }
     };
 
-    // APPROVE OWNER
-    const handleApprove = async (owner) => {
-        const confirmed = window.confirm(
-            `Are you sure you want to approve ${owner.username || "this owner"}?`
-        );
-
-        if (!confirmed) return;
+    // OPEN OWNER DETAILS MODAL
+    const openOwnerDetails = async (owner) => {
+        setDetailsOwner(null);
+        setDetailsError("");
+        setShowAadhaar(false);
+        setShowPan(false);
+        setDetailsLoading(true);
 
         try {
-            setProcessingId(owner._id);
+            const response = await apiClient.get(`/admin/owners/${owner._id}/details`);
+            setDetailsOwner(response.data.data || response.data.owner || response.data);
+        } catch (error) {
+            setDetailsError(
+                error.response?.data?.message ||
+                "Unable to load owner verification details."
+            );
+        } finally {
+            setDetailsLoading(false);
+        }
+    };
+
+    const closeOwnerDetails = () => {
+        if (detailsLoading) return;
+        setDetailsOwner(null);
+        setDetailsError("");
+        setShowAadhaar(false);
+        setShowPan(false);
+    };
+
+    // APPROVE OWNER USING A CUSTOM MODAL
+    const handleApprove = async () => {
+        if (!approvalOwner) return;
+
+        try {
+            setApproving(true);
+            setProcessingId(approvalOwner._id);
 
             const response = await apiClient.patch(
-                `/admin/owners/${owner._id}/review`,
+                `/admin/owners/${approvalOwner._id}/review`,
                 { status: "approved" }
             );
 
-            toast.success(
-                response.data.message || "Owner approved successfully."
-            );
-
+            toast.success(response.data.message || "Owner approved successfully.");
+            setApprovalOwner(null);
             await fetchOwners();
         } catch (error) {
             toast.error(
-                error.response?.data?.message ||
-                "Unable to approve owner."
+                error.response?.data?.message || "Unable to approve owner."
             );
         } finally {
+            setApproving(false);
             setProcessingId(null);
         }
     };
@@ -515,7 +549,7 @@ const AdminOwners = () => {
                                                 {owner.verificationStatus !== "approved" && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => handleApprove(owner)}
+                                                        onClick={() => setApprovalOwner(owner)}
                                                         disabled={processingId === owner._id}
                                                         className="border border-green-200 px-3 py-2 text-xs font-medium text-green-700 transition hover:bg-green-50 disabled:opacity-50 dark:border-green-900 dark:text-green-400 dark:hover:bg-green-400/10"
                                                     >
@@ -533,6 +567,14 @@ const AdminOwners = () => {
                                                         Reject
                                                     </button>
                                                 )}
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openOwnerDetails(owner)}
+                                                    className="border border-blue-200 px-3 py-2 text-xs font-medium text-blue-700 transition hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-400/10"
+                                                >
+                                                    View Details
+                                                </button>
 
                                                 <button
                                                     type="button"
@@ -595,7 +637,7 @@ const AdminOwners = () => {
                                     {owner.verificationStatus !== "approved" && (
                                         <button
                                             type="button"
-                                            onClick={() => handleApprove(owner)}
+                                            onClick={() => setApprovalOwner(owner)}
                                             disabled={processingId === owner._id}
                                             className="flex-1 border border-green-200 px-3 py-2.5 text-xs font-medium text-green-700 disabled:opacity-50 dark:border-green-900 dark:text-green-400"
                                         >
@@ -613,6 +655,14 @@ const AdminOwners = () => {
                                             Reject
                                         </button>
                                     )}
+
+                                    <button
+                                        type="button"
+                                        onClick={() => openOwnerDetails(owner)}
+                                        className="flex-1 border border-blue-200 px-3 py-2.5 text-xs font-medium text-blue-700 transition hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-400/10"
+                                    >
+                                        View Details
+                                    </button>
 
                                     <button
                                         type="button"
@@ -671,6 +721,73 @@ const AdminOwners = () => {
                         </button>
                     </div>
                 </section>
+            )}
+
+            {/* OWNER DETAILS MODAL */}
+            {(detailsLoading || detailsError || detailsOwner) && (
+                <div
+                    className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-4"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) closeOwnerDetails();
+                    }}
+                >
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="owner-details-title"
+                        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto border border-stone-200 bg-white p-5 shadow-2xl dark:border-neutral-700 dark:bg-[#1b1b1b] sm:p-6"
+                    >
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <h2 id="owner-details-title" className="text-xl font-medium">Owner Verification Details</h2>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Review the submitted information before making a decision.</p>
+                            </div>
+                            <button type="button" onClick={closeOwnerDetails} disabled={detailsLoading} aria-label="Close details" className="rounded-lg p-2 text-xl leading-none hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-neutral-800">×</button>
+                        </div>
+
+                        {detailsLoading && <div className="py-12 text-center text-sm text-gray-500">Loading owner details...</div>}
+                        {!detailsLoading && detailsError && <div role="alert" className="mt-6 border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{detailsError}</div>}
+
+                        {!detailsLoading && detailsOwner && (
+                            <>
+                                <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-stone-200 p-4 dark:border-neutral-700">
+                                    <div><p className="font-semibold">{detailsOwner.username || detailsOwner.name || "Owner"}</p><p className="mt-1 break-all text-xs text-gray-500 dark:text-gray-400">{detailsOwner.email || "—"}</p></div>
+                                    <span className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize ${statusStyle(detailsOwner.verificationStatus)}`}>{detailsOwner.verificationStatus || "pending"}</span>
+                                </div>
+
+                                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                                    <div className="border border-stone-200 p-4 dark:border-neutral-700"><p className="text-xs uppercase tracking-wide text-gray-500">Phone number</p><p className="mt-2 break-all text-sm font-medium">{detailsOwner.phone || "—"}</p></div>
+                                    <div className="border border-stone-200 p-4 dark:border-neutral-700"><p className="text-xs uppercase tracking-wide text-gray-500">Registration date</p><p className="mt-2 text-sm font-medium">{formatDateTime(detailsOwner.createdAt)}</p></div>
+                                    <div className="border border-stone-200 p-4 dark:border-neutral-700"><p className="text-xs uppercase tracking-wide text-gray-500">Aadhaar number</p><div className="mt-2 flex items-center justify-between gap-2"><p className="break-all text-sm font-medium">{showAadhaar ? (detailsOwner.aadhaarNumber || "Not available") : (detailsOwner.aadhaarNumber ? `XXXX-XXXX-${String(detailsOwner.aadhaarNumber).slice(-4)}` : "Not available")}</p>{detailsOwner.aadhaarNumber && <button type="button" onClick={() => setShowAadhaar((value) => !value)} className="shrink-0 text-xs font-semibold text-blue-600 underline dark:text-blue-400">{showAadhaar ? "Hide" : "Reveal"}</button>}</div></div>
+                                    <div className="border border-stone-200 p-4 dark:border-neutral-700"><p className="text-xs uppercase tracking-wide text-gray-500">PAN number</p><div className="mt-2 flex items-center justify-between gap-2"><p className="break-all text-sm font-medium">{showPan ? (detailsOwner.panNumber || "Not available") : (detailsOwner.panNumber ? `${String(detailsOwner.panNumber).slice(0, 2)}XXX${String(detailsOwner.panNumber).slice(-3)}` : "Not available")}</p>{detailsOwner.panNumber && <button type="button" onClick={() => setShowPan((value) => !value)} className="shrink-0 text-xs font-semibold text-blue-600 underline dark:text-blue-400">{showPan ? "Hide" : "Reveal"}</button>}</div></div>
+                                </div>
+
+                                <div className="mt-5 border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-800 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300">
+                                    Identity document images are not available in the current owner registration data. This screen displays the Aadhaar and PAN numbers submitted during signup; verify the original documents through your approved verification process before approving.
+                                </div>
+
+                                {detailsOwner.verificationReviewedAt && <div className="mt-5 border border-stone-200 p-4 dark:border-neutral-700"><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Latest review</p><p className="mt-2 text-sm">Reviewed by: {detailsOwner.verificationReviewedBy?.name || "Admin"}</p><p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{formatDateTime(detailsOwner.verificationReviewedAt)}</p>{detailsOwner.verificationRejectionReason && <p className="mt-2 whitespace-pre-wrap text-sm text-red-600 dark:text-red-400">Reason: {detailsOwner.verificationRejectionReason}</p>}</div>}
+
+                                <div className="mt-6 flex justify-end border-t border-stone-200 pt-4 dark:border-neutral-700"><button type="button" onClick={closeOwnerDetails} className="border border-stone-300 px-5 py-2.5 text-sm font-medium hover:bg-stone-100 dark:border-neutral-700 dark:hover:bg-neutral-800">Close</button></div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* APPROVAL CONFIRMATION MODAL */}
+            {approvalOwner && (
+                <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/60 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !approving) setApprovalOwner(null); }}>
+                    <div role="dialog" aria-modal="true" aria-labelledby="approve-owner-title" className="w-full max-w-md border border-stone-200 bg-white p-6 shadow-2xl dark:border-neutral-700 dark:bg-[#1b1b1b]">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"><ShieldCheck size={25} /></div>
+                        <h2 id="approve-owner-title" className="text-xl font-medium">Approve owner verification?</h2>
+                        <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">You are about to approve <span className="font-semibold text-black dark:text-white">{approvalOwner.username || "this owner"}</span>. The owner will be allowed to manage and list properties after approval.</p>
+                        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                            <button type="button" onClick={() => setApprovalOwner(null)} disabled={approving} className="border border-stone-300 px-5 py-2.5 text-sm font-medium hover:bg-stone-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800">Cancel</button>
+                            <button type="button" onClick={handleApprove} disabled={approving} className="bg-green-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50">{approving ? "Approving..." : "Confirm Approval"}</button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* REJECTION DIALOG */}

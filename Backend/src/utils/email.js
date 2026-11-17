@@ -500,7 +500,8 @@ export const sendRentalApplicationNotification = async ({
     },
     approved: {
       subject: "RentGuard - Your Rental Application Was Approved",
-      tenantText: "Good news! The property owner approved your application. Please log in to RentGuard to confirm or decline the lease offer.",
+      tenantText:
+        "Good news! The property owner approved your application. Please log in to RentGuard to confirm or decline the lease offer.",
       ownerText: `You approved the rental application from ${escapeHtml(tenantName)}.`,
     },
     rejected: {
@@ -510,7 +511,8 @@ export const sendRentalApplicationNotification = async ({
     },
     accepted: {
       subject: "RentGuard - Lease Confirmed",
-      tenantText: "You have accepted the rental offer. Your tenancy is now active.",
+      tenantText:
+        "You have accepted the rental offer. Your tenancy is now active.",
       ownerText: `${escapeHtml(tenantName)} accepted your rental offer. The unit is now occupied.`,
     },
     declined: {
@@ -538,9 +540,10 @@ export const sendRentalApplicationNotification = async ({
         year: "numeric",
       })
     : "Not specified";
-  const safeAmount = rent === undefined || rent === null
-    ? "Not specified"
-    : `₹${Number(rent).toLocaleString("en-IN")}`;
+  const safeAmount =
+    rent === undefined || rent === null
+      ? "Not specified"
+      : `₹${Number(rent).toLocaleString("en-IN")}`;
 
   const details = `
     <div style="background:#f8fafc;padding:16px;border-radius:8px;margin:20px 0;">
@@ -555,29 +558,37 @@ export const sendRentalApplicationNotification = async ({
     </div>
   `;
 
-  const baseStyle = "font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:25px;color:#333;line-height:1.6;";
+  const baseStyle =
+    "font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:25px;color:#333;line-height:1.6;";
   const emails = [];
 
   if (tenantEmail) {
-    emails.push(sendEmail({
-      to: tenantEmail,
-      subject: template.subject,
-      html: `<div style="${baseStyle}"><h2 style="color:#d4a017;">RentGuard</h2><p>Hello ${escapeHtml(tenantName || "Tenant")},</p><p>${template.tenantText}</p>${details}<p>Thank you for using RentGuard.</p></div>`,
-    }));
+    emails.push(
+      sendEmail({
+        to: tenantEmail,
+        subject: template.subject,
+        html: `<div style="${baseStyle}"><h2 style="color:#d4a017;">RentGuard</h2><p>Hello ${escapeHtml(tenantName || "Tenant")},</p><p>${template.tenantText}</p>${details}<p>Thank you for using RentGuard.</p></div>`,
+      }),
+    );
   }
 
   if (ownerEmail) {
-    emails.push(sendEmail({
-      to: ownerEmail,
-      subject: template.subject,
-      html: `<div style="${baseStyle}"><h2 style="color:#d4a017;">RentGuard</h2><p>Hello ${escapeHtml(ownerName || "Property Owner")},</p><p>${template.ownerText}</p>${details}<p>Please log in to your RentGuard dashboard to manage this application.</p></div>`,
-    }));
+    emails.push(
+      sendEmail({
+        to: ownerEmail,
+        subject: template.subject,
+        html: `<div style="${baseStyle}"><h2 style="color:#d4a017;">RentGuard</h2><p>Hello ${escapeHtml(ownerName || "Property Owner")},</p><p>${template.ownerText}</p>${details}<p>Please log in to your RentGuard dashboard to manage this application.</p></div>`,
+      }),
+    );
   }
 
   const results = await Promise.allSettled(emails);
   results.forEach((result) => {
     if (result.status === "rejected") {
-      console.error("Rental application notification email failed:", result.reason);
+      console.error(
+        "Rental application notification email failed:",
+        result.reason,
+      );
     }
   });
   return results;
@@ -615,7 +626,6 @@ export const sendContactEmail = async ({ name, email, topic, message }) => {
   }
 };
 
-
 // OWNER AND TENANT SIGNUP EMAILS
 
 export const sendSignupEmails = async ({
@@ -625,128 +635,172 @@ export const sendSignupEmails = async ({
   phone,
   registeredAt,
 }) => {
-  try {
-    if (!["owner", "tenant"].includes(role)) {
-      throw new Error("Invalid signup email role.");
-    }
+  if (!["owner", "tenant"].includes(role)) {
+    throw new Error("Invalid signup email role.");
+  }
 
-    const isOwner = role === "owner";
+  const isOwner = role === "owner";
 
-    const formattedDate = new Date(
-      registeredAt || Date.now(),
-    ).toLocaleString("en-IN", {
+  const formattedDate = new Date(registeredAt || Date.now()).toLocaleString(
+    "en-IN",
+    {
       dateStyle: "medium",
       timeStyle: "short",
-    });
+    },
+  );
 
-    const baseStyle = `
-      font-family:Arial,sans-serif;
-      max-width:600px;
-      margin:auto;
-      padding:25px;
-      color:#333;
-      line-height:1.6;
-    `;
+  const baseStyle = `
+    font-family:Arial,sans-serif;
+    max-width:600px;
+    margin:auto;
+    padding:25px;
+    color:#333;
+    line-height:1.6;
+  `;
 
-    const emails = [];
+  const emails = [];
 
-    // Send signup confirmation to the registering user.
-    emails.push(
-      sendEmail({
-        to: email,
-        senderName: "RentGuard",
-        subject: isOwner
-          ? "RentGuard - Owner Registration Received"
-          : "Welcome to RentGuard - Signup Successful",
-        html: `
-          <div style="${baseStyle}">
-            <h2 style="color:#d4a017;">RentGuard</h2>
-            <h3>${isOwner ? "Owner Registration Received" : "Welcome to RentGuard!"}</h3>
+  // EMAIL 1: OWNER OR TENANT CONFIRMATION
+  emails.push({
+    recipient: role,
+    to: email,
+    subject: isOwner
+      ? "Your RentGuard Account Has Been Created Successfully"
+      : "Welcome to RentGuard - Signup Successful",
+    html: `
+      <div style="${baseStyle}">
+        <h2 style="color:#d4a017;">RentGuard</h2>
 
-            <p>Hello ${escapeHtml(name)},</p>
+        <h3 style="color:#15803d;">
+          ${isOwner ? "Account Created Successfully!" : "Welcome to RentGuard!"}
+        </h3>
 
-            ${
-              isOwner
-                ? `
-                  <p>
-                    Your property owner registration has been successfully received.
-                  </p>
+        <p>Hello ${escapeHtml(name)},</p>
 
-                  <div style="background:#fffbeb;padding:16px;border-radius:8px;">
-                    <p><strong>Verification Status:</strong>
-                      <span style="color:#d97706;font-weight:bold;">Pending</span>
-                    </p>
-                    <p>
-                      Our team will review your details and contact you
-                      after completing the verification process.
-                    </p>
-                  </div>
+        ${
+          isOwner
+            ? `
+              <p>
+                Congratulations! Your RentGuard property owner
+                account has been created successfully.
+              </p>
 
-                  <p>
-                    You can add and manage properties after your
-                    owner account has been approved.
-                  </p>
-                `
-                : `
-                  <p>
-                    Your tenant account has been successfully created on RentGuard.
-                  </p>
-                  <p>
-                    You can now log in using the OTP sent to your registered email address.
-                  </p>
-                `
-            }
-
-            <p><strong>Registration Date:</strong> ${escapeHtml(formattedDate)}</p>
-
-            <p>Thank you for choosing RentGuard.</p>
-
-            <p>Regards,<br /><strong>RentGuard Team</strong></p>
-          </div>
-        `,
-      }),
-    );
-
-    // Only owner signup should notify RentGuard admin.
-    if (isOwner) {
-      emails.push(
-        sendEmail({
-          to: "rentguard26@gmail.com",
-          senderName: "RentGuard Notifications",
-          subject: "New Property Owner Registration - RentGuard",
-          html: `
-            <div style="${baseStyle}">
-              <h2 style="color:#d4a017;">RentGuard</h2>
-              <h3>New Property Owner Registration</h3>
-
-              <p>A new property owner has registered on RentGuard.</p>
-
-              <div style="background:#f8fafc;padding:18px;border-radius:8px;">
-                <p><strong>Owner Name:</strong> ${escapeHtml(name)}</p>
+              <div style="background:#fffbeb;padding:18px;border-radius:8px;">
+                <p><strong>Account Name:</strong> ${escapeHtml(name)}</p>
                 <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-                <p><strong>Phone:</strong> ${escapeHtml(phone || "N/A")}</p>
                 <p><strong>Registration Date:</strong> ${escapeHtml(formattedDate)}</p>
-                <p><strong>Verification Status:</strong> Pending</p>
+                <p>
+                  <strong>Verification Status:</strong>
+                  <span style="color:#d97706;font-weight:bold;">
+                    Pending
+                  </span>
+                </p>
               </div>
 
-              <p>Please log in to the RentGuard Admin Panel to review this registration.</p>
-            </div>
-          `,
-        }),
-      );
-    }
+              <p>
+                Our RentGuard team will review your details and
+                contact you after completing the verification process.
+              </p>
 
-    const results = await Promise.allSettled(emails);
+              <p>
+                You can manage properties after your owner account
+                has been approved.
+              </p>
+            `
+            : `
+              <p>
+                Your tenant account has been created successfully
+                on RentGuard.
+              </p>
 
-    results.forEach((result) => {
-      if (result.status === "rejected") {
-        console.error("Signup email failed:", result.reason);
-      }
+              <p>
+                You can now log in using the OTP sent to your
+                registered email address.
+              </p>
+
+              <div style="background:#f8fafc;padding:18px;border-radius:8px;">
+                <p><strong>Account Name:</strong> ${escapeHtml(name)}</p>
+                <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+                <p><strong>Registration Date:</strong> ${escapeHtml(formattedDate)}</p>
+              </div>
+
+              <p>
+                Thank you for choosing RentGuard. We are happy
+                to have you with us!
+              </p>
+            `
+        }
+
+        <p>Regards,<br /><strong>RentGuard Team</strong></p>
+      </div>
+    `,
+  });
+
+  // EMAIL 2: ADMIN NOTIFICATION - OWNER ONLY
+  if (isOwner) {
+    emails.push({
+      recipient: "admin",
+      to: "rentguard26@gmail.com",
+      subject: "New Property Owner Registered - RentGuard",
+      html: `
+        <div style="${baseStyle}">
+          <h2 style="color:#d4a017;">RentGuard</h2>
+
+          <h3>New Property Owner Registration</h3>
+
+          <p>
+            A new property owner has successfully registered on RentGuard.
+          </p>
+
+          <div style="background:#f8fafc;padding:18px;border-radius:8px;">
+            <p><strong>Owner Name:</strong> ${escapeHtml(name)}</p>
+            <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+            <p><strong>Phone:</strong> ${escapeHtml(phone || "N/A")}</p>
+            <p><strong>Registration Date:</strong> ${escapeHtml(formattedDate)}</p>
+            <p><strong>Verification Status:</strong> Pending</p>
+          </div>
+
+          <p>
+            Please log in to the RentGuard Admin Panel
+            to review this owner's registration.
+          </p>
+
+          <p>Regards,<br /><strong>RentGuard Notifications</strong></p>
+        </div>
+      `,
     });
-
-    return results;
-  } catch (error) {
-    console.error("Signup email error:", error);
-    return null;
   }
+
+  // SEND EMAILS INDEPENDENTLY
+  const results = await Promise.all(
+    emails.map(async ({ recipient, ...emailData }) => {
+      try {
+        const response = await sendEmail({
+          ...emailData,
+          senderName: "RentGuard",
+        });
+
+        console.log(
+          `Signup email accepted for ${recipient}:`,
+          response.messageId,
+        );
+
+        return {
+          recipient,
+          status: "sent",
+          messageId: response.messageId,
+        };
+      } catch (error) {
+        console.error(`Signup email failed for ${recipient}:`, error.message);
+
+        return {
+          recipient,
+          status: "failed",
+          error: error.message,
+        };
+      }
+    }),
+  );
+
+  return results;
 };

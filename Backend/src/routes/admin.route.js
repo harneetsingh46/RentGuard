@@ -7,6 +7,7 @@ import {
   reviewOwner,
   getAllTenants,
   getOwnerVerificationHistory,
+  getOwnerVerificationDetails,
 } from "../controllers/admin.controller.js";
 
 import { protect, isAdmin } from "../utils/protect.js";
@@ -26,6 +27,15 @@ router.get(
   isAdmin,
   getOwnerVerificationHistory,
 );
+
+
+router.get(
+  "/owners/:id/details",
+  protect,
+  isAdmin,
+  getOwnerVerificationDetails,
+);
+
 router.get("/tenants", protect, isAdmin, getAllTenants);
 
 export default router;

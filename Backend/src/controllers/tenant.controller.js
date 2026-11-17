@@ -106,14 +106,15 @@ export const registerSelfTenant = async (req, res) => {
       contactVerified: false,
     });
 
-    // Send signup confirmation only to the newly registered tenant.
-    void sendSignupEmails({
+    const emailResults = await sendSignupEmails({
       role: "tenant",
       name: tenant.fullName,
       email: tenant.email,
       phone: tenant.phone,
       registeredAt: tenant.createdAt,
     });
+
+    console.log("Tenant signup email results:", emailResults);
 
     return res.status(201).json({
       message: "Tenant registration successful! Please login with OTP.",
