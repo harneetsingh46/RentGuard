@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import apiClient from "../../ApiClient/interceptor.js"
+import { useAuth } from "../../context/AuthContext";
 import { Pencil, Trash2, X, AlertTriangle } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -17,6 +18,10 @@ const emptyUnit = {
 
 
 const Property = () => {
+    const { user } = useAuth();
+    const verificationStatus = user?.verificationStatus || "pending";
+    const isApproved = verificationStatus === "approved";
+
     // Property state
     const [properties, setProperties] = useState([]);
     const [selectedProperty, setSelectedProperty] = useState(null);
@@ -157,6 +162,8 @@ const Property = () => {
 
     // Open add property modal
     const openAddForm = () => {
+        if (!isApproved) return;
+
         setProperty({ ...emptyProperty });
         setIsEditingProperty(false);
         setError("");
@@ -165,6 +172,8 @@ const Property = () => {
 
     // Open edit property modal
     const openEditForm = (item) => {
+        if (!isApproved) return;
+
         setProperty({
             propertyName: item.propertyName,
             address: item.address,
@@ -188,6 +197,11 @@ const Property = () => {
     // Add or update property
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!isApproved) {
+            setError("Your owner account must be approved before you can manage properties.");
+            return;
+        }
 
         const formData = {
             propertyName: property.propertyName.trim(),
@@ -233,6 +247,8 @@ const Property = () => {
 
     // Open a custom confirmation modal before deleting a property
     const handleDelete = (propertyId) => {
+        if (!isApproved) return;
+
         const item = properties.find((propertyItem) => propertyItem._id === propertyId);
         setConfirmModal({
             open: true,
@@ -245,7 +261,7 @@ const Property = () => {
 
     // Open a custom confirmation modal before deleting a unit
     const handleDeleteUnit = (unitId) => {
-        if (!selectedProperty?._id) return;
+        if (!isApproved || !selectedProperty?._id) return;
         const item = units.find((unitItem) => unitItem._id === unitId);
         setConfirmModal({
             open: true,
@@ -262,7 +278,7 @@ const Property = () => {
     };
 
     const confirmDelete = async () => {
-        if (!confirmModal.id || !confirmModal.type) return;
+        if (!isApproved || !confirmModal.id || !confirmModal.type) return;
 
         try {
             setDeleting(true);
@@ -317,7 +333,7 @@ const Property = () => {
 
     // Open add unit modal
     const openAddUnitForm = () => {
-        if (!selectedProperty) return;
+        if (!isApproved || !selectedProperty) return;
 
         setUnit({ ...emptyUnit });
         setSelectedUnit(null);
@@ -329,6 +345,8 @@ const Property = () => {
 
     // Open edit unit modal
     const openEditUnitForm = (item) => {
+        if (!isApproved) return;
+
         setUnit({
             unitName: item.unitName,
             unitType: item.unitType,
@@ -355,6 +373,11 @@ const Property = () => {
     // Add or update unit
     const handleUnitSubmit = async (e) => {
         e.preventDefault();
+
+        if (!isApproved) {
+            setUnitError("Your owner account must be approved before you can manage units.");
+            return;
+        }
 
         if (!selectedProperty?._id) {
             setUnitError("Please select a property first.");
@@ -481,11 +504,49 @@ const Property = () => {
                 <button
                     type="button"
                     onClick={openAddForm}
-                    className="whitespace-nowrap rounded-xs bg-yellow-300 px-5 py-3 font-medium text-black transition hover:bg-yellow-400"
+                    disabled={!isApproved}
+                    title={!isApproved ? "Available after owner verification" : "Add property"}
+                    className="whitespace-nowrap rounded-xs bg-yellow-300 px-5 py-3 font-medium text-black transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     + Add Property
                 </button>
             </div>
+
+            {/* OWNER VERIFICATION STATUS */}
+            {!isApproved && (
+                <div
+                    className={`mt-6 rounded-xs border p-5 ${
+                        verificationStatus === "rejected"
+                            ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                            : "border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30"
+                    }`}
+                    role="status"
+                >
+                    <h2
+                        className={`text-lg font-semibold ${
+                            verificationStatus === "rejected"
+                                ? "text-red-700 dark:text-red-300"
+                                : "text-amber-800 dark:text-amber-300"
+                        }`}
+                    >
+                        {verificationStatus === "rejected"
+                            ? "Owner Verification Rejected"
+                            : "Your Account Is Under Verification"}
+                    </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">
+                        {verificationStatus === "rejected"
+                            ? "Your owner verification was not approved. Please contact the RentGuard support team for assistance."
+                            : "Thank you for registering with RentGuard. Our team is reviewing your details. Once verification is complete, our team will reach out to you. You will be able to add and manage properties after approval."}
+                    </p>
+
+                    {verificationStatus !== "rejected" && (
+                        <p className="mt-3 text-sm font-medium text-amber-800 dark:text-amber-300">
+                            Property and unit management is temporarily unavailable until your account is approved.
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Properties Section */}
             <div className="mt-10">
@@ -517,7 +578,9 @@ const Property = () => {
                         <button
                             type="button"
                             onClick={openAddForm}
-                            className="mt-5 rounded-sm bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400"
+                            disabled={!isApproved}
+                            title={!isApproved ? "Available after owner verification" : "Add property"}
+                            className="mt-5 rounded-sm bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             + Add Your First Property
                         </button>
@@ -569,9 +632,10 @@ const Property = () => {
                                                 e.stopPropagation();
                                                 openEditForm(item);
                                             }}
+                                            disabled={!isApproved}
                                             aria-label={`Edit ${item.propertyName}`}
                                             title="Edit property"
-                                            className="mx-0 my-1 inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400"
+                                            className="mx-0 my-1 inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             <Pencil size={17} />
                                         </button>
@@ -582,9 +646,10 @@ const Property = () => {
                                                 e.stopPropagation();
                                                 handleDelete(item._id);
                                             }}
+                                            disabled={!isApproved}
                                             aria-label={`Delete ${item.propertyName}`}
                                             title="Delete property"
-                                            className="mx-1 my-1 inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                                            className="mx-1 my-1 inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 shadow-sm transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             <Trash2 size={17} />
                                         </button>
@@ -621,7 +686,9 @@ const Property = () => {
                                 <button
                                     type="button"
                                     onClick={openAddUnitForm}
-                                    className="rounded-xs bg-yellow-300 px-5 py-3 font-medium text-black transition hover:bg-yellow-400"
+                                    disabled={!isApproved}
+                                    title={!isApproved ? "Available after owner verification" : "Add unit"}
+                                    className="rounded-xs bg-yellow-300 px-5 py-3 font-medium text-black transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     + Add Unit
                                 </button>
@@ -659,7 +726,9 @@ const Property = () => {
                                     <button
                                         type="button"
                                         onClick={openAddUnitForm}
-                                        className="mt-4 rounded-xs text-center bg-yellow-300 px-4 py-2 font-medium text-black hover:bg-yellow-400"
+                                        disabled={!isApproved}
+                                        title={!isApproved ? "Available after owner verification" : "Add unit"}
+                                        className="mt-4 rounded-xs text-center bg-yellow-300 px-4 py-2 font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         + Add First Unit
                                     </button>
@@ -733,9 +802,10 @@ const Property = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => openEditUnitForm(item)}
+                                                        disabled={!isApproved}
                                                         aria-label={`Edit ${item.unitName}`}
                                                         title="Edit unit"
-                                                        className="inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400"
+                                                        className="inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                         <Pencil size={16} />
                                                     </button>
@@ -743,9 +813,10 @@ const Property = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleDeleteUnit(item._id)}
+                                                        disabled={!isApproved}
                                                         aria-label={`Delete ${item.unitName}`}
                                                         title="Delete unit"
-                                                        className="inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                                                        className="inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                         <Trash2 size={16} />
                                                     </button>
@@ -856,7 +927,7 @@ const Property = () => {
 
                                 <button
                                     type="submit"
-                                    disabled={submitting}
+                                    disabled={submitting || !isApproved}
                                     className="rounded-xs bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {submitting
@@ -990,7 +1061,7 @@ const Property = () => {
 
                                 <button
                                     type="submit"
-                                    disabled={submitting}
+                                    disabled={submitting || !isApproved}
                                     className="rounded-xs bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {submitting

@@ -80,9 +80,7 @@ const sendEmail = async ({
   };
 };
 
-// ==========================================
 // 1. OTP EMAIL
-// ==========================================
 
 export const sendOtpEmail = async (email, otp) => {
   try {
@@ -106,9 +104,7 @@ export const sendOtpEmail = async (email, otp) => {
   }
 };
 
-// ==========================================
 // 2. MAINTENANCE NOTIFICATION EMAIL
-// ==========================================
 
 export const sendMaintenanceEmail = async ({
   ownerEmail,
@@ -171,9 +167,7 @@ export const sendMaintenanceEmail = async ({
   }
 };
 
-// ==========================================
 // 3. TENANCY AND MOVE-OUT NOTIFICATIONS
-// ==========================================
 
 export const sendTenancyNotificationEmails = async ({
   event,
@@ -343,9 +337,7 @@ export const sendTenancyNotificationEmails = async ({
   }
 };
 
-// ==========================================
 // 4. PAYMENT CONFIRMATION EMAILS
-// ==========================================
 
 export const sendPaymentConfirmationEmails = async ({
   tenantEmail,
@@ -484,9 +476,7 @@ export const sendPaymentConfirmationEmails = async ({
   }
 };
 
-// ==========================================
 // RENTAL APPLICATION NOTIFICATIONS
-// ==========================================
 
 export const sendRentalApplicationNotification = async ({
   event,
@@ -593,9 +583,7 @@ export const sendRentalApplicationNotification = async ({
   return results;
 };
 
-// ==========================================
 // 6. CONTACT FORM EMAIL
-// ==========================================
 
 export const sendContactEmail = async ({ name, email, topic, message }) => {
   try {
@@ -624,5 +612,195 @@ export const sendContactEmail = async ({ name, email, topic, message }) => {
   } catch (error) {
     console.error("Contact email error:", error);
     throw error;
+  }
+};
+
+
+// OWNER REGISTRATION NOTIFICATION EMAIL
+
+export const sendOwnerRegistrationNotification = async ({
+  username,
+  email,
+  phone,
+  registeredAt,
+}) => {
+  try {
+    const adminEmail = "rentguard26@gmail.com";
+
+    const formattedDate = new Date(registeredAt || Date.now()).toLocaleString(
+      "en-IN",
+      {
+        dateStyle: "medium",
+        timeStyle: "short",
+      },
+    );
+
+    return await sendEmail({
+      to: adminEmail,
+      senderName: "RentGuard Notifications",
+      subject: "New Property Owner Registration - RentGuard",
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:25px;color:#333;line-height:1.6;">
+          <h2 style="color:#d4a017;">RentGuard</h2>
+          <h3>New Property Owner Registration</h3>
+
+          <p>A new property owner has registered on RentGuard.</p>
+
+          <div style="background:#f8fafc;padding:18px;border-radius:8px;margin:20px 0;">
+            <p><strong>Owner Name:</strong> ${escapeHtml(username)}</p>
+            <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+            <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
+            <p><strong>Registration Date:</strong> ${escapeHtml(formattedDate)}</p>
+            <p><strong>Verification Status:</strong>
+              <span style="color:#d97706;font-weight:bold;">Pending</span>
+            </p>
+          </div>
+
+          <p>Please log in to the RentGuard Admin Panel to review this owner's registration and verification details.</p>
+
+          <p style="color:#6b7280;font-size:13px;">
+            This is an automated notification from RentGuard.
+          </p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error("Owner registration notification failed:", error.message);
+    return null;
+  }
+};
+
+// OWNER AND TENANT SIGNUP EMAILS
+
+export const sendSignupEmails = async ({
+  role,
+  name,
+  email,
+  phone,
+  registeredAt,
+}) => {
+  try {
+    if (!["owner", "tenant"].includes(role)) {
+      throw new Error("Invalid signup email role.");
+    }
+
+    const isOwner = role === "owner";
+
+    const formattedDate = new Date(
+      registeredAt || Date.now(),
+    ).toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+
+    const baseStyle = `
+      font-family:Arial,sans-serif;
+      max-width:600px;
+      margin:auto;
+      padding:25px;
+      color:#333;
+      line-height:1.6;
+    `;
+
+    const emails = [];
+
+    // Send signup confirmation to the registering user.
+    emails.push(
+      sendEmail({
+        to: email,
+        senderName: "RentGuard",
+        subject: isOwner
+          ? "RentGuard - Owner Registration Received"
+          : "Welcome to RentGuard - Signup Successful",
+        html: `
+          <div style="${baseStyle}">
+            <h2 style="color:#d4a017;">RentGuard</h2>
+            <h3>${isOwner ? "Owner Registration Received" : "Welcome to RentGuard!"}</h3>
+
+            <p>Hello ${escapeHtml(name)},</p>
+
+            ${
+              isOwner
+                ? `
+                  <p>
+                    Your property owner registration has been successfully received.
+                  </p>
+
+                  <div style="background:#fffbeb;padding:16px;border-radius:8px;">
+                    <p><strong>Verification Status:</strong>
+                      <span style="color:#d97706;font-weight:bold;">Pending</span>
+                    </p>
+                    <p>
+                      Our team will review your details and contact you
+                      after completing the verification process.
+                    </p>
+                  </div>
+
+                  <p>
+                    You can add and manage properties after your
+                    owner account has been approved.
+                  </p>
+                `
+                : `
+                  <p>
+                    Your tenant account has been successfully created on RentGuard.
+                  </p>
+                  <p>
+                    You can now log in using the OTP sent to your registered email address.
+                  </p>
+                `
+            }
+
+            <p><strong>Registration Date:</strong> ${escapeHtml(formattedDate)}</p>
+
+            <p>Thank you for choosing RentGuard.</p>
+
+            <p>Regards,<br /><strong>RentGuard Team</strong></p>
+          </div>
+        `,
+      }),
+    );
+
+    // Only owner signup should notify RentGuard admin.
+    if (isOwner) {
+      emails.push(
+        sendEmail({
+          to: "rentguard26@gmail.com",
+          senderName: "RentGuard Notifications",
+          subject: "New Property Owner Registration - RentGuard",
+          html: `
+            <div style="${baseStyle}">
+              <h2 style="color:#d4a017;">RentGuard</h2>
+              <h3>New Property Owner Registration</h3>
+
+              <p>A new property owner has registered on RentGuard.</p>
+
+              <div style="background:#f8fafc;padding:18px;border-radius:8px;">
+                <p><strong>Owner Name:</strong> ${escapeHtml(name)}</p>
+                <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+                <p><strong>Phone:</strong> ${escapeHtml(phone || "N/A")}</p>
+                <p><strong>Registration Date:</strong> ${escapeHtml(formattedDate)}</p>
+                <p><strong>Verification Status:</strong> Pending</p>
+              </div>
+
+              <p>Please log in to the RentGuard Admin Panel to review this registration.</p>
+            </div>
+          `,
+        }),
+      );
+    }
+
+    const results = await Promise.allSettled(emails);
+
+    results.forEach((result) => {
+      if (result.status === "rejected") {
+        console.error("Signup email failed:", result.reason);
+      }
+    });
+
+    return results;
+  } catch (error) {
+    console.error("Signup email error:", error);
+    return null;
   }
 };
