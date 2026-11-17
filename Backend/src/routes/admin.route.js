@@ -1,4 +1,3 @@
-
 import express from "express";
 
 import {
@@ -7,6 +6,7 @@ import {
   getAllOwners,
   reviewOwner,
   getAllTenants,
+  getOwnerVerificationHistory,
 } from "../controllers/admin.controller.js";
 
 import { protect, isAdmin } from "../utils/protect.js";
@@ -20,6 +20,12 @@ router.post("/login", adminLogin);
 router.get("/overview", protect, isAdmin, getAdminOverview);
 router.get("/owners", protect, isAdmin, getAllOwners);
 router.patch("/owners/:id/review", protect, isAdmin, reviewOwner);
+router.get(
+  "/owners/:id/verification-history",
+  protect,
+  isAdmin,
+  getOwnerVerificationHistory,
+);
 router.get("/tenants", protect, isAdmin, getAllTenants);
 
 export default router;

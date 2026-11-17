@@ -4,6 +4,7 @@ import { Tenant } from "../models/tenant.model.js";
 import bcrypt from "bcryptjs";
 import { Admin } from "../models/admin.model.js";
 import genToken from "../utils/genToken.js";
+import { OwnerVerificationLog } from "../models/ownerVerificationLog.model.js";
 
 const getCookieOptions = () => ({
   httpOnly: true,
@@ -233,13 +234,25 @@ export const reviewOwner = async (req, res) => {
       });
     }
 
+    const reviewedAt = new Date();
+    const rejectionReason = status === "rejected" ? reason.trim() : null;
+
+    // Save the latest review on the owner
     owner.verificationStatus = status;
-    owner.verificationReviewedAt = new Date();
+    owner.verificationReviewedAt = reviewedAt;
     owner.verificationReviewedBy = req.user._id;
-    owner.verificationRejectionReason =
-      status === "rejected" ? reason.trim() : null;
+    owner.verificationRejectionReason = rejectionReason;
 
     await owner.save();
+
+    // Save this review as a separate audit record
+    const reviewLog = await OwnerVerificationLog.create({
+      owner: owner._id,
+      reviewedBy: req.user._id,
+      status,
+      rejectionReason,
+      reviewedAt,
+    });
 
     return res.status(200).json({
       message:
@@ -253,6 +266,7 @@ export const reviewOwner = async (req, res) => {
         verificationStatus: owner.verificationStatus,
         verificationReviewedAt: owner.verificationReviewedAt,
         verificationRejectionReason: owner.verificationRejectionReason,
+        reviewLogId: reviewLog._id,
       },
     });
   } catch (error) {
@@ -260,6 +274,69 @@ export const reviewOwner = async (req, res) => {
 
     return res.status(500).json({
       message: "Unable to review owner.",
+    });
+  }
+};
+
+// GET OWNER VERIFICATION HISTORY
+export const getOwnerVerificationHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid owner ID.",
+      });
+    }
+
+    const owner = await User.findOne({
+      _id: id,
+      role: "owner",
+    }).select("_id username email");
+
+    if (!owner) {
+      return res.status(404).json({
+        message: "Owner not found.",
+      });
+    }
+
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(req.query.limit, 10) || 10),
+    );
+
+    const skip = (page - 1) * limit;
+
+    const [history, total] = await Promise.all([
+      OwnerVerificationLog.find({ owner: id })
+        .populate("reviewedBy", "name email")
+        .sort({ reviewedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      OwnerVerificationLog.countDocuments({ owner: id }),
+    ]);
+
+    return res.status(200).json({
+      message: "Owner verification history fetched successfully.",
+      data: {
+        owner,
+        history,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Owner verification history error:", error);
+
+    return res.status(500).json({
+      message: "Unable to fetch owner verification history.",
     });
   }
 };
