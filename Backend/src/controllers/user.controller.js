@@ -6,11 +6,7 @@ import { Tenant } from "../models/tenant.model.js";
 import genToken from "../utils/genToken.js";
 
 import { OTP_CONFIG } from "../config/policy.js";
-import {
-  sendOtpEmail,
-  sendOwnerRegistrationNotification,
-  sendSignupEmails 
-} from "../utils/email.js";
+import { sendOtpEmail, sendSignupEmails } from "../utils/email.js";
 
 // HELPERS
 
@@ -170,9 +166,10 @@ export const register = async (req, res) => {
       tokenVersion: 0,
     });
 
-    // Notify RentGuard admin about the new owner registration
-    sendOwnerRegistrationNotification({
-      username: user.username,
+    // Send signup confirmation to owner and notification to RentGuard admin.
+    void sendSignupEmails({
+      role: "owner",
+      name: user.username,
       email: user.email,
       phone: user.phone,
       registeredAt: user.createdAt,

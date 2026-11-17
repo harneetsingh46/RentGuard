@@ -5,7 +5,10 @@ import { Unit } from "../models/unit.model.js";
 import { Bill } from "../models/bill.model.js";
 import uploadToCloudinary from "../utils/uploadToCloudinary.js";
 import cloudinary from "../config/cloudinary.js";
-import { sendTenancyNotificationEmails } from "../utils/email.js";
+import {
+  sendTenancyNotificationEmails,
+  sendSignupEmails,
+} from "../utils/email.js";
 
 // HELPERS
 
@@ -84,7 +87,8 @@ export const registerSelfTenant = async (req, res) => {
 
     if (existing) {
       return res.status(409).json({
-        message: "An active tenant account with this email, phone, or Aadhaar already exists.",
+        message:
+          "An active tenant account with this email, phone, or Aadhaar already exists.",
       });
     }
 
@@ -100,6 +104,15 @@ export const registerSelfTenant = async (req, res) => {
       isActive: true,
       tokenVersion: 0,
       contactVerified: false,
+    });
+
+    // Send signup confirmation only to the newly registered tenant.
+    void sendSignupEmails({
+      role: "tenant",
+      name: tenant.fullName,
+      email: tenant.email,
+      phone: tenant.phone,
+      registeredAt: tenant.createdAt,
     });
 
     return res.status(201).json({
