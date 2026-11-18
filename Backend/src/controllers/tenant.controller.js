@@ -176,6 +176,10 @@ export const getAvailableProperties = async (req, res) => {
         unitType: unit.unitType,
         rent: unit.rent,
         status: unit.status,
+        image: unit.image || {
+          url: "",
+          publicId: "",
+        },
       });
       propertyListing.availableCount = propertyListing.availableUnits.length;
     }

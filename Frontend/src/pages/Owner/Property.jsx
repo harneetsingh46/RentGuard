@@ -35,6 +35,8 @@ const Property = () => {
     const [units, setUnits] = useState([]);
     const [unit, setUnit] = useState(emptyUnit);
     const [selectedUnit, setSelectedUnit] = useState(null);
+    const [unitImage, setUnitImage] = useState(null);
+    const [unitImagePreview, setUnitImagePreview] = useState("");
 
     // Unit modal state
     const [unitModalOpen, setUnitModalOpen] = useState(false);
@@ -158,6 +160,30 @@ const Property = () => {
             ...current,
             [e.target.name]: e.target.value,
         }));
+    };
+
+    const handleUnitImageChange = (e) => {
+        const file = e.target.files?.[0];
+
+        if (!file) return;
+
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+
+        if (!allowedTypes.includes(file.type)) {
+            setUnitError("Please select a JPG, PNG, or WebP image.");
+            e.target.value = "";
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            setUnitError("Image size must be less than 5 MB.");
+            e.target.value = "";
+            return;
+        }
+
+        setUnitImage(file);
+        setUnitImagePreview(URL.createObjectURL(file));
+        setUnitError("");
     };
 
     // Open add property modal
@@ -336,6 +362,8 @@ const Property = () => {
         if (!isApproved || !selectedProperty) return;
 
         setUnit({ ...emptyUnit });
+        setUnitImage(null);
+        setUnitImagePreview("");
         setSelectedUnit(null);
         setIsEditingUnit(false);
         setUnitError("");
@@ -358,6 +386,8 @@ const Property = () => {
         setUnitError("");
         setSuccess("");
         setUnitModalOpen(true);
+        setUnitImage(null);
+        setUnitImagePreview(item.image?.url || "");
     };
 
     // Close unit modal
@@ -368,6 +398,8 @@ const Property = () => {
         setUnit({ ...emptyUnit });
         setSelectedUnit(null);
         setUnitError("");
+        setUnitImage(null);
+        setUnitImagePreview("");
     };
 
     // Add or update unit
@@ -414,17 +446,26 @@ const Property = () => {
             setUnitError("");
             setSuccess("");
 
+            const unitFormData = new FormData();
+            unitFormData.append("unitName", formData.unitName);
+            unitFormData.append("unitType", formData.unitType);
+            unitFormData.append("rent", String(formData.rent));
+
+            if (unitImage) {
+                unitFormData.append("image", unitImage);
+            }
+
             if (isEditingUnit && selectedUnit) {
                 await apiClient.put(
                     `/property/${selectedProperty._id}/units/${selectedUnit._id}`,
-                    formData
+                    unitFormData
                 );
 
                 setSuccess("Unit updated successfully!");
             } else {
                 await apiClient.post(
                     `/property/${selectedProperty._id}/units`,
-                    formData
+                    unitFormData
                 );
 
                 setSuccess("Unit added successfully!");
@@ -433,6 +474,8 @@ const Property = () => {
             setUnitModalOpen(false);
             setUnit({ ...emptyUnit });
             setSelectedUnit(null);
+            setUnitImage(null);
+            setUnitImagePreview("");
 
             await getUnits(selectedProperty._id);
         } catch (err) {
@@ -515,19 +558,17 @@ const Property = () => {
             {/* OWNER VERIFICATION STATUS */}
             {!isApproved && (
                 <div
-                    className={`mt-6 rounded-xs border p-5 ${
-                        verificationStatus === "rejected"
-                            ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
-                            : "border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30"
-                    }`}
+                    className={`mt-6 rounded-xs border p-5 ${verificationStatus === "rejected"
+                        ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30"
+                        : "border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30"
+                        }`}
                     role="status"
                 >
                     <h2
-                        className={`text-lg font-semibold ${
-                            verificationStatus === "rejected"
-                                ? "text-red-700 dark:text-red-300"
-                                : "text-amber-800 dark:text-amber-300"
-                        }`}
+                        className={`text-lg font-semibold ${verificationStatus === "rejected"
+                            ? "text-red-700 dark:text-red-300"
+                            : "text-amber-800 dark:text-amber-300"
+                            }`}
                     >
                         {verificationStatus === "rejected"
                             ? "Owner Verification Rejected"
@@ -981,6 +1022,39 @@ const Property = () => {
                         </div>
 
                         <form onSubmit={handleUnitSubmit}>
+                            {/* Unit Image */}
+                            <div className="mb-5">
+                                <label
+                                    htmlFor="unitImage"
+                                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
+                                >
+                                    Unit Picture
+                                </label>
+
+                                {unitImagePreview && (
+                                    <div className="mb-3 overflow-hidden rounded-xl border border-gray-200 dark:border-stone-700">
+                                        <img
+                                            src={unitImagePreview}
+                                            alt="Unit preview"
+                                            className="h-48 w-full object-cover"
+                                        />
+                                    </div>
+                                )}
+
+                                <input
+                                    id="unitImage"
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={handleUnitImageChange}
+                                    disabled={submitting}
+                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-yellow-300 file:px-4 file:py-2 file:font-medium file:text-black dark:border-stone-800 dark:bg-[#262626] dark:text-gray-200"
+                                />
+
+                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                    JPG, PNG or WebP. Maximum size: 5 MB.
+                                </p>
+                            </div>
+
                             <div className="mb-5">
                                 <label
                                     htmlFor="unitName"
@@ -1109,40 +1183,40 @@ const Property = () => {
                             </button>
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-7">
-                        {tenantDetailsLoading ? (
-                            <p className="py-8 text-center text-gray-500 dark:text-gray-400">Loading tenant details...</p>
-                        ) : tenantDetailsError ? (
-                            <p className="rounded-xs bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
-                                {tenantDetailsError}
-                            </p>
-                        ) : tenantDetails ? (
-                            <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
-                                {[
-                                    ["Full Name", tenantDetails.fullName],
-                                    ["Email", tenantDetails.email],
-                                    ["Phone", tenantDetails.phone],
-                                    ["Address", tenantDetails.address],
-                                    ["Aadhaar Number", tenantDetails.aadhaarNumber],
-                                    ["Unit", tenantDetails.unit?.unitName],
-                                    ["Monthly Rent", tenantDetails.unit?.rent != null ? `₹${Number(tenantDetails.unit.rent).toLocaleString("en-IN")}` : "—"],
-                                ].filter(([, value]) => value !== undefined && value !== null && value !== "").map(([label, value]) => (
-                                    <div key={label} className="min-w-0 border-b border-gray-100 pb-3 dark:border-stone-800">
-                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
-                                        <p className="mt-1 break-words text-sm text-gray-900 dark:text-white">{value}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : null}
+                            {tenantDetailsLoading ? (
+                                <p className="py-8 text-center text-gray-500 dark:text-gray-400">Loading tenant details...</p>
+                            ) : tenantDetailsError ? (
+                                <p className="rounded-xs bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">
+                                    {tenantDetailsError}
+                                </p>
+                            ) : tenantDetails ? (
+                                <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+                                    {[
+                                        ["Full Name", tenantDetails.fullName],
+                                        ["Email", tenantDetails.email],
+                                        ["Phone", tenantDetails.phone],
+                                        ["Address", tenantDetails.address],
+                                        ["Aadhaar Number", tenantDetails.aadhaarNumber],
+                                        ["Unit", tenantDetails.unit?.unitName],
+                                        ["Monthly Rent", tenantDetails.unit?.rent != null ? `₹${Number(tenantDetails.unit.rent).toLocaleString("en-IN")}` : "—"],
+                                    ].filter(([, value]) => value !== undefined && value !== null && value !== "").map(([label, value]) => (
+                                        <div key={label} className="min-w-0 border-b border-gray-100 pb-3 dark:border-stone-800">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
+                                            <p className="mt-1 break-words text-sm text-gray-900 dark:text-white">{value}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : null}
 
-                        <div className="mt-5 flex justify-end">
-                            <button
-                                type="button"
-                                onClick={closeTenantDetails}
-                                className="rounded-xs bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400"
-                            >
-                                Close
-                            </button>
-                        </div>
+                            <div className="mt-5 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={closeTenantDetails}
+                                    className="rounded-xs bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -1,5 +1,7 @@
 import { Unit } from "../models/unit.model.js";
 import { Property } from "../models/property.model.js";
+import uploadToCloudinary from "../utils/uploadToCloudinary.js";
+import cloudinary from "../config/cloudinary.js";
 import mongoose from "mongoose";
 // CREATE UNIT
 
@@ -65,13 +67,32 @@ export const createUnit = async (req, res, next) => {
       });
     }
 
-    // Create unit as available
+    // Upload unit image to Cloudinary if provided
+    let image = {
+      url: "",
+      publicId: "",
+    };
+
+    if (req.file) {
+      const uploadedImage = await uploadToCloudinary(req.file.buffer, {
+        folder: "rentguard/units",
+        resourceType: "image",
+      });
+
+      image = {
+        url: uploadedImage.secure_url,
+        publicId: uploadedImage.public_id,
+      };
+    }
+
+    // Create unit
     const unit = await Unit.create({
       unitName,
       unitType,
       property: propertyId,
       rent,
       status: "available",
+      image,
     });
 
     return res.status(201).json({
@@ -287,6 +308,28 @@ export const updateUnit = async (req, res, next) => {
 
     if (status !== undefined) {
       unit.status = status;
+    }
+
+    // Replace unit image if a new image was uploaded
+    if (req.file) {
+      // Delete previous image from Cloudinary
+      if (unit.image?.publicId) {
+        try {
+          await cloudinary.uploader.destroy(unit.image.publicId);
+        } catch (error) {
+          console.error("Previous unit image deletion failed:", error.message);
+        }
+      }
+
+      const uploadedImage = await uploadToCloudinary(req.file.buffer, {
+        folder: "rentguard/units",
+        resourceType: "image",
+      });
+
+      unit.image = {
+        url: uploadedImage.secure_url,
+        publicId: uploadedImage.public_id,
+      };
     }
 
     await unit.save();

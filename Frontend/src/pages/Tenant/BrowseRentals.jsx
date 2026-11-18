@@ -170,7 +170,7 @@ const BrowseRentals = () => {
       const res = await apiClient.patch(`/rental-request/${confirmModal.request._id}/accept`);
       toast.success(
         res.data.message ||
-          "Congratulations! Lease confirmed. Other applications have been cancelled."
+        "Congratulations! Lease confirmed. Other applications have been cancelled."
       );
       setConfirmModal({ open: false, request: null });
       await loadData();
@@ -252,22 +252,20 @@ const BrowseRentals = () => {
             <button
               type="button"
               onClick={() => setActiveTab("listings")}
-              className={`pb-2 text-sm font-semibold transition border-b-2 ${
-                activeTab === "listings"
+              className={`pb-2 text-sm font-semibold transition border-b-2 ${activeTab === "listings"
                   ? "border-yellow-400 text-yellow-600 dark:text-yellow-400"
                   : "border-transparent text-gray-500 hover:text-black dark:text-neutral-400 dark:hover:text-white"
-              }`}
+                }`}
             >
               Available Properties ({listings.length})
             </button>
             <button
               type="button"
               onClick={() => setActiveTab("applications")}
-              className={`pb-2 text-sm font-semibold transition border-b-2 ${
-                activeTab === "applications"
+              className={`pb-2 text-sm font-semibold transition border-b-2 ${activeTab === "applications"
                   ? "border-yellow-400 text-yellow-600 dark:text-yellow-400"
                   : "border-transparent text-gray-500 hover:text-black dark:text-neutral-400 dark:hover:text-white"
-              }`}
+                }`}
             >
               My Applications ({myApplications.length})
             </button>
@@ -336,26 +334,58 @@ const BrowseRentals = () => {
                         </p>
                         <div className="mt-2 space-y-2">
                           {prop.availableUnits?.map((u) => (
+
                             <div
                               key={u._id}
-                              className="flex items-center justify-between rounded border border-stone-100 bg-[#fbfaf8] p-3 dark:border-neutral-800 dark:bg-neutral-900/60"
+                              className="overflow-hidden rounded border border-stone-100 bg-[#fbfaf8] dark:border-neutral-800 dark:bg-neutral-900/60"
                             >
-                              <div>
-                                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                  {u.unitName}
-                                </p>
-                                <p className="text-xs text-stone-500 capitalize">
-                                  {u.unitType || "Residential"} · ₹{Number(u.rent || 0).toLocaleString("en-IN")} / month
-                                </p>
+                              <div className="flex flex-col sm:flex-row">
+                                {/* Unit Picture */}
+                                <div className="h-44 w-full shrink-0 bg-stone-200 sm:h-auto sm:w-40 dark:bg-neutral-800">
+                                  {u.image?.url ? (
+                                    <img
+                                      src={u.image.url}
+                                      alt={u.unitName || "Unit picture"}
+                                      className="h-full min-h-36 w-full object-cover"
+                                      loading="lazy"
+                                    />
+                                  ) : (
+                                    <div className="flex h-full min-h-36 items-center justify-center text-stone-400">
+                                      <Home className="h-10 w-10" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Unit Details */}
+                                <div className="flex flex-1 flex-col justify-between gap-3 p-3 sm:flex-row sm:items-center">
+                                  <div>
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                      {u.unitName}
+                                    </p>
+
+                                    <p className="mt-1 text-xs capitalize text-stone-500">
+                                      {u.unitType || "Residential"}
+                                    </p>
+
+                                    <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                                      ₹{Number(u.rent || 0).toLocaleString("en-IN")}
+                                      <span className="text-xs font-normal text-stone-500">
+                                        {" "}/ month
+                                      </span>
+                                    </p>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => openApplyModal(prop, u)}
+                                    className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xs bg-yellow-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-yellow-400"
+                                  >
+                                    Apply to Rent
+                                  </button>
+                                </div>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => openApplyModal(prop, u)}
-                                className="inline-flex items-center gap-1 rounded-xs bg-yellow-300 px-3 py-1.5 text-xs font-semibold text-black transition hover:bg-yellow-400"
-                              >
-                                Apply to Rent
-                              </button>
                             </div>
+
                           ))}
                         </div>
                       </div>
@@ -390,11 +420,10 @@ const BrowseRentals = () => {
                 {myApplications.map((app) => (
                   <div
                     key={app._id}
-                    className={`rounded-xs border p-5 shadow-sm transition ${
-                      app.status === "Approved"
+                    className={`rounded-xs border p-5 shadow-sm transition ${app.status === "Approved"
                         ? "border-yellow-400 bg-yellow-50/40 dark:border-yellow-500/60 dark:bg-yellow-950/20"
                         : "border-stone-200 bg-white dark:border-neutral-800 dark:bg-[#171717]"
-                    }`}
+                      }`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
@@ -407,15 +436,14 @@ const BrowseRentals = () => {
                       </div>
 
                       <span
-                        className={`rounded-xs px-2.5 py-1 text-xs font-semibold capitalize ${
-                          app.status === "Pending"
+                        className={`rounded-xs px-2.5 py-1 text-xs font-semibold capitalize ${app.status === "Pending"
                             ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300"
                             : app.status === "Approved"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300"
-                            : app.status === "Accepted"
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300"
-                            : "bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-neutral-300 border border-gray-300"
-                        }`}
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300"
+                              : app.status === "Accepted"
+                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300"
+                                : "bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-neutral-300 border border-gray-300"
+                          }`}
                       >
                         {app.status}
                       </span>
