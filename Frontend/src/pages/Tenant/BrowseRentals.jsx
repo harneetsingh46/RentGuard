@@ -21,6 +21,7 @@ const BrowseRentals = () => {
   const [myApplications, setMyApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewImage, setViewImage] = useState(null);
 
   // Apply Modal state
   const [applyModal, setApplyModal] = useState({
@@ -253,8 +254,8 @@ const BrowseRentals = () => {
               type="button"
               onClick={() => setActiveTab("listings")}
               className={`pb-2 text-sm font-semibold transition border-b-2 ${activeTab === "listings"
-                  ? "border-yellow-400 text-yellow-600 dark:text-yellow-400"
-                  : "border-transparent text-gray-500 hover:text-black dark:text-neutral-400 dark:hover:text-white"
+                ? "border-yellow-400 text-yellow-600 dark:text-yellow-400"
+                : "border-transparent text-gray-500 hover:text-black dark:text-neutral-400 dark:hover:text-white"
                 }`}
             >
               Available Properties ({listings.length})
@@ -263,8 +264,8 @@ const BrowseRentals = () => {
               type="button"
               onClick={() => setActiveTab("applications")}
               className={`pb-2 text-sm font-semibold transition border-b-2 ${activeTab === "applications"
-                  ? "border-yellow-400 text-yellow-600 dark:text-yellow-400"
-                  : "border-transparent text-gray-500 hover:text-black dark:text-neutral-400 dark:hover:text-white"
+                ? "border-yellow-400 text-yellow-600 dark:text-yellow-400"
+                : "border-transparent text-gray-500 hover:text-black dark:text-neutral-400 dark:hover:text-white"
                 }`}
             >
               My Applications ({myApplications.length})
@@ -341,18 +342,26 @@ const BrowseRentals = () => {
                             >
                               <div className="flex flex-col sm:flex-row">
                                 {/* Unit Picture */}
-                                <div className="h-44 w-full shrink-0 bg-stone-200 sm:h-auto sm:w-40 dark:bg-neutral-800">
+                                <div className="w-48 h-44 bg-gray-100 flex items-center justify-center">
                                   {u.image?.url ? (
-                                    <img
-                                      src={u.image.url}
-                                      alt={u.unitName || "Unit picture"}
-                                      className="h-full min-h-36 w-full object-cover"
-                                      loading="lazy"
-                                    />
+                                    <button
+                                      onClick={() => setViewImage(u.image.url)}
+                                      className="w-full h-full relative group"
+                                    >
+                                      <img
+                                        src={u.image.url}
+                                        alt={u.unitName}
+                                        className="w-full h-full object-cover"
+                                      />
+
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                                        <span className="bg-white text-gray-900 px-4 py-2 rounded-lg font-medium">
+                                          View Image
+                                        </span>
+                                      </div>
+                                    </button>
                                   ) : (
-                                    <div className="flex h-full min-h-36 items-center justify-center text-stone-400">
-                                      <Home className="h-10 w-10" />
-                                    </div>
+                                    <Home className="w-12 h-12 text-gray-400" />
                                   )}
                                 </div>
 
@@ -421,8 +430,8 @@ const BrowseRentals = () => {
                   <div
                     key={app._id}
                     className={`rounded-xs border p-5 shadow-sm transition ${app.status === "Approved"
-                        ? "border-yellow-400 bg-yellow-50/40 dark:border-yellow-500/60 dark:bg-yellow-950/20"
-                        : "border-stone-200 bg-white dark:border-neutral-800 dark:bg-[#171717]"
+                      ? "border-yellow-400 bg-yellow-50/40 dark:border-yellow-500/60 dark:bg-yellow-950/20"
+                      : "border-stone-200 bg-white dark:border-neutral-800 dark:bg-[#171717]"
                       }`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -437,12 +446,12 @@ const BrowseRentals = () => {
 
                       <span
                         className={`rounded-xs px-2.5 py-1 text-xs font-semibold capitalize ${app.status === "Pending"
-                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300"
-                            : app.status === "Approved"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300"
-                              : app.status === "Accepted"
-                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300"
-                                : "bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-neutral-300 border border-gray-300"
+                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300"
+                          : app.status === "Approved"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-300"
+                            : app.status === "Accepted"
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300"
+                              : "bg-gray-100 text-gray-700 dark:bg-neutral-800 dark:text-neutral-300 border border-gray-300"
                           }`}
                       >
                         {app.status}
@@ -747,6 +756,35 @@ const BrowseRentals = () => {
                   {processingConfirm ? "Activating Tenancy..." : "Confirm & Accept Lease"}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+        {/* UNIT IMAGE VIEWER */}
+        {viewImage && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
+            onClick={() => setViewImage(null)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Unit image viewer"
+              className="relative w-full max-w-4xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setViewImage(null)}
+                className="absolute -right-3 -top-3 rounded-full bg-white p-2 text-gray-800 shadow-lg transition hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <img
+                src={viewImage}
+                alt="Unit"
+                className="max-h-[85vh] w-full rounded-xl bg-white object-contain"
+              />
             </div>
           </div>
         )}
