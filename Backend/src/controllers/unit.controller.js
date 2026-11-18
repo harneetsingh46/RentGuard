@@ -73,6 +73,9 @@ export const createUnit = async (req, res, next) => {
       publicId: "",
     };
 
+    console.log("UNIT IMAGE FILE:", req.file);
+    console.log("UNIT REQUEST BODY:", req.body);
+
     if (req.file) {
       const uploadedImage = await uploadToCloudinary(req.file.buffer, {
         folder: "rentguard/units",
