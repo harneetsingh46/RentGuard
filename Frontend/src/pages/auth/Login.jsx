@@ -30,7 +30,7 @@ export const Login = () => {
         e.preventDefault();
 
         if (!contact.trim()) {
-            setErrorMessage("Email or phone number is required.");
+            setErrorMessage("Email is required.");
             return;
         }
 
@@ -148,7 +148,7 @@ export const Login = () => {
                             noValidate
                             className="space-y-3 sm:space-y-4"
                         >
-                            {/* Email or phone */}
+                            {/* Email */}
                             <div>
                                 <label
                                     htmlFor="contact"
@@ -168,7 +168,7 @@ export const Login = () => {
                                     disabled={otpSent || loading}
                                     required
                                     autoComplete="username"
-                                    placeholder="Enter your email or phone"
+                                    placeholder="Enter your email"
                                     className={inputClass}
                                 />
                             </div>
