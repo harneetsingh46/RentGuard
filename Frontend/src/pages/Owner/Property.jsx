@@ -986,14 +986,14 @@ const Property = () => {
             {/* Add / Edit Unit Modal */}
             {unitModalOpen && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm"
                     onClick={closeUnitForm}
                 >
                     <div
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="unit-form-title"
-                        className="w-full max-w-lg rounded-xs border border-gray-200 bg-white p-6 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b] md:p-8"
+                        className="my-auto max-h-[90vh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-xs border border-gray-200 bg-white p-6 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b] md:p-8"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="mb-6 flex items-center justify-between">
