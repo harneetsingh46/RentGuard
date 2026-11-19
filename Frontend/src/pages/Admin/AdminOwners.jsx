@@ -557,17 +557,6 @@ const AdminOwners = () => {
                                                     </button>
                                                 )}
 
-                                                {owner.verificationStatus !== "rejected" && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openRejectDialog(owner)}
-                                                        disabled={processingId === owner._id}
-                                                        className="border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-400/10"
-                                                    >
-                                                        Reject
-                                                    </button>
-                                                )}
-
                                                 <button
                                                     type="button"
                                                     onClick={() => openOwnerDetails(owner)}
@@ -583,6 +572,18 @@ const AdminOwners = () => {
                                                 >
                                                     View History
                                                 </button>
+
+                                                {owner.verificationStatus !== "rejected" && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openRejectDialog(owner)}
+                                                        disabled={processingId === owner._id}
+                                                        className="border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-400/10"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                )}
+
 
                                             </div>
                                         </td>
