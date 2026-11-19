@@ -645,17 +645,6 @@ const AdminOwners = () => {
                                         </button>
                                     )}
 
-                                    {owner.verificationStatus !== "rejected" && (
-                                        <button
-                                            type="button"
-                                            onClick={() => openRejectDialog(owner)}
-                                            disabled={processingId === owner._id}
-                                            className="flex-1 border border-red-200 px-3 py-2.5 text-xs font-medium text-red-600 disabled:opacity-50 dark:border-red-900 dark:text-red-400"
-                                        >
-                                            Reject
-                                        </button>
-                                    )}
-
                                     <button
                                         type="button"
                                         onClick={() => openOwnerDetails(owner)}
@@ -671,6 +660,19 @@ const AdminOwners = () => {
                                     >
                                         View History
                                     </button>
+
+                                    {owner.verificationStatus !== "rejected" && (
+                                        <button
+                                            type="button"
+                                            onClick={() => openRejectDialog(owner)}
+                                            disabled={processingId === owner._id}
+                                            className="flex-1 border border-red-200 px-3 py-2.5 text-xs font-medium text-red-600 disabled:opacity-50 dark:border-red-900 dark:text-red-400"
+                                        >
+                                            Reject
+                                        </button>
+                                    )}
+
+
                                 </div>
                             </article>
                         ))}
