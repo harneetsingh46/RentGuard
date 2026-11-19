@@ -52,16 +52,19 @@ export const adminLogin = async (req, res) => {
       });
     }
 
-    if (admin.tokenVersion === undefined || admin.tokenVersion === null) {
-      admin.tokenVersion = 0;
-    }
+    const tokenVersion = admin.tokenVersion ?? 0;
 
+    admin.tokenVersion = tokenVersion;
     admin.lastLoginAt = new Date();
+
     await admin.save();
 
     const token = genToken({
-      ...admin.toObject(),
+      _id: admin._id,
+      username: admin.name,
+      email: admin.email,
       role: "admin",
+      tokenVersion,
     });
 
     return res
