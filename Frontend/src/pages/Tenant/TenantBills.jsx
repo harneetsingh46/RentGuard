@@ -426,10 +426,6 @@ const TenantBills = () => {
         {/* Header */}
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
-              Tenant Portal / Bills
-            </p>
-
             <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
               My Bills
             </h1>

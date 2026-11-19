@@ -285,10 +285,6 @@ const TenantDashboard = () => {
     return (
       <div className="min-h-screen bg-[#f7f5f0] p-6 text-[#171717] sm:p-10 dark:bg-[#101010] dark:text-[#F1F0ED]">
         <div className="mx-auto max-w-[1600px]">
-          <p className="text-xs uppercase tracking-[0.18em] text-stone-500 dark:text-[#A5A5A5]">
-            RentGuard / Tenant Portal
-          </p>
-
           <h1 className="mt-6 text-3xl font-normal tracking-tight sm:text-5xl">
             Your home. Your peace of mind.
           </h1>
@@ -344,10 +340,6 @@ const TenantDashboard = () => {
         {/* Header */}
         <header className="mb-6 flex flex-col justify-between gap-4 sm:mb-9 sm:gap-6 lg:flex-row lg:items-center">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-stone-500 dark:text-[#A5A5A5]">
-              RentGuard / Tenant Portal
-            </p>
-
             <h1 className="mt-3 text-2xl font-normal leading-tight tracking-tight [overflow-wrap:anywhere] sm:mt-4 sm:text-4xl lg:text-[42px]">
               Your home. Your peace of mind.
             </h1>

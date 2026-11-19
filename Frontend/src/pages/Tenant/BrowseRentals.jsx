@@ -206,9 +206,6 @@ const BrowseRentals = () => {
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <div className="mb-6">
-          <p className="text-xs uppercase tracking-[0.18em] text-stone-500 dark:text-[#A5A5A5]">
-            RentGuard / Browse Rentals
-          </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
             Find Your Next Home
           </h1>
