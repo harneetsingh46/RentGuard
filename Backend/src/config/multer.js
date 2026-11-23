@@ -9,7 +9,7 @@ const allowedTypes = [
   "application/pdf",
 ];
 
-const createUpload = (types) =>
+const createUpload = (types, maxFiles = 1) =>
   multer({
     storage,
     fileFilter: (req, file, cb) => {
@@ -21,11 +21,12 @@ const createUpload = (types) =>
     },
     limits: {
       fileSize: 5 * 1024 * 1024,
-      files: 1,
+      files: maxFiles,
     },
   });
 
 const upload = createUpload(allowedTypes);
 export const uploadImage = createUpload(imageTypes);
+export const uploadUnitImages = createUpload(imageTypes, 5);
 
 export default upload;

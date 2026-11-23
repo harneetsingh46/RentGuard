@@ -1,8 +1,28 @@
 import { Unit } from "../models/unit.model.js";
 import { Property } from "../models/property.model.js";
+import { Tenant } from "../models/tenant.model.js";
 import uploadToCloudinary from "../utils/uploadToCloudinary.js";
 import cloudinary from "../config/cloudinary.js";
 import mongoose from "mongoose";
+
+// HELPER: Extract unit images with fallback to legacy single image
+export const getUnitImages = (unit) => {
+  if (Array.isArray(unit?.images) && unit.images.length > 0) {
+    return unit.images;
+  }
+  if (unit?.image?.url) {
+    return [unit.image];
+  }
+  return [];
+};
+
+const formatUnit = (unitDoc) => {
+  if (!unitDoc) return unitDoc;
+  const obj = unitDoc.toObject ? unitDoc.toObject() : { ...unitDoc };
+  obj.images = getUnitImages(obj);
+  return obj;
+};
+
 // CREATE UNIT
 
 export const createUnit = async (req, res, next) => {
@@ -67,40 +87,55 @@ export const createUnit = async (req, res, next) => {
       });
     }
 
-    // Upload unit image to Cloudinary if provided
-    let image = {
-      url: "",
-      publicId: "",
-    };
-
-    console.log("UNIT IMAGE FILE:", req.file);
-    console.log("UNIT REQUEST BODY:", req.body);
-
-    if (req.file) {
-      const uploadedImage = await uploadToCloudinary(req.file.buffer, {
-        folder: "rentguard/units",
-        resourceType: "image",
+    const files = req.files || [];
+    if (files.length > 5) {
+      return res.status(400).json({
+        message: "You can upload a maximum of 5 images per unit!",
       });
-
-      image = {
-        url: uploadedImage.secure_url,
-        publicId: uploadedImage.public_id,
-      };
     }
 
-    // Create unit
-    const unit = await Unit.create({
-      unitName,
-      unitType,
-      property: propertyId,
-      rent,
-      status: "available",
-      image,
-    });
+    let images = [];
+    if (files.length > 0) {
+      const uploadResults = await Promise.all(
+        files.map((file) =>
+          uploadToCloudinary(file.buffer, {
+            folder: "rentguard/units",
+            resourceType: "image",
+          })
+        )
+      );
+
+      images = uploadResults.map((img) => ({
+        url: img.secure_url,
+        publicId: img.public_id,
+      }));
+    }
+
+    const legacyImage = images[0] || { url: "", publicId: "" };
+
+    let unit;
+    try {
+      unit = await Unit.create({
+        unitName: normalizedUnitName,
+        unitType,
+        property: propertyId,
+        rent,
+        status: "available",
+        images,
+        image: legacyImage,
+      });
+    } catch (createError) {
+      if (images.length > 0) {
+        await Promise.allSettled(
+          images.map((img) => cloudinary.uploader.destroy(img.publicId))
+        );
+      }
+      throw createError;
+    }
 
     return res.status(201).json({
       message: "Unit created successfully!",
-      data: unit,
+      data: formatUnit(unit),
     });
   } catch (error) {
     return res.status(500).json({
@@ -156,7 +191,7 @@ export const getUnits = async (req, res, next) => {
 
     return res.status(200).json({
       message: "Units fetched successfully!",
-      data: units,
+      data: units.map(formatUnit),
     });
   } catch (error) {
     return res.status(500).json({
@@ -217,7 +252,7 @@ export const getUnit = async (req, res, next) => {
 
     return res.status(200).json({
       message: "Unit fetched successfully!",
-      data: unit,
+      data: formatUnit(unit),
     });
   } catch (error) {
     return res.status(500).json({
@@ -232,7 +267,7 @@ export const updateUnit = async (req, res, next) => {
   try {
     const { propertyId, unitId } = req.params;
 
-    const { unitName, unitType, rent, status } = req.body;
+    const { unitName, unitType, rent, status, removeImages } = req.body;
 
     if (
       !mongoose.isValidObjectId(propertyId) ||
@@ -313,33 +348,89 @@ export const updateUnit = async (req, res, next) => {
       unit.status = status;
     }
 
-    // Replace unit image if a new image was uploaded
-    if (req.file) {
-      // Delete previous image from Cloudinary
-      if (unit.image?.publicId) {
-        try {
-          await cloudinary.uploader.destroy(unit.image.publicId);
-        } catch (error) {
-          console.error("Previous unit image deletion failed:", error.message);
+    // Migrate legacy image into images if images is empty and image.url exists
+    if ((!unit.images || unit.images.length === 0) && unit.image?.url) {
+      unit.images = [
+        {
+          url: unit.image.url,
+          publicId: unit.image.publicId || "",
+        },
+      ];
+    }
+
+    // Process removeImages (JSON string array of publicIds)
+    let removeList = [];
+    if (removeImages) {
+      try {
+        removeList =
+          typeof removeImages === "string"
+            ? JSON.parse(removeImages)
+            : removeImages;
+        if (!Array.isArray(removeList)) removeList = [];
+      } catch (e) {
+        removeList = [];
+      }
+    }
+
+    if (removeList.length > 0) {
+      for (const pid of removeList) {
+        if (pid) {
+          try {
+            await cloudinary.uploader.destroy(pid);
+          } catch (error) {
+            console.error("Cloudinary image deletion failed:", error.message);
+          }
         }
       }
 
-      const uploadedImage = await uploadToCloudinary(req.file.buffer, {
-        folder: "rentguard/units",
-        resourceType: "image",
-      });
-
-      unit.image = {
-        url: uploadedImage.secure_url,
-        publicId: uploadedImage.public_id,
-      };
+      unit.images = unit.images.filter(
+        (img) => !removeList.includes(img.publicId)
+      );
     }
+
+    // Process newly uploaded req.files
+    const files = req.files || [];
+    let newlyUploaded = [];
+    if (files.length > 0) {
+      const uploadResults = await Promise.all(
+        files.map((file) =>
+          uploadToCloudinary(file.buffer, {
+            folder: "rentguard/units",
+            resourceType: "image",
+          })
+        )
+      );
+
+      newlyUploaded = uploadResults.map((img) => ({
+        url: img.secure_url,
+        publicId: img.public_id,
+      }));
+    }
+
+    // Enforce final total <= 5 (destroy anything just uploaded if exceeded)
+    const finalTotal = unit.images.length + newlyUploaded.length;
+    if (finalTotal > 5) {
+      if (newlyUploaded.length > 0) {
+        await Promise.allSettled(
+          newlyUploaded.map((img) => cloudinary.uploader.destroy(img.publicId))
+        );
+      }
+      return res.status(400).json({
+        message: "You can upload a maximum of 5 images per unit!",
+      });
+    }
+
+    if (newlyUploaded.length > 0) {
+      unit.images.push(...newlyUploaded);
+    }
+
+    unit.image = unit.images[0] || { url: "", publicId: "" };
 
     await unit.save();
 
     return res.status(200).json({
       message: "Unit updated successfully!",
-      data: unit,
+      data: formatUnit(unit),
     });
   } catch (error) {
     return res.status(500).json({
@@ -386,8 +477,16 @@ export const deleteUnit = async (req, res, next) => {
       });
     }
 
-    // Find and delete unit
-    const unit = await Unit.findOneAndDelete({
+    // Do not delete a unit that has an active tenant
+    const activeTenant = await Tenant.findOne({ unit: unitId, isActive: true });
+    if (activeTenant) {
+      return res.status(400).json({
+        message: "Cannot delete a unit with an active tenant!",
+      });
+    }
+
+    // Find unit
+    const unit = await Unit.findOne({
       _id: unitId,
       property: propertyId,
     });
@@ -398,11 +497,35 @@ export const deleteUnit = async (req, res, next) => {
       });
     }
 
+    // Destroy all Cloudinary assets (images plus legacy image)
+    const publicIds = new Set();
+    if (Array.isArray(unit.images)) {
+      unit.images.forEach((img) => {
+        if (img?.publicId) publicIds.add(img.publicId);
+      });
+    }
+    if (unit.image?.publicId) {
+      publicIds.add(unit.image.publicId);
+    }
+
+    if (publicIds.size > 0) {
+      await Promise.allSettled(
+        Array.from(publicIds).map((pid) => cloudinary.uploader.destroy(pid))
+      );
+    }
+
+    await Unit.findByIdAndDelete(unitId);
+
     return res.status(200).json({
       message: "Unit deleted successfully!",
-      data: unit,
+      data: formatUnit(unit),
     });
   } catch (error) {
+    return res.status(500).json({
+      message: error.message,
+    });
+  }
+};
     return res.status(500).json({
       message: error.message,
     });

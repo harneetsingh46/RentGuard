@@ -8,7 +8,7 @@ import {
 } from "../controllers/unit.controller.js";
 
 import { protect, isApprovedOwner } from "../utils/protect.js";
-import { uploadImage } from "../config/multer.js";
+import { uploadUnitImages } from "../config/multer.js";
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ router.post(
   "/:propertyId/units",
   protect,
   isApprovedOwner,
-  uploadImage.single("image"),
+  uploadUnitImages.array("images", 5),
   createUnit,
 );
 
@@ -28,7 +28,7 @@ router.put(
   "/:propertyId/units/:unitId",
   protect,
   isApprovedOwner,
-  uploadImage.single("image"),
+  uploadUnitImages.array("images", 5),
   updateUnit,
 );
 

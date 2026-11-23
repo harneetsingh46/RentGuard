@@ -44,8 +44,9 @@ const Property = () => {
     const [units, setUnits] = useState([]);
     const [unit, setUnit] = useState(emptyUnit);
     const [selectedUnit, setSelectedUnit] = useState(null);
-    const [unitImage, setUnitImage] = useState(null);
-    const [unitImagePreview, setUnitImagePreview] = useState("");
+    const [existingImages, setExistingImages] = useState([]);
+    const [removedImageIds, setRemovedImageIds] = useState([]);
+    const [newImages, setNewImages] = useState([]);
 
     // Unit modal state
     const [unitModalOpen, setUnitModalOpen] = useState(false);
@@ -174,28 +175,66 @@ const Property = () => {
         }));
     };
 
-    const handleUnitImageChange = (e) => {
-        const file = e.target.files?.[0];
+    const clearNewImages = () => {
+        newImages.forEach((item) => {
+            if (item.preview) URL.revokeObjectURL(item.preview);
+        });
+        setNewImages([]);
+    };
 
-        if (!file) return;
+    const handleRemoveExistingImage = (imgToRemove) => {
+        setExistingImages((prev) =>
+            prev.filter((img) => img.publicId !== imgToRemove.publicId)
+        );
+        if (imgToRemove.publicId) {
+            setRemovedImageIds((prev) => [...prev, imgToRemove.publicId]);
+        }
+    };
+
+    const handleRemoveNewImage = (indexToRemove) => {
+        setNewImages((prev) => {
+            const target = prev[indexToRemove];
+            if (target?.preview) URL.revokeObjectURL(target.preview);
+            return prev.filter((_, idx) => idx !== indexToRemove);
+        });
+    };
+
+    const handleUnitImagesChange = (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
 
         const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+        const currentTotal = existingImages.length + newImages.length;
 
-        if (!allowedTypes.includes(file.type)) {
-            setUnitError("Please select a JPG, PNG, or WebP image.");
+        if (currentTotal + files.length > 5) {
+            setUnitError("You can upload a maximum of 5 images per unit.");
             e.target.value = "";
             return;
         }
 
-        if (file.size > 5 * 1024 * 1024) {
-            setUnitError("Image size must be less than 5 MB.");
-            e.target.value = "";
-            return;
+        const added = [];
+        for (const file of files) {
+            if (!allowedTypes.includes(file.type)) {
+                setUnitError("Please select only JPG, PNG, or WebP images.");
+                e.target.value = "";
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                setUnitError("Each image size must be less than 5 MB.");
+                e.target.value = "";
+                return;
+            }
+
+            added.push({
+                file,
+                preview: URL.createObjectURL(file),
+            });
         }
 
-        setUnitImage(file);
-        setUnitImagePreview(URL.createObjectURL(file));
+        setNewImages((prev) => [...prev, ...added]);
         setUnitError("");
+        e.target.value = "";
     };
 
     // Open add property modal
@@ -374,8 +413,9 @@ const Property = () => {
         if (!isApproved || !selectedProperty) return;
 
         setUnit({ ...emptyUnit });
-        setUnitImage(null);
-        setUnitImagePreview("");
+        clearNewImages();
+        setExistingImages([]);
+        setRemovedImageIds([]);
         setSelectedUnit(null);
         setIsEditingUnit(false);
         setUnitError("");
@@ -398,8 +438,14 @@ const Property = () => {
         setUnitError("");
         setSuccess("");
         setUnitModalOpen(true);
-        setUnitImage(null);
-        setUnitImagePreview(item.image?.url || "");
+        clearNewImages();
+        const imgs = Array.isArray(item.images) && item.images.length > 0
+            ? item.images
+            : item.image?.url
+                ? [item.image]
+                : [];
+        setExistingImages(imgs);
+        setRemovedImageIds([]);
     };
 
     // Close unit modal
@@ -410,8 +456,9 @@ const Property = () => {
         setUnit({ ...emptyUnit });
         setSelectedUnit(null);
         setUnitError("");
-        setUnitImage(null);
-        setUnitImagePreview("");
+        clearNewImages();
+        setExistingImages([]);
+        setRemovedImageIds([]);
     };
 
     // Add or update unit
@@ -463,11 +510,12 @@ const Property = () => {
             unitFormData.append("unitType", formData.unitType);
             unitFormData.append("rent", String(formData.rent));
 
-            if (unitImage) {
-                unitFormData.append("image", unitImage);
-            }
+            newImages.forEach(({ file }) => {
+                unitFormData.append("images", file);
+            });
 
             if (isEditingUnit && selectedUnit) {
+                unitFormData.append("removeImages", JSON.stringify(removedImageIds));
                 await apiClient.put(
                     `/property/${selectedProperty._id}/units/${selectedUnit._id}`,
                     unitFormData
@@ -486,8 +534,9 @@ const Property = () => {
             setUnitModalOpen(false);
             setUnit({ ...emptyUnit });
             setSelectedUnit(null);
-            setUnitImage(null);
-            setUnitImagePreview("");
+            clearNewImages();
+            setExistingImages([]);
+            setRemovedImageIds([]);
 
             await getUnits(selectedProperty._id);
         } catch (err) {
@@ -625,7 +674,7 @@ const Property = () => {
                         value={propertySearch}
                         onChange={(e) => setPropertySearch(e.target.value)}
                         placeholder="Search properties by name or address..."
-                        className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-10 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                        className="w-full rounded-xs border border-gray-300 bg-white py-3 pl-10 pr-10 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                     />
                     {propertySearch && (
                         <button
@@ -1068,36 +1117,85 @@ const Property = () => {
                         </div>
 
                         <form onSubmit={handleUnitSubmit}>
-                            {/* Unit Image */}
+                            {/* Unit Images */}
                             <div className="mb-5">
-                                <label
-                                    htmlFor="unitImage"
-                                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
-                                >
-                                    Unit Picture
-                                </label>
+                                <div className="mb-2 flex items-center justify-between">
+                                    <label
+                                        htmlFor="unitImages"
+                                        className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                                    >
+                                        Unit Pictures ({existingImages.length + newImages.length}/5)
+                                    </label>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        Max 5 images
+                                    </span>
+                                </div>
 
-                                {unitImagePreview && (
-                                    <div className="mb-3 overflow-hidden rounded-xl border border-gray-200 dark:border-stone-700">
-                                        <img
-                                            src={unitImagePreview}
-                                            alt="Unit preview"
-                                            className="h-48 w-full object-cover"
-                                        />
+                                {(existingImages.length > 0 || newImages.length > 0) && (
+                                    <div className="mb-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
+                                        {existingImages.map((img, idx) => (
+                                            <div
+                                                key={img.publicId || idx}
+                                                className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-100 dark:border-stone-700 dark:bg-neutral-800"
+                                            >
+                                                <img
+                                                    src={img.url}
+                                                    alt="Unit"
+                                                    className="h-full w-full object-cover"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveExistingImage(img)}
+                                                    disabled={submitting}
+                                                    aria-label="Remove image"
+                                                    className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white transition hover:bg-red-600"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+
+                                        {newImages.map((item, idx) => (
+                                            <div
+                                                key={idx}
+                                                className="group relative aspect-square overflow-hidden rounded-lg border border-yellow-300 bg-gray-100 dark:border-yellow-500 dark:bg-neutral-800"
+                                            >
+                                                <img
+                                                    src={item.preview}
+                                                    alt="New unit"
+                                                    className="h-full w-full object-cover"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveNewImage(idx)}
+                                                    disabled={submitting}
+                                                    aria-label="Remove image"
+                                                    className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white transition hover:bg-red-600"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                                <span className="absolute bottom-1 left-1 rounded bg-yellow-400 px-1 py-0.5 text-[9px] font-bold text-black">
+                                                    New
+                                                </span>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
 
-                                <input
-                                    id="unitImage"
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/webp"
-                                    onChange={handleUnitImageChange}
-                                    disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-yellow-300 file:px-4 file:py-2 file:font-medium file:text-black dark:border-stone-800 dark:bg-[#262626] dark:text-gray-200"
-                                />
+                                {existingImages.length + newImages.length < 5 && (
+                                    <input
+                                        id="unitImages"
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/webp"
+                                        multiple
+                                        onChange={handleUnitImagesChange}
+                                        disabled={submitting}
+                                        className="w-full rounded-xl border border-gray-300 bg-white p-3 text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-yellow-300 file:px-4 file:py-2 file:font-medium file:text-black dark:border-stone-800 dark:bg-[#262626] dark:text-gray-200"
+                                    />
+                                )}
 
                                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                    JPG, PNG or WebP. Maximum size: 5 MB.
+                                    JPG, PNG or WebP. Up to 5 images, maximum size 5 MB each.
                                 </p>
                             </div>
 

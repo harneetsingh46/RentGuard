@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import apiClient from "../../ApiClient/interceptor";
 import toast from "react-hot-toast";
+import ImageSlider from "../../common/ImageSlider.jsx";
 import {
   Building2,
   Calendar,
@@ -21,7 +22,7 @@ const BrowseRentals = () => {
   const [myApplications, setMyApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewImage, setViewImage] = useState(null);
+  const [lightbox, setLightbox] = useState(null);
 
   // Apply Modal state
   const [applyModal, setApplyModal] = useState({
@@ -347,27 +348,29 @@ const BrowseRentals = () => {
                             >
                               <div className="flex flex-col sm:flex-row">
                                 {/* Unit Picture */}
-                                <div className="w-48 h-44 bg-gray-100 flex items-center justify-center">
-                                  {u.image?.url ? (
-                                    <button
-                                      onClick={() => setViewImage(u.image.url)}
-                                      className="w-full h-full relative group"
-                                    >
-                                      <img
-                                        src={u.image.url}
-                                        alt={u.unitName}
-                                        className="w-full h-full object-cover"
-                                      />
-
-                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                                        <span className="bg-white text-gray-900 px-4 py-2 rounded-lg font-medium">
-                                          View Image
-                                        </span>
-                                      </div>
-                                    </button>
-                                  ) : (
-                                    <Home className="w-12 h-12 text-gray-400" />
-                                  )}
+                                <div className="w-full sm:w-48 sm:h-44 shrink-0 bg-gray-100 dark:bg-neutral-800">
+                                  <ImageSlider
+                                    images={
+                                      Array.isArray(u.images) && u.images.length > 0
+                                        ? u.images
+                                        : u.image?.url
+                                          ? [u.image]
+                                          : []
+                                    }
+                                    className="w-full h-44"
+                                    fitClass="object-cover"
+                                    onImageClick={(index) =>
+                                      setLightbox({
+                                        images:
+                                          Array.isArray(u.images) && u.images.length > 0
+                                            ? u.images
+                                            : u.image?.url
+                                              ? [u.image]
+                                              : [],
+                                        initialIndex: index,
+                                      })
+                                    }
+                                  />
                                 </div>
 
                                 {/* Unit Details */}
@@ -765,11 +768,11 @@ const BrowseRentals = () => {
             </div>
           </div>
         )}
-        {/* UNIT IMAGE VIEWER */}
-        {viewImage && (
+        {/* UNIT IMAGE VIEWER LIGHTBOX */}
+        {lightbox && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm"
-            onClick={() => setViewImage(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+            onClick={() => setLightbox(null)}
           >
             <div
               role="dialog"
@@ -780,17 +783,21 @@ const BrowseRentals = () => {
             >
               <button
                 type="button"
-                onClick={() => setViewImage(null)}
-                className="absolute -right-3 -top-3 rounded-full bg-white p-2 text-gray-800 shadow-lg transition hover:bg-gray-100"
+                onClick={() => setLightbox(null)}
+                aria-label="Close image viewer"
+                className="absolute -right-3 -top-3 z-10 rounded-full bg-white p-2 text-gray-800 shadow-lg transition hover:bg-gray-100 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700"
               >
                 <X className="h-5 w-5" />
               </button>
 
-              <img
-                src={viewImage}
-                alt="Unit"
-                className="max-h-[85vh] w-full rounded-xl bg-white object-contain"
-              />
+              <div className="max-h-[85vh] w-full overflow-hidden rounded-xl bg-black">
+                <ImageSlider
+                  images={lightbox.images}
+                  initialIndex={lightbox.initialIndex}
+                  className="max-h-[85vh] h-[70vh] w-full"
+                  fitClass="object-contain"
+                />
+              </div>
             </div>
           </div>
         )}

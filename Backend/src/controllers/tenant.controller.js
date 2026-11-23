@@ -170,12 +170,20 @@ export const getAvailableProperties = async (req, res) => {
       }
 
       const propertyListing = propertyMap.get(propId);
+      const unitImages =
+        Array.isArray(unit.images) && unit.images.length > 0
+          ? unit.images
+          : unit.image?.url
+            ? [unit.image]
+            : [];
+
       propertyListing.availableUnits.push({
         _id: unit._id,
         unitName: unit.unitName,
         unitType: unit.unitType,
         rent: unit.rent,
         status: unit.status,
+        images: unitImages,
         image: unit.image || {
           url: "",
           publicId: "",

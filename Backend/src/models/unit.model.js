@@ -30,6 +30,23 @@ const unitSchema = new mongoose.Schema(
       default: "available",
     },
 
+    // Unit images stored in Cloudinary
+    images: {
+      type: [
+        {
+          url: {
+            type: String,
+            default: "",
+          },
+          publicId: {
+            type: String,
+            default: "",
+          },
+        },
+      ],
+      default: [],
+    },
+
     // Unit image stored in Cloudinary
     image: {
       url: {
