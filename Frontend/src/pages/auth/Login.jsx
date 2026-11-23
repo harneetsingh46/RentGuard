@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import { useAuth } from "../../context/AuthContext";
 
 export const Login = () => {
@@ -44,14 +44,14 @@ export const Login = () => {
             setOtp("");
             setResendSeconds(10);
 
-            toast.success("OTP sent successfully!");
+            notify.success("OTP sent successfully!");
         } catch (error) {
             const message =
                 error.response?.data?.message ||
                 "Unable to send OTP. Please try again.";
 
             setErrorMessage(message);
-            toast.error(message);
+            notify.error(message);
         } finally {
             setLoading(false);
         }
@@ -72,7 +72,7 @@ export const Login = () => {
 
             const user = await verifyOtp(contact.trim(), otp);
 
-            toast.success("Login successful!");
+            notify.success("Login successful!");
 
             if (user.role === "owner") {
                 navigate("/owner/dashboard");
@@ -87,7 +87,7 @@ export const Login = () => {
                 "OTP verification failed. Please try again.";
 
             setErrorMessage(message);
-            toast.error(message);
+            notify.error(message);
         } finally {
             setLoading(false);
         }

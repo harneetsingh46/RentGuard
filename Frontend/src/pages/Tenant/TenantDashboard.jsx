@@ -1,7 +1,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import apiClient from "../../ApiClient/interceptor";
 import {
   Building2,
@@ -125,14 +125,14 @@ const TenantDashboard = () => {
     try {
       setProcessingConfirm(true);
       const res = await apiClient.patch(`/rental-request/${target._id}/accept`);
-      toast.success(
+      notify.success(
         res.data.message ||
           "Congratulations! Lease confirmed. Other applications have been cancelled."
       );
       setConfirmModal({ open: false, request: null });
       await fetchDashboardData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to confirm lease.");
+      notify.error(err.response?.data?.message || "Failed to confirm lease.");
     } finally {
       setProcessingConfirm(false);
     }
@@ -144,11 +144,11 @@ const TenantDashboard = () => {
     try {
       setProcessingConfirm(true);
       await apiClient.patch(`/rental-request/${requestId}/decline`);
-      toast.success("Rental offer declined.");
+      notify.success("Rental offer declined.");
       setConfirmModal({ open: false, request: null });
       await fetchDashboardData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to decline offer.");
+      notify.error(err.response?.data?.message || "Failed to decline offer.");
     } finally {
       setProcessingConfirm(false);
     }
@@ -159,10 +159,10 @@ const TenantDashboard = () => {
 
     try {
       await apiClient.patch(`/rental-request/${requestId}/cancel`);
-      toast.success("Application cancelled successfully.");
+      notify.success("Application cancelled successfully.");
       await fetchDashboardData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to cancel application.");
+      notify.error(err.response?.data?.message || "Failed to cancel application.");
     }
   };
 

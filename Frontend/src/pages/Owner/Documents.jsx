@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import apiClient from "../../ApiClient/interceptor.js";
 import {
   Eye,
@@ -142,7 +142,7 @@ const Documents = () => {
     } catch (err) {
       setTenants([]);
       setError(err.response?.data?.message || "Failed to load your tenants.");
-      toast.error(err.response?.data?.message || "Failed to load your tenants.");
+      notify.error(err.response?.data?.message || "Failed to load your tenants.");
     } finally {
       setLoadingTenants(false);
     }
@@ -175,7 +175,7 @@ const Documents = () => {
       setDocuments([]);
       const message = err.response?.data?.message || "Failed to load tenant documents.";
       setError(message);
-      toast.error(message);
+      notify.error(message);
     } finally {
       if (requestId === documentRequestId.current) {
         setLoadingDocuments(false);
@@ -231,13 +231,13 @@ const Documents = () => {
 
     if (!documentName.trim()) {
       setError("Please enter a document name.");
-      toast.error("Please enter a document name.");
+      notify.error("Please enter a document name.");
       return;
     }
 
     if (documentName.trim().length > 100) {
       setError("Document name cannot exceed 100 characters.");
-      toast.error("Document name cannot exceed 100 characters.");
+      notify.error("Document name cannot exceed 100 characters.");
       return;
     }
 
@@ -285,7 +285,7 @@ const Documents = () => {
 
       if (fileInput) fileInput.value = "";
 
-      setSuccess("Document uploaded successfully."); toast.success("Document uploaded successfully.");
+      setSuccess("Document uploaded successfully."); notify.success("Document uploaded successfully.");
 
       await fetchDocuments(selectedTenantId);
     } catch (err) {
@@ -395,7 +395,7 @@ const Documents = () => {
       }
 
       setSuccess("Document deleted successfully.");     
-      toast.success("Document deleted successfully.");
+      notify.success("Document deleted successfully.");
     } catch (err) {
       setError(
         err.response?.data?.message || "Failed to delete the document."

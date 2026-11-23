@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Eye, Download, LoaderCircle } from "lucide-react";
 import apiClient from "../../ApiClient/interceptor";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import Pagination from "../../common/Pagination";
 
 const PAGE_SIZE = 10;
@@ -158,7 +158,7 @@ const Bill = () => {
         document.body.appendChild(link);
         link.click();
         link.remove();
-        toast.success("Receipt downloaded successfully.");
+        notify.success("Receipt downloaded successfully.");
       }
 
       window.setTimeout(() => {
@@ -166,7 +166,7 @@ const Bill = () => {
       }, 60_000);
     } catch (err) {
       console.error("Receipt action error:", err);
-      toast.error(
+      notify.error(
         action === "view"
           ? "Unable to open receipt. Please try again."
           : "Unable to download receipt. Please try again."
@@ -222,7 +222,7 @@ const Bill = () => {
       setTenants(response.data.data || []);
     } catch (err) {
       setTenants([]);
-      toast.error(err.response?.data?.message || "Failed to load tenants.");
+      notify.error(err.response?.data?.message || "Failed to load tenants.");
     } finally {
       setLoadingTenants(false);
     }
@@ -473,12 +473,12 @@ const Bill = () => {
         note: cashNote.trim(),
       });
 
-      toast.success("Cash payment recorded.");
+      notify.success("Cash payment recorded.");
       setCashModalOpen(false);
       setCashModalBill(null);
       await fetchBills(selectedProperty);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to record cash payment.");
+      notify.error(err.response?.data?.message || "Failed to record cash payment.");
     } finally {
       setRecordingCash(false);
     }
@@ -550,13 +550,13 @@ const Bill = () => {
           `/bill/${selectedProperty}/${editingBill._id}`,
           payload
         );
-        toast.success("Bill updated successfully.");
+        notify.success("Bill updated successfully.");
       } else {
         await apiClient.post(
           `/bill/${selectedProperty}/units/${form.unitId}/tenants/${form.tenantId}`,
           payload
         );
-        toast.success("Bill created successfully.");
+        notify.success("Bill created successfully.");
       }
 
       setShowModal(false);
@@ -566,7 +566,7 @@ const Bill = () => {
     } catch (err) {
       const message = err.response?.data?.message || "Unable to save bill.";
       setError(message);
-      toast.error(message);
+      notify.error(message);
     } finally {
       setSaving(false);
     }

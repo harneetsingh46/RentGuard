@@ -3,7 +3,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import apiClient from "../../ApiClient/interceptor.js"
 import { useAuth } from "../../context/AuthContext";
 import { Pencil, Trash2, X, AlertTriangle, Search, Eye } from "lucide-react";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import AddTenantModal from "./AddTenantModal.jsx";
 import Pagination from "../../common/Pagination";
 
@@ -143,15 +143,15 @@ const Property = () => {
     // Keep existing validation logic while showing all messages as toast notifications.
     const setError = (message) => {
         setErrorState(message);
-        if (message) toast.error(message);
+        if (message) notify.error(message);
     };
     const setUnitError = (message) => {
         setUnitErrorState(message);
-        if (message) toast.error(message);
+        if (message) notify.error(message);
     };
     const setSuccess = (message) => {
         setSuccessState(message);
-        if (message) toast.success(message);
+        if (message) notify.success(message);
     };
     const [confirmModal, setConfirmModal] = useState({ open: false, type: "", id: null, title: "", message: "" });
     const [deleting, setDeleting] = useState(false);

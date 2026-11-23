@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import apiClient from "../../ApiClient/interceptor";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import ImageSlider from "../../common/ImageSlider.jsx";
 import {
   Building2,
@@ -56,7 +56,7 @@ const BrowseRentals = () => {
       setListings(res.data.data || []);
     } catch (err) {
       console.error("Error fetching listings:", err);
-      toast.error(err.response?.data?.message || "Failed to load rental listings.");
+      notify.error(err.response?.data?.message || "Failed to load rental listings.");
     }
   };
 
@@ -110,7 +110,7 @@ const BrowseRentals = () => {
         ["Pending", "Approved"].includes(a.status)
     );
     if (existing) {
-      toast.error(`You already have an active application (${existing.status}) for this unit.`);
+      notify.error(`You already have an active application (${existing.status}) for this unit.`);
       return;
     }
 
@@ -141,7 +141,7 @@ const BrowseRentals = () => {
         message: applyModal.message.trim() || undefined,
       });
 
-      toast.success("Rental application submitted successfully!");
+      notify.success("Rental application submitted successfully!");
       setApplyModal({
         open: false,
         unit: null,
@@ -152,7 +152,7 @@ const BrowseRentals = () => {
       await fetchMyApplications();
       setActiveTab("applications");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to submit rental application.");
+      notify.error(err.response?.data?.message || "Failed to submit rental application.");
     } finally {
       setSubmittingApply(false);
     }
@@ -164,10 +164,10 @@ const BrowseRentals = () => {
 
     try {
       await apiClient.patch(`/rental-request/${requestId}/cancel`);
-      toast.success("Application cancelled successfully.");
+      notify.success("Application cancelled successfully.");
       await fetchMyApplications();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to cancel application.");
+      notify.error(err.response?.data?.message || "Failed to cancel application.");
     }
   };
 
@@ -178,14 +178,14 @@ const BrowseRentals = () => {
     try {
       setProcessingConfirm(true);
       const res = await apiClient.patch(`/rental-request/${confirmModal.request._id}/accept`);
-      toast.success(
+      notify.success(
         res.data.message ||
         "Congratulations! Lease confirmed. Other applications have been cancelled."
       );
       setConfirmModal({ open: false, request: null });
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to confirm lease.");
+      notify.error(err.response?.data?.message || "Failed to confirm lease.");
     } finally {
       setProcessingConfirm(false);
     }
@@ -198,11 +198,11 @@ const BrowseRentals = () => {
     try {
       setProcessingConfirm(true);
       await apiClient.patch(`/rental-request/${requestId}/decline`);
-      toast.success("Rental offer declined.");
+      notify.success("Rental offer declined.");
       setConfirmModal({ open: false, request: null });
       await loadData();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to decline offer.");
+      notify.error(err.response?.data?.message || "Failed to decline offer.");
     } finally {
       setProcessingConfirm(false);
     }

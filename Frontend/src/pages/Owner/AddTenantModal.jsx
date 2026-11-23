@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import apiClient from "../../ApiClient/interceptor.js";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import { X, LoaderCircle } from "lucide-react";
 
 const getTodayStr = () => {
@@ -60,7 +60,7 @@ export const AddTenantModal = ({
         const res = await apiClient.get("/property/");
         setProperties(res.data.data || []);
       } catch (err) {
-        toast.error("Failed to load properties.");
+        notify.error("Failed to load properties.");
       } finally {
         setPropertiesLoading(false);
       }
@@ -190,19 +190,19 @@ export const AddTenantModal = ({
         body
       );
 
-      toast.success("Tenant added successfully.");
+      notify.success("Tenant added successfully.");
       if (onSuccess) {
         await onSuccess();
       }
       onClose();
     } catch (err) {
       if (err.response?.status === 409) {
-        toast.error(
+        notify.error(
           err.response?.data?.message ||
             "An active tenant with this Aadhaar, phone, or unit already exists."
         );
       } else {
-        toast.error(
+        notify.error(
           err.response?.data?.message || "Failed to register tenant."
         );
       }

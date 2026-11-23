@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { notify } from "../../utils/notify";
 import { useAuth } from "../../context/AuthContext";
 
 const AdminLogin = () => {
@@ -35,7 +35,7 @@ const AdminLogin = () => {
                 throw new Error("Unauthorized account.");
             }
 
-            toast.success("Admin login successful!");
+            notify.success("Admin login successful!");
             navigate("/admin/dashboard", { replace: true });
         } catch (error) {
             const message =
@@ -44,7 +44,7 @@ const AdminLogin = () => {
                 "Unable to login. Please try again.";
 
             setErrorMessage(message);
-            toast.error(message);
+            notify.error(message);
         } finally {
             setLoading(false);
         }
