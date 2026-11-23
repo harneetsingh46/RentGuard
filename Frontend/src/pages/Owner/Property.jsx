@@ -4,6 +4,7 @@ import apiClient from "../../ApiClient/interceptor.js"
 import { useAuth } from "../../context/AuthContext";
 import { Pencil, Trash2, X, AlertTriangle, Search, Eye } from "lucide-react";
 import toast from "react-hot-toast";
+import AddTenantModal from "./components/AddTenantModal.jsx";
 
 const emptyProperty = {
     propertyName: "",
@@ -73,6 +74,11 @@ const Property = () => {
     const [tenantDetails, setTenantDetails] = useState(null);
     const [tenantDetailsLoading, setTenantDetailsLoading] = useState(false);
     const [tenantDetailsError, setTenantDetailsError] = useState("");
+    const [addTenantModal, setAddTenantModal] = useState({
+        open: false,
+        propertyId: null,
+        unitId: null,
+    });
 
     // Loading and messages
     const [loading, setLoading] = useState(true);
@@ -992,6 +998,16 @@ const Property = () => {
 
                                             {/* Actions */}
                                             <div className="flex items-center justify-end gap-2">
+                                                {item.status === "available" && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAddTenantModal({ open: true, propertyId: selectedProperty?._id, unitId: item._id })}
+                                                        disabled={!isApproved}
+                                                        className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-yellow-500 bg-yellow-400 px-3 text-sm font-medium text-gray-900 transition hover:bg-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        Add Tenant
+                                                    </button>
+                                                )}
                                                 {item.status === "occupied" && (
                                                     <button
                                                         type="button"
@@ -1596,6 +1612,18 @@ const Property = () => {
                     </div>
                 </div>
             )}
+
+            <AddTenantModal
+                isOpen={addTenantModal.open}
+                onClose={() => setAddTenantModal({ open: false, propertyId: null, unitId: null })}
+                onSuccess={async () => {
+                    if (selectedProperty?._id) {
+                        await getUnits(selectedProperty._id);
+                    }
+                }}
+                initialPropertyId={addTenantModal.propertyId}
+                initialUnitId={addTenantModal.unitId}
+            />
         </div>
     );
 };

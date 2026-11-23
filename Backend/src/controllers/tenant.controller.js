@@ -217,7 +217,7 @@ export const registerTenant = async (req, res) => {
 
   try {
     const { propertyId, unitId } = req.params;
-    const { fullName, address, aadhaarNumber, email, phone } = req.body;
+    const { fullName, address, aadhaarNumber, email, phone, moveInDate } = req.body;
 
     // Only owners can register tenants.
     if (req.authRole !== "owner") {
@@ -239,7 +239,6 @@ export const registerTenant = async (req, res) => {
     // Validate required fields.
     if (
       typeof fullName !== "string" ||
-      typeof address !== "string" ||
       !aadhaarNumber ||
       typeof email !== "string" ||
       typeof phone !== "string"
@@ -251,9 +250,9 @@ export const registerTenant = async (req, res) => {
 
     // Normalize input.
     const normalizedName = fullName.trim();
-    const normalizedAddress = address.trim();
+    const normalizedAddress = typeof address === "string" ? address.trim() : "";
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedPhone = phone.replace(/\D/g, "");
+    const normalizedPhone = String(phone).replace(/\D/g, "");
     const normalizedAadhaar = String(aadhaarNumber).replace(/\D/g, "");
 
     // Validate name.
@@ -263,8 +262,11 @@ export const registerTenant = async (req, res) => {
       });
     }
 
-    // Validate address.
-    if (normalizedAddress.length < 5 || normalizedAddress.length > 250) {
+    // Validate address (optional, but 5-250 characters if provided).
+    if (
+      normalizedAddress &&
+      (normalizedAddress.length < 5 || normalizedAddress.length > 250)
+    ) {
       return res.status(400).json({
         message: "Address must be between 5 and 250 characters!",
       });
@@ -394,7 +396,10 @@ export const registerTenant = async (req, res) => {
             phone: normalizedPhone,
 
             isActive: true,
-            moveInDate: new Date(),
+            moveInDate:
+              moveInDate && !Number.isNaN(new Date(moveInDate).getTime())
+                ? new Date(moveInDate)
+                : new Date(),
             moveOutDate: null,
 
             moveOutRequest: {

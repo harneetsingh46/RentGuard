@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import apiClient from '../../ApiClient/interceptor.js'
 import { useToast } from "../../common/ToastProvider"
 import Pagination from "../../common/Pagination"
+import AddTenantModal from "./components/AddTenantModal.jsx"
 import {
   Pencil,
   Search,
@@ -46,6 +47,7 @@ const Tenant = () => {
 
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [selectedTenant, setSelectedTenant] = useState(null)
+  const [addTenantModalOpen, setAddTenantModalOpen] = useState(false)
 
   const [editForm, setEditForm] = useState({
     fullName: '',
@@ -542,9 +544,18 @@ const Tenant = () => {
   return (
     <div className="mx-auto w-full min-w-0 p-4 sm:p-6 lg:p-8">
 
-      <h1 className="mb-4 break-words text-xl font-semibold text-gray-900 dark:text-white sm:mb-6 sm:text-2xl">
-        Tenant Management
-      </h1>
+      <div className="mb-4 flex flex-col justify-between gap-3 sm:mb-6 sm:flex-row sm:items-center">
+        <h1 className="break-words text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
+          Tenant Management
+        </h1>
+        <button
+          type="button"
+          onClick={() => setAddTenantModalOpen(true)}
+          className="inline-flex items-center justify-center gap-1.5 rounded-xs bg-yellow-300 px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-yellow-400"
+        >
+          + Add Tenant
+        </button>
+      </div>
 
       {success && (
         <p className="mb-4 text-sm text-green-600 dark:text-green-400">
@@ -1828,6 +1839,12 @@ const Tenant = () => {
           </div>
         </div>
       )}
+
+      <AddTenantModal
+        isOpen={addTenantModalOpen}
+        onClose={() => setAddTenantModalOpen(false)}
+        onSuccess={fetchTenants}
+      />
     </div>
   )
 }
