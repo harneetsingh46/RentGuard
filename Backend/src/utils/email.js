@@ -187,8 +187,20 @@ export const sendTenancyNotificationEmails = async ({
   reviewedAt,
   bills = [],
   reason,
+  requestedMoveOutDate,
 }) => {
   try {
+    const formatDateOnly = (value) => {
+      if (!value) return "";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return escapeHtml(String(value));
+      return escapeHtml(
+        d.toLocaleDateString("en-IN", {
+          dateStyle: "medium",
+        }),
+      );
+    };
+
     const date = (value) =>
       value
         ? new Date(value).toLocaleString("en-IN", {
@@ -282,6 +294,7 @@ export const sendTenancyNotificationEmails = async ({
         <p><strong>Unit:</strong> ${escapeHtml(unitName)}</p>
         ${rent !== undefined ? `<p><strong>Monthly Rent:</strong> ${amount(rent)}</p>` : ""}
         ${requestedAt ? `<p><strong>Requested At:</strong> ${date(requestedAt)}</p>` : ""}
+        ${requestedMoveOutDate ? `<p><strong>Requested Move-Out Date:</strong> ${formatDateOnly(requestedMoveOutDate)}</p>` : ""}
         ${expiresAt ? `<p><strong>Request Expires:</strong> ${date(expiresAt)}</p>` : ""}
         ${reviewedAt ? `<p><strong>Reviewed At:</strong> ${date(reviewedAt)}</p>` : ""}
       </div>

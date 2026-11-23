@@ -95,6 +95,10 @@ const tenantSchema = new mongoose.Schema(
         type: Date,
         default: null,
       },
+      requestedMoveOutDate: {
+        type: Date,
+        default: null,
+      },
       status: {
         type: String,
         enum: ["none", "pending", "approved", "expired", "rejected"],

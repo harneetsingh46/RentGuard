@@ -10,6 +10,7 @@ import {
   sendTenancyNotificationEmails,
   sendSignupEmails,
 } from "../utils/email.js";
+import { expireStaleMoveOut } from "../utils/moveOut.js";
 
 // HELPERS
 
@@ -1100,24 +1101,40 @@ export const createMoveOutRequest = async (req, res) => {
       });
     }
 
+    const { moveOutDate } = req.body;
+    if (!moveOutDate) {
+      return res.status(400).json({
+        message: "Move-out date is required.",
+      });
+    }
+
+    const parsedMoveOutDate = new Date(moveOutDate);
+    if (Number.isNaN(parsedMoveOutDate.getTime())) {
+      return res.status(400).json({
+        message: "Please provide a valid move-out date.",
+      });
+    }
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    if (parsedMoveOutDate < startOfToday) {
+      return res.status(400).json({
+        message: "Move-out date cannot be in the past.",
+      });
+    }
+
+    const maxDate = new Date();
+    maxDate.setFullYear(maxDate.getFullYear() + 1);
+    if (parsedMoveOutDate > maxDate) {
+      return res.status(400).json({
+        message: "Move-out date cannot be more than 12 months ahead.",
+      });
+    }
+
+    await expireStaleMoveOut(req.user._id);
+
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 48 * 60 * 60 * 1000);
-
-    // Mark an old pending request as expired after 48 hours.
-    await Tenant.updateOne(
-      {
-        _id: req.user._id,
-        isActive: true,
-        "moveOutRequest.status": "pending",
-        "moveOutRequest.expiresAt": { $lte: now },
-      },
-      {
-        $set: {
-          "moveOutRequest.status": "expired",
-          "moveOutRequest.reviewedAt": now,
-        },
-      },
-    );
 
     // Allow a new request if the previous request was:
     // none, expired, or rejected.
@@ -1140,6 +1157,7 @@ export const createMoveOutRequest = async (req, res) => {
         $set: {
           "moveOutRequest.requestedAt": now,
           "moveOutRequest.expiresAt": expiresAt,
+          "moveOutRequest.requestedMoveOutDate": parsedMoveOutDate,
           "moveOutRequest.status": "pending",
           "moveOutRequest.reviewedAt": null,
         },
@@ -1201,6 +1219,7 @@ export const createMoveOutRequest = async (req, res) => {
       unitName: tenant.unit?.unitName,
 
       requestedAt: tenant.moveOutRequest.requestedAt,
+      requestedMoveOutDate: tenant.moveOutRequest.requestedMoveOutDate,
       expiresAt: tenant.moveOutRequest.expiresAt,
     });
 
@@ -1209,6 +1228,7 @@ export const createMoveOutRequest = async (req, res) => {
       data: {
         status: tenant.moveOutRequest.status,
         requestedAt: tenant.moveOutRequest.requestedAt,
+        requestedMoveOutDate: tenant.moveOutRequest.requestedMoveOutDate,
         expiresAt: tenant.moveOutRequest.expiresAt,
       },
     });
@@ -1231,20 +1251,7 @@ export const getMyMoveOutRequest = async (req, res) => {
       });
     }
 
-    const now = new Date();
-
-    await Tenant.updateOne(
-      {
-        _id: req.user._id,
-        "moveOutRequest.status": "pending",
-        "moveOutRequest.expiresAt": { $lte: now },
-      },
-      {
-        $set: {
-          "moveOutRequest.status": "expired",
-        },
-      },
-    );
+    await expireStaleMoveOut(req.user._id);
 
     const tenant = await Tenant.findById(req.user._id).select(
       "isActive moveOutRequest moveInDate moveOutDate",
@@ -1372,23 +1379,9 @@ export const approveMoveOutRequest = async (req, res) => {
       });
     }
 
-    const now = new Date();
+    await expireStaleMoveOut(tenantId);
 
-    // Expire this request first if its validity has passed.
-    await Tenant.updateOne(
-      {
-        _id: tenantId,
-        owner: req.user._id,
-        property: propertyId,
-        "moveOutRequest.status": "pending",
-        "moveOutRequest.expiresAt": { $lte: now },
-      },
-      {
-        $set: {
-          "moveOutRequest.status": "expired",
-        },
-      },
-    );
+    const now = new Date();
 
     session = await mongoose.startSession();
 
@@ -1454,6 +1447,48 @@ export const approveMoveOutRequest = async (req, res) => {
 
       await tenant.save({ session });
       await unit.save({ session });
+
+      const hasOpenRequests = await RentalRequest.exists({
+        tenant: tenant._id,
+        status: { $in: ["Pending", "Approved"] },
+      }).session(session);
+
+      if (hasOpenRequests) {
+        const [newTenant] = await Tenant.create(
+          [
+            {
+              fullName: tenant.fullName,
+              email: tenant.email,
+              phone: tenant.phone,
+              aadhaarNumber: tenant.aadhaarNumber,
+              address: tenant.address || "",
+              profilePicture: tenant.profilePicture || "",
+              profilePicturePublicId: tenant.profilePicturePublicId || "",
+              tokenVersion: 0,
+              contactVerified: false,
+              isActive: true,
+              moveOutRequest: { status: "none" },
+              owner: null,
+              property: null,
+              unit: null,
+            },
+          ],
+          { session },
+        );
+
+        await RentalRequest.updateMany(
+          {
+            tenant: tenant._id,
+            status: { $in: ["Pending", "Approved"] },
+          },
+          {
+            $set: {
+              tenant: newTenant._id,
+            },
+          },
+          { session },
+        );
+      }
 
       approvedTenant = tenant;
     });
@@ -1625,23 +1660,9 @@ export const rejectMoveOutRequest = async (req, res) => {
     }
 
     const sanitizedReason = typeof reason === "string" ? reason.trim() : "";
-    const now = new Date();
+    await expireStaleMoveOut(tenantId);
 
-    // Expire this request first if its validity has passed.
-    await Tenant.updateOne(
-      {
-        _id: tenantId,
-        owner: req.user._id,
-        property: propertyId,
-        "moveOutRequest.status": "pending",
-        "moveOutRequest.expiresAt": { $lte: now },
-      },
-      {
-        $set: {
-          "moveOutRequest.status": "expired",
-        },
-      },
-    );
+    const now = new Date();
 
     session = await mongoose.startSession();
     let rejectedTenant;

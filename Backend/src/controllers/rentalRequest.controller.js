@@ -4,6 +4,7 @@ import { Tenant } from "../models/tenant.model.js";
 import { Unit } from "../models/unit.model.js";
 import { Property } from "../models/property.model.js";
 import { sendRentalApplicationNotification } from "../utils/email.js";
+import { expireStaleMoveOut } from "../utils/moveOut.js";
 
 // Helper to mask Aadhaar in responses
 const maskAadhaar = (aadhaarNumber) => {
@@ -23,13 +24,34 @@ export const createRentalRequest = async (req, res) => {
       });
     }
 
-    const tenant = req.user;
+    await expireStaleMoveOut(req.user._id);
 
-    // Check if tenant already has an active tenancy with an assigned unit
-    if (tenant.unit && tenant.isActive) {
-      return res.status(400).json({
-        message: "You already have an active tenancy assigned.",
+    const tenant = await Tenant.findById(req.user._id);
+    if (!tenant || !tenant.isActive) {
+      return res.status(403).json({
+        message: "Active tenant account not found.",
       });
+    }
+
+    // Active tenant with a unit may apply ONLY if moveOutRequest.status is "pending" and expiresAt > now
+    if (tenant.unit && tenant.isActive) {
+      if (tenant.unit.toString() === unitId.toString()) {
+        return res.status(400).json({
+          message: "You cannot apply to the unit you currently occupy.",
+        });
+      }
+
+      const isMoveOutPending =
+        tenant.moveOutRequest?.status === "pending" &&
+        tenant.moveOutRequest?.expiresAt &&
+        new Date(tenant.moveOutRequest.expiresAt) > new Date();
+
+      if (!isMoveOutPending) {
+        return res.status(400).json({
+          message:
+            "To apply for another property, first submit a move-out request for your current unit.",
+        });
+      }
     }
 
     // Verify unit exists and load its owner for the notification.
@@ -134,6 +156,8 @@ export const createRentalRequest = async (req, res) => {
 // 2. TENANT: GET ALL MY RENTAL REQUESTS
 export const getMyRentalRequests = async (req, res) => {
   try {
+    await expireStaleMoveOut(req.user._id);
+
     const requests = await RentalRequest.find({ tenant: req.user._id })
       .populate("property", "propertyName address")
       .populate("unit", "unitName unitType rent status")
@@ -372,6 +396,8 @@ export const acceptApprovedRentalRequest = async (req, res) => {
       return res.status(400).json({ message: "Invalid rental request ID." });
     }
 
+    await expireStaleMoveOut(req.user._id);
+
     await session.withTransaction(async () => {
       const request = await RentalRequest.findOne({
         _id: id,
@@ -397,7 +423,9 @@ export const acceptApprovedRentalRequest = async (req, res) => {
       }
 
       if (tenant.unit) {
-        const error = new Error("You already have an assigned active tenancy.");
+        const error = new Error(
+          "Your current owner must approve your move-out before you can confirm this lease.",
+        );
         error.statusCode = 409;
         throw error;
       }
