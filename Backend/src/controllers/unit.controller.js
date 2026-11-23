@@ -376,6 +376,14 @@ export const updateUnit = async (req, res, next) => {
       });
     }
 
+    // Do not edit a unit that has an active tenant
+    const activeTenant = await Tenant.findOne({ unit: unitId, isActive: true });
+    if (activeTenant) {
+      return res.status(409).json({
+        message: "This unit has an active tenant and cannot be edited.",
+      });
+    }
+
     // Check duplicate unit name
     if (unitName !== undefined && unitName !== unit.unitName) {
       const existingUnit = await Unit.findOne({
