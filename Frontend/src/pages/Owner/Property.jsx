@@ -921,12 +921,7 @@ const Property = () => {
                                             </div>
 
                                             {/* Actions */}
-                                            <div className="flex flex-wrap justify-end gap-1">
-                                                {item.status === "available" && (
-                                                    <span className="inline-flex items-center rounded-xs bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800">
-                                                        Available for Rent
-                                                    </span>
-                                                )}
+                                            <div className="flex items-center justify-end gap-2">
                                                 {item.status === "occupied" && (
                                                     <button
                                                         type="button"
@@ -936,29 +931,28 @@ const Property = () => {
                                                         View Tenant
                                                     </button>
                                                 )}
-                                                <div className="p-1">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openEditUnitForm(item)}
-                                                        disabled={!isApproved}
-                                                        aria-label={`Edit ${item.unitName}`}
-                                                        title="Edit unit"
-                                                        className="inline-flex m-1 items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    >
-                                                        <Pencil size={16} />
-                                                    </button>
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDeleteUnit(item._id)}
-                                                        disabled={!isApproved}
-                                                        aria-label={`Delete ${item.unitName}`}
-                                                        title="Delete unit"
-                                                        className="inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openEditUnitForm(item)}
+                                                    disabled={!isApproved}
+                                                    aria-label={`Edit ${item.unitName}`}
+                                                    title="Edit unit"
+                                                    className="inline-flex items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <Pencil size={16} />
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteUnit(item._id)}
+                                                    disabled={!isApproved}
+                                                    aria-label={`Delete ${item.unitName}`}
+                                                    title="Delete unit"
+                                                    className="inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
