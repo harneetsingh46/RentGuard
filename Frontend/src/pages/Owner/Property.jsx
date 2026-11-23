@@ -1,10 +1,11 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import apiClient from "../../ApiClient/interceptor.js"
 import { useAuth } from "../../context/AuthContext";
 import { Pencil, Trash2, X, AlertTriangle, Search, Eye } from "lucide-react";
 import toast from "react-hot-toast";
 import AddTenantModal from "./AddTenantModal.jsx";
+import Pagination from "../../common/Pagination";
 
 const emptyProperty = {
     propertyName: "",
@@ -108,6 +109,13 @@ const Property = () => {
     const [description, setDescription] = useState("");
     const [facilities, setFacilities] = useState([]);
     const [customFacility, setCustomFacility] = useState("");
+
+    // Unit filters & pagination
+    const UNIT_PAGE_SIZE = 8;
+    const [unitCurrentPage, setUnitCurrentPage] = useState(1);
+    const [unitSearch, setUnitSearch] = useState("");
+    const [unitStatusFilter, setUnitStatusFilter] = useState("all");
+    const [unitTypeFilter, setUnitTypeFilter] = useState("all");
 
     // Unit modal state
     const [unitModalOpen, setUnitModalOpen] = useState(false);
@@ -215,10 +223,57 @@ const Property = () => {
         }
     };
 
+    // Filter units in memory
+    const filteredUnits = useMemo(() => {
+        const searchTrimmed = unitSearch.trim().toLowerCase();
+        return units.filter((item) => {
+            const matchesName =
+                !searchTrimmed ||
+                (item.unitName && item.unitName.toLowerCase().includes(searchTrimmed));
+            const matchesStatus =
+                unitStatusFilter === "all" ||
+                (item.status && item.status.toLowerCase() === unitStatusFilter.toLowerCase());
+            const matchesType =
+                unitTypeFilter === "all" ||
+                (item.unitType && item.unitType.toLowerCase() === unitTypeFilter.toLowerCase());
+            return matchesName && matchesStatus && matchesType;
+        });
+    }, [units, unitSearch, unitStatusFilter, unitTypeFilter]);
+
+    // Reset to page 1 whenever a filter changes or a different property is selected
+    useEffect(() => {
+        setUnitCurrentPage(1);
+    }, [unitSearch, unitStatusFilter, unitTypeFilter, selectedProperty?._id]);
+
+    // Clamp page if rows are deleted or filtered
+    const totalUnitPages = Math.ceil(filteredUnits.length / UNIT_PAGE_SIZE) || 1;
+    useEffect(() => {
+        if (unitCurrentPage > totalUnitPages) {
+            setUnitCurrentPage(totalUnitPages);
+        }
+    }, [totalUnitPages, unitCurrentPage]);
+
+    // Paginated slice
+    const paginatedUnits = useMemo(() => {
+        const startIndex = (unitCurrentPage - 1) * UNIT_PAGE_SIZE;
+        return filteredUnits.slice(startIndex, startIndex + UNIT_PAGE_SIZE);
+    }, [filteredUnits, unitCurrentPage]);
+
+    const handleClearFilters = () => {
+        setUnitSearch("");
+        setUnitStatusFilter("all");
+        setUnitTypeFilter("all");
+        setUnitCurrentPage(1);
+    };
+
     // Fetch units whenever the selected property changes
     useEffect(() => {
         setUnits([]);
         setUnitError("");
+        setUnitSearch("");
+        setUnitStatusFilter("all");
+        setUnitTypeFilter("all");
+        setUnitCurrentPage(1);
 
         if (selectedProperty?._id) {
             getUnits(selectedProperty._id);
@@ -1023,11 +1078,11 @@ const Property = () => {
                             </div>
 
                             {unitsLoading ? (
-                                <p className="py-6 text-gray-500  text-center dark:text-gray-400">
+                                <p className="py-6 text-center text-gray-500 dark:text-gray-400">
                                     Loading units...
                                 </p>
                             ) : units.length === 0 ? (
-                                <div className="rounded-xs text-center border border-gray-200 bg-white p-6 dark:border-stone-800 dark:bg-[#1b1b1b]">
+                                <div className="rounded-xs border border-gray-200 bg-white p-6 text-center dark:border-stone-800 dark:bg-[#1b1b1b]">
                                     <p className="text-gray-600 dark:text-gray-400">
                                         No units added to this property yet.
                                     </p>
@@ -1037,110 +1092,198 @@ const Property = () => {
                                         onClick={openAddUnitForm}
                                         disabled={!isApproved}
                                         title={!isApproved ? "Available after owner verification" : "Add unit"}
-                                        className="mt-4 rounded-xs text-center bg-yellow-300 px-4 py-2 font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="mt-4 rounded-xs bg-yellow-300 px-4 py-2 font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         + Add First Unit
                                     </button>
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto rounded-xs border border-gray-200 dark:border-stone-800">
-                                    {/* Table Header */}
-                                    <div className="grid min-w-[860px] grid-cols-[1.6fr_1.1fr_1.1fr_1fr_1.6fr] items-center gap-4 border-b border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-700 dark:border-stone-800 dark:bg-[#1b1b1b] dark:text-gray-300">
-                                        <span>Unit Name</span>
-                                        <span className="text-center">Type</span>
-                                        <span className="text-center">Monthly Rent</span>
-                                        <span className="text-center">Status</span>
-                                        <span className="text-right">Actions</span>
+                                <>
+                                    {/* Filter Row */}
+                                    <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                                        {/* Search Input */}
+                                        <div className="relative flex-1">
+                                            <Search
+                                                size={18}
+                                                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={unitSearch}
+                                                onChange={(e) => setUnitSearch(e.target.value)}
+                                                placeholder="Search unit by name..."
+                                                className="w-full rounded border border-gray-300 bg-white py-2 pl-9 pr-9 text-sm text-gray-900 outline-none transition focus:border-yellow-400 dark:border-stone-700 dark:bg-[#1b1b1b] dark:text-white"
+                                            />
+                                            {unitSearch && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setUnitSearch("")}
+                                                    aria-label="Clear search"
+                                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Status Select */}
+                                        <div className="w-full sm:w-auto">
+                                            <select
+                                                value={unitStatusFilter}
+                                                onChange={(e) => setUnitStatusFilter(e.target.value)}
+                                                aria-label="Filter by status"
+                                                className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-yellow-400 dark:border-stone-700 dark:bg-[#1b1b1b] dark:text-white sm:w-auto"
+                                            >
+                                                <option value="all">All</option>
+                                                <option value="available">Available</option>
+                                                <option value="occupied">Occupied</option>
+                                                <option value="maintenance">Maintenance</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Type Select */}
+                                        <div className="w-full sm:w-auto">
+                                            <select
+                                                value={unitTypeFilter}
+                                                onChange={(e) => setUnitTypeFilter(e.target.value)}
+                                                aria-label="Filter by type"
+                                                className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-yellow-400 dark:border-stone-700 dark:bg-[#1b1b1b] dark:text-white sm:w-auto"
+                                            >
+                                                <option value="all">All</option>
+                                                <option value="residential">Residential</option>
+                                                <option value="commercial">Commercial</option>
+                                            </select>
+                                        </div>
                                     </div>
 
-                                    {/* Unit Rows */}
-                                    {units.map((item, index) => (
-                                        <div
-                                            key={item._id}
-                                            className={`grid min-w-[860px] grid-cols-[1.6fr_1.1fr_1.1fr_1fr_1.6fr] items-center gap-4 bg-white px-6 py-4 transition hover:bg-yellow-50 dark:bg-[#151515] dark:hover:bg-[#222222] ${index !== units.length - 1
-                                                ? "border-b border-gray-200 dark:border-stone-800"
-                                                : ""
-                                                }`}
-                                        >
-                                            {/* Unit Name */}
-                                            <span className="font-medium text-gray-900 dark:text-white">
-                                                {item.unitName}
-                                            </span>
+                                    {/* Count under filters */}
+                                    <p className="mb-4 text-xs text-gray-500 dark:text-gray-400 sm:text-sm">
+                                        {filteredUnits.length} of {units.length} {units.length === 1 ? "unit" : "units"}
+                                    </p>
 
-                                            {/* Type */}
-                                            <span className="text-center text-sm capitalize text-gray-600 dark:text-gray-400">
-                                                {item.unitType}
-                                            </span>
-
-                                            {/* Monthly Rent */}
-                                            <span className="text-center text-sm font-medium text-gray-900 dark:text-white">
-                                                ₹{Number(item.rent).toLocaleString("en-IN")}
-                                            </span>
-
-                                            {/* Status */}
-                                            <div className="flex justify-center">
-                                                <span
-                                                    className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium capitalize ${item.status === "available"
-                                                        ? "bg-green-100 text-green-800"
-                                                        : item.status === "occupied"
-                                                            ? "bg-yellow-100 text-yellow-800"
-                                                            : "bg-red-100 text-red-800"
-                                                        }`}
-                                                >
-                                                    {item.status}
-                                                </span>
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="flex items-center justify-end gap-2">
-                                                {item.status === "available" && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setAddTenantModal({ open: true, propertyId: selectedProperty?._id, unitId: item._id })}
-                                                        disabled={!isApproved}
-                                                        className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-yellow-500 bg-yellow-400 px-3 text-sm font-medium text-gray-900 transition hover:bg-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    >
-                                                        Add Tenant
-                                                    </button>
-                                                )}
-                                                {item.status === "occupied" ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openTenantDetails(item)}
-                                                        className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-yellow-500 bg-yellow-400 px-3 text-sm font-medium text-gray-900 transition hover:bg-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    >
-                                                        <Eye size={16} />
-                                                        View Tenant
-                                                    </button>
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openEditUnitForm(item)}
-                                                            disabled={!isApproved}
-                                                            aria-label={`Edit ${item.unitName}`}
-                                                            title="Edit unit"
-                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 transition hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-transparent dark:text-gray-200 dark:hover:bg-neutral-800"
-                                                        >
-                                                            <Pencil size={16} />
-                                                        </button>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteUnit(item._id)}
-                                                            disabled={!isApproved}
-                                                            aria-label={`Delete ${item.unitName}`}
-                                                            title="Delete unit"
-                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-300 text-sm text-red-600 transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
+                                    {filteredUnits.length === 0 ? (
+                                        <div className="rounded-xs border border-gray-200 bg-white p-6 text-center dark:border-stone-800 dark:bg-[#1b1b1b]">
+                                            <p className="text-gray-600 dark:text-gray-400">
+                                                No units match your filters.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={handleClearFilters}
+                                                className="mt-4 rounded-xs bg-yellow-300 px-4 py-2 font-medium text-black hover:bg-yellow-400"
+                                            >
+                                                Clear filters
+                                            </button>
                                         </div>
-                                    ))}
-                                </div>
+                                    ) : (
+                                        <>
+                                            <div className="overflow-x-auto rounded-xs border border-gray-200 dark:border-stone-800">
+                                                {/* Table Header */}
+                                                <div className="grid min-w-[860px] grid-cols-[1.6fr_1.1fr_1.1fr_1fr_1.6fr] items-center gap-4 border-b border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-700 dark:border-stone-800 dark:bg-[#1b1b1b] dark:text-gray-300">
+                                                    <span>Unit Name</span>
+                                                    <span className="text-center">Type</span>
+                                                    <span className="text-center">Monthly Rent</span>
+                                                    <span className="text-center">Status</span>
+                                                    <span className="text-right">Actions</span>
+                                                </div>
+
+                                                {/* Unit Rows */}
+                                                {paginatedUnits.map((item, index) => (
+                                                    <div
+                                                        key={item._id}
+                                                        className={`grid min-w-[860px] grid-cols-[1.6fr_1.1fr_1.1fr_1fr_1.6fr] items-center gap-4 bg-white px-6 py-4 transition hover:bg-yellow-50 dark:bg-[#151515] dark:hover:bg-[#222222] ${index !== paginatedUnits.length - 1
+                                                            ? "border-b border-gray-200 dark:border-stone-800"
+                                                            : ""
+                                                            }`}
+                                                    >
+                                                        {/* Unit Name */}
+                                                        <span className="font-medium text-gray-900 dark:text-white">
+                                                            {item.unitName}
+                                                        </span>
+
+                                                        {/* Type */}
+                                                        <span className="text-center text-sm capitalize text-gray-600 dark:text-gray-400">
+                                                            {item.unitType}
+                                                        </span>
+
+                                                        {/* Monthly Rent */}
+                                                        <span className="text-center text-sm font-medium text-gray-900 dark:text-white">
+                                                            ₹{Number(item.rent).toLocaleString("en-IN")}
+                                                        </span>
+
+                                                        {/* Status */}
+                                                        <div className="flex justify-center">
+                                                            <span
+                                                                className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium capitalize ${item.status === "available"
+                                                                    ? "bg-green-100 text-green-800"
+                                                                    : item.status === "occupied"
+                                                                        ? "bg-yellow-100 text-yellow-800"
+                                                                        : "bg-red-100 text-red-800"
+                                                                    }`}
+                                                            >
+                                                                {item.status}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Actions */}
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            {item.status === "available" && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setAddTenantModal({ open: true, propertyId: selectedProperty?._id, unitId: item._id })}
+                                                                    disabled={!isApproved}
+                                                                    className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-yellow-500 bg-yellow-400 px-3 text-sm font-medium text-gray-900 transition hover:bg-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                >
+                                                                    Add Tenant
+                                                                </button>
+                                                            )}
+                                                            {item.status === "occupied" ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openTenantDetails(item)}
+                                                                    className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-yellow-500 bg-yellow-400 px-3 text-sm font-medium text-gray-900 transition hover:bg-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                >
+                                                                    <Eye size={16} />
+                                                                    View Tenant
+                                                                </button>
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => openEditUnitForm(item)}
+                                                                        disabled={!isApproved}
+                                                                        aria-label={`Edit ${item.unitName}`}
+                                                                        title="Edit unit"
+                                                                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 transition hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-transparent dark:text-gray-200 dark:hover:bg-neutral-800"
+                                                                    >
+                                                                        <Pencil size={16} />
+                                                                    </button>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDeleteUnit(item._id)}
+                                                                        disabled={!isApproved}
+                                                                        aria-label={`Delete ${item.unitName}`}
+                                                                        title="Delete unit"
+                                                                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-300 text-sm text-red-600 transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <Pagination
+                                                currentPage={unitCurrentPage}
+                                                totalItems={filteredUnits.length}
+                                                pageSize={UNIT_PAGE_SIZE}
+                                                onPageChange={(page) => setUnitCurrentPage(page)}
+                                            />
+                                        </>
+                                    )}
+                                </>
                             )}
                         </div>
 
