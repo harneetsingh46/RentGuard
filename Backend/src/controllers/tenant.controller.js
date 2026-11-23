@@ -182,6 +182,8 @@ export const getAvailableProperties = async (req, res) => {
         unitName: unit.unitName,
         unitType: unit.unitType,
         rent: unit.rent,
+        description: unit.description || "",
+        facilities: unit.facilities || [],
         status: unit.status,
         images: unitImages,
         image: unit.image || {

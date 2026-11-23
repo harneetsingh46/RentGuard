@@ -23,12 +23,53 @@ const formatUnit = (unitDoc) => {
   return obj;
 };
 
+const parseAndSanitizeFacilities = (raw) => {
+  if (raw === undefined || raw === null || raw === "") return [];
+  let list;
+  if (typeof raw === "string") {
+    try {
+      list = JSON.parse(raw);
+    } catch (err) {
+      const error = new Error("Invalid facilities.");
+      error.status = 400;
+      throw error;
+    }
+  } else if (Array.isArray(raw)) {
+    list = raw;
+  } else {
+    const error = new Error("Invalid facilities.");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!Array.isArray(list)) {
+    const error = new Error("Invalid facilities.");
+    error.status = 400;
+    throw error;
+  }
+
+  const seen = new Set();
+  const result = [];
+  for (const item of list) {
+    if (typeof item !== "string") continue;
+    const trimmed = item.trim();
+    if (!trimmed) continue;
+    const lower = trimmed.toLowerCase();
+    if (!seen.has(lower)) {
+      seen.add(lower);
+      result.push(trimmed.slice(0, 30));
+      if (result.length >= 15) break;
+    }
+  }
+  return result;
+};
+
 // CREATE UNIT
 
 export const createUnit = async (req, res, next) => {
   try {
     const { propertyId } = req.params;
-    const { unitName, unitType, rent } = req.body;
+    const { unitName, unitType, rent, description, facilities } = req.body;
 
     if (!mongoose.isValidObjectId(propertyId)) {
       return res.status(400).json({
@@ -58,6 +99,18 @@ export const createUnit = async (req, res, next) => {
         message: "Rent must be a valid number greater than zero!",
       });
     }
+
+    let sanitizedFacilities = [];
+    try {
+      sanitizedFacilities = parseAndSanitizeFacilities(facilities);
+    } catch (err) {
+      return res.status(400).json({
+        message: "Invalid facilities.",
+      });
+    }
+
+    const sanitizedDescription =
+      typeof description === "string" ? description.trim().slice(0, 500) : "";
 
     // Check property
     const property = await Property.findById(propertyId);
@@ -120,6 +173,8 @@ export const createUnit = async (req, res, next) => {
         unitType,
         property: propertyId,
         rent,
+        description: sanitizedDescription,
+        facilities: sanitizedFacilities,
         status: "available",
         images,
         image: legacyImage,
@@ -267,7 +322,15 @@ export const updateUnit = async (req, res, next) => {
   try {
     const { propertyId, unitId } = req.params;
 
-    const { unitName, unitType, rent, status, removeImages } = req.body;
+    const {
+      unitName,
+      unitType,
+      rent,
+      status,
+      removeImages,
+      description,
+      facilities,
+    } = req.body;
 
     if (
       !mongoose.isValidObjectId(propertyId) ||
@@ -346,6 +409,21 @@ export const updateUnit = async (req, res, next) => {
 
     if (status !== undefined) {
       unit.status = status;
+    }
+
+    if (description !== undefined) {
+      unit.description =
+        typeof description === "string" ? description.trim().slice(0, 500) : "";
+    }
+
+    if (facilities !== undefined) {
+      try {
+        unit.facilities = parseAndSanitizeFacilities(facilities);
+      } catch (err) {
+        return res.status(400).json({
+          message: "Invalid facilities.",
+        });
+      }
     }
 
     // Migrate legacy image into images if images is empty and image.url exists

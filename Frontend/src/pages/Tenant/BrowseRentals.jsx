@@ -375,7 +375,7 @@ const BrowseRentals = () => {
 
                                 {/* Unit Details */}
                                 <div className="flex flex-1 flex-col justify-between gap-3 p-3 sm:flex-row sm:items-center">
-                                  <div>
+                                  <div className="min-w-0 flex-1">
                                     <p className="text-sm font-semibold text-gray-900 dark:text-white">
                                       {u.unitName}
                                     </p>
@@ -390,12 +390,38 @@ const BrowseRentals = () => {
                                         {" "}/ month
                                       </span>
                                     </p>
+
+                                    {/* Description */}
+                                    {u.description && (
+                                      <p className="mt-2 line-clamp-3 text-xs text-stone-600 dark:text-stone-300">
+                                        {u.description}
+                                      </p>
+                                    )}
+
+                                    {/* Facilities */}
+                                    {Array.isArray(u.facilities) && u.facilities.length > 0 && (
+                                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                        {u.facilities.slice(0, 4).map((facility, fIdx) => (
+                                          <span
+                                            key={fIdx}
+                                            className="inline-flex items-center rounded-xs border border-stone-200 bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-stone-300"
+                                          >
+                                            {facility}
+                                          </span>
+                                        ))}
+                                        {u.facilities.length > 4 && (
+                                          <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">
+                                            +{u.facilities.length - 4} more
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
 
                                   <button
                                     type="button"
                                     onClick={() => openApplyModal(prop, u)}
-                                    className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xs bg-yellow-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-yellow-400"
+                                    className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xs bg-yellow-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-yellow-400 sm:self-center"
                                   >
                                     Apply to Rent
                                   </button>

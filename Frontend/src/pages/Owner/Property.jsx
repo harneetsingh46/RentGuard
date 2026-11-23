@@ -16,6 +16,19 @@ const emptyUnit = {
     rent: "",
 };
 
+const QUICK_FACILITIES = [
+    "Parking",
+    "Wi-Fi",
+    "Lift",
+    "Furnished",
+    "Air conditioning",
+    "Power backup",
+    "Water supply",
+    "Balcony",
+    "Security",
+    "Gas pipeline",
+];
+
 
 const Property = () => {
     const { user } = useAuth();
@@ -47,6 +60,9 @@ const Property = () => {
     const [existingImages, setExistingImages] = useState([]);
     const [removedImageIds, setRemovedImageIds] = useState([]);
     const [newImages, setNewImages] = useState([]);
+    const [description, setDescription] = useState("");
+    const [facilities, setFacilities] = useState([]);
+    const [customFacility, setCustomFacility] = useState("");
 
     // Unit modal state
     const [unitModalOpen, setUnitModalOpen] = useState(false);
@@ -237,6 +253,46 @@ const Property = () => {
         e.target.value = "";
     };
 
+    const toggleQuickFacility = (fac) => {
+        setFacilities((prev) => {
+            const exists = prev.some(
+                (item) => item.toLowerCase() === fac.toLowerCase()
+            );
+            if (exists) {
+                return prev.filter(
+                    (item) => item.toLowerCase() !== fac.toLowerCase()
+                );
+            }
+            if (prev.length >= 15) {
+                setUnitError("You can add at most 15 facilities.");
+                return prev;
+            }
+            setUnitError("");
+            return [...prev, fac];
+        });
+    };
+
+    const handleAddCustomFacility = (e) => {
+        if (e) e.preventDefault();
+        const trimmed = customFacility.trim().slice(0, 30);
+        if (!trimmed) return;
+        if (facilities.some((item) => item.toLowerCase() === trimmed.toLowerCase())) {
+            setUnitError("Facility already added.");
+            return;
+        }
+        if (facilities.length >= 15) {
+            setUnitError("You can add at most 15 facilities.");
+            return;
+        }
+        setFacilities((prev) => [...prev, trimmed]);
+        setCustomFacility("");
+        setUnitError("");
+    };
+
+    const handleRemoveFacility = (fac) => {
+        setFacilities((prev) => prev.filter((item) => item !== fac));
+    };
+
     // Open add property modal
     const openAddForm = () => {
         if (!isApproved) return;
@@ -416,6 +472,9 @@ const Property = () => {
         clearNewImages();
         setExistingImages([]);
         setRemovedImageIds([]);
+        setDescription("");
+        setFacilities([]);
+        setCustomFacility("");
         setSelectedUnit(null);
         setIsEditingUnit(false);
         setUnitError("");
@@ -433,6 +492,9 @@ const Property = () => {
             rent: String(item.rent),
         });
 
+        setDescription(item.description || "");
+        setFacilities(Array.isArray(item.facilities) ? [...item.facilities] : []);
+        setCustomFacility("");
         setSelectedUnit(item);
         setIsEditingUnit(true);
         setUnitError("");
@@ -459,6 +521,9 @@ const Property = () => {
         clearNewImages();
         setExistingImages([]);
         setRemovedImageIds([]);
+        setDescription("");
+        setFacilities([]);
+        setCustomFacility("");
     };
 
     // Add or update unit
@@ -509,6 +574,8 @@ const Property = () => {
             unitFormData.append("unitName", formData.unitName);
             unitFormData.append("unitType", formData.unitType);
             unitFormData.append("rent", String(formData.rent));
+            unitFormData.append("description", description.trim());
+            unitFormData.append("facilities", JSON.stringify(facilities));
 
             newImages.forEach(({ file }) => {
                 unitFormData.append("images", file);
@@ -537,6 +604,9 @@ const Property = () => {
             clearNewImages();
             setExistingImages([]);
             setRemovedImageIds([]);
+            setDescription("");
+            setFacilities([]);
+            setCustomFacility("");
 
             await getUnits(selectedProperty._id);
         } catch (err) {
@@ -1257,6 +1327,113 @@ const Property = () => {
                                     disabled={submitting}
                                     className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
+                            </div>
+
+                            {/* Description */}
+                            <div className="mb-5">
+                                <div className="mb-2 flex items-center justify-between">
+                                    <label
+                                        htmlFor="unitDescription"
+                                        className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                                    >
+                                        Description <span className="font-normal text-gray-400 dark:text-gray-500">(optional)</span>
+                                    </label>
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                                        {description.length}/500
+                                    </span>
+                                </div>
+                                <textarea
+                                    id="unitDescription"
+                                    name="description"
+                                    rows={4}
+                                    maxLength={500}
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    placeholder="Tell tenants about the unit, space, layout, natural light, etc."
+                                    disabled={submitting}
+                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                                />
+                            </div>
+
+                            {/* Facilities */}
+                            <div className="mb-6">
+                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Facilities ({facilities.length}/15)
+                                </label>
+
+                                {/* Quick-pick toggle chips */}
+                                <div className="mb-3 flex flex-wrap gap-2">
+                                    {QUICK_FACILITIES.map((fac) => {
+                                        const isSelected = facilities.some(
+                                            (f) => f.toLowerCase() === fac.toLowerCase()
+                                        );
+                                        return (
+                                            <button
+                                                key={fac}
+                                                type="button"
+                                                onClick={() => toggleQuickFacility(fac)}
+                                                disabled={submitting}
+                                                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                                                    isSelected
+                                                        ? "bg-yellow-400 text-black dark:bg-yellow-400 dark:text-black"
+                                                        : "border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 dark:border-stone-700 dark:bg-neutral-800 dark:text-gray-300 dark:hover:bg-neutral-700"
+                                                }`}
+                                            >
+                                                {isSelected ? `✓ ${fac}` : `+ ${fac}`}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Custom facility input */}
+                                <div className="mb-3 flex gap-2">
+                                    <input
+                                        type="text"
+                                        maxLength={30}
+                                        value={customFacility}
+                                        onChange={(e) => setCustomFacility(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                e.preventDefault();
+                                                handleAddCustomFacility();
+                                            }
+                                        }}
+                                        placeholder="Add custom facility (e.g. Geyser, Swimming pool)..."
+                                        disabled={submitting || facilities.length >= 15}
+                                        className="flex-1 rounded-xl border border-gray-300 bg-white p-2.5 text-xs text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleAddCustomFacility}
+                                        disabled={submitting || !customFacility.trim() || facilities.length >= 15}
+                                        className="rounded-xl border border-yellow-400 bg-yellow-300 px-4 py-2 text-xs font-semibold text-black transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+
+                                {/* Selected facilities chips */}
+                                {facilities.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {facilities.map((fac) => (
+                                            <span
+                                                key={fac}
+                                                className="inline-flex items-center gap-1.5 rounded-full border border-yellow-400/60 bg-yellow-100/60 px-3 py-1 text-xs font-medium text-yellow-900 dark:border-yellow-500/40 dark:bg-yellow-950/40 dark:text-yellow-300"
+                                            >
+                                                {fac}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveFacility(fac)}
+                                                    disabled={submitting}
+                                                    aria-label={`Remove ${fac}`}
+                                                    className="rounded-full p-0.5 hover:bg-yellow-200 dark:hover:bg-yellow-900/60"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
 

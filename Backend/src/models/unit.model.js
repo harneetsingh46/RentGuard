@@ -24,6 +24,16 @@ const unitSchema = new mongoose.Schema(
       required: true,
       default: 0,
     },
+    description: {
+      type: String,
+      trim: true,
+      maxLength: 500,
+      default: "",
+    },
+    facilities: {
+      type: [String],
+      default: [],
+    },
     status: {
       type: String,
       enum: ["available", "occupied", "maintenance"],
