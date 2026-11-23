@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import apiClient from '../../ApiClient/interceptor.js'
-import { useToast } from "../../common/ToastProvider"
+import notify from "../../utils/notify.js"
 import Pagination from "../../common/Pagination"
 import AddTenantModal from "./AddTenantModal.jsx";
 import {
@@ -23,7 +23,6 @@ const Tenant = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const PAGE_SIZE = 10
   const navigate = useNavigate()
-  const { showToast } = useToast()
 
   const [tenantSearch, setTenantSearch] = useState('')
   const [searchDropdownOpen, setSearchDropdownOpen] = useState(false)
@@ -221,13 +220,12 @@ const Tenant = () => {
       setSelectedTenant(null)
       setSuccess('Tenant updated successfully.')
 
-      showToast('Tenant updated successfully.', 'success')
+      notify.success('Tenant updated successfully.')
 
       await getTenants()
     } catch (err) {
-      showToast(
-        err.response?.data?.message || 'Failed to update tenant.',
-        'error'
+      notify.error(
+        err.response?.data?.message || 'Failed to update tenant.'
       )
 
       setError(
@@ -254,9 +252,8 @@ const Tenant = () => {
 
       setApprovalRequest(null)
 
-      showToast(
-        `${tenantName}'s move-out request was approved.`,
-        "success"
+      notify.success(
+        `${tenantName}'s move-out request was approved.`
       )
 
       await getTenants()
@@ -267,10 +264,10 @@ const Tenant = () => {
 
       if (err.response?.data?.code === "MOVE_OUT_UNPAID_BILLS") {
         setApprovalRequest(null)
-        showToast(message, "error")
+        notify.error(message)
         await getTenants()
       } else {
-        showToast(message, "error")
+        notify.error(message)
       }
     } finally {
       setApprovingRequestId(null)
@@ -292,13 +289,13 @@ const Tenant = () => {
         { reason: reason.trim() }
       )
 
-      showToast("Move-out request rejected.", "success")
+      notify.success("Move-out request rejected.")
       setRejectMoveOutModal({ open: false, request: null, reason: "" })
       await getTenants()
     } catch (err) {
       const message =
         err.response?.data?.message || "Failed to reject move-out request."
-      showToast(message, "error")
+      notify.error(message)
     } finally {
       setRejectingMoveOut(false)
     }
@@ -309,10 +306,10 @@ const Tenant = () => {
     try {
       setProcessingRentalId(requestId)
       await apiClient.patch(`/rental-request/${requestId}/approve`)
-      showToast("Rental application approved! The tenant has been notified to confirm.", "success")
+      notify.success("Rental application approved. The tenant has been notified to confirm.")
       await getTenants()
     } catch (err) {
-      showToast(err.response?.data?.message || "Failed to approve application.", "error")
+      notify.error(err.response?.data?.message || "Failed to approve application.")
     } finally {
       setProcessingRentalId(null)
     }
@@ -326,11 +323,11 @@ const Tenant = () => {
       await apiClient.patch(`/rental-request/${rejectModal.requestId}/reject`, {
         rejectionReason: rejectModal.reason.trim(),
       })
-      showToast("Rental application rejected.", "success")
+      notify.success("Rental application rejected.")
       setRejectModal({ open: false, requestId: null, applicantName: "", reason: "" })
       await getTenants()
     } catch (err) {
-      showToast(err.response?.data?.message || "Failed to reject application.", "error")
+      notify.error(err.response?.data?.message || "Failed to reject application.")
     } finally {
       setProcessingRentalId(null)
     }

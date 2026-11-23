@@ -213,10 +213,27 @@ const App = () => {
       <Toaster
         position="top-right"
         toastOptions={{
-          duration: 3000,
+          duration: 3500,
+          className:
+            "border border-gray-200 bg-white text-sm font-medium text-gray-900 shadow-lg dark:border-stone-800 dark:bg-[#1b1b1b] dark:text-white rounded-md",
           style: {
             borderRadius: "8px",
             padding: "12px 16px",
+            fontSize: "14px",
+          },
+          success: {
+            duration: 3500,
+            iconTheme: {
+              primary: "#10b981",
+              secondary: "#ffffff",
+            },
+          },
+          error: {
+            duration: 3500,
+            iconTheme: {
+              primary: "#ef4444",
+              secondary: "#ffffff",
+            },
           },
         }}
       />

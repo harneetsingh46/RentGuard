@@ -19,7 +19,9 @@ const SignOut = () => {
         signout()
     }, [])
     return (
-        <div>Signing out...</div>
+        <div className="flex min-h-screen items-center justify-center">
+                <p className="font-medium">Signing out...</p>
+            </div>
     )
 }
 
