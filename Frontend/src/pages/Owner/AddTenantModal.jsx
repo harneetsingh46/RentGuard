@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import apiClient from "../../../ApiClient/interceptor.js";
+import apiClient from "../../ApiClient/interceptor.js";
 import toast from "react-hot-toast";
 import { X, LoaderCircle } from "lucide-react";
 

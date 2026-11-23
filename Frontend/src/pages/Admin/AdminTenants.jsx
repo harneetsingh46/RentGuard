@@ -194,13 +194,6 @@ const AdminTenants = () => {
                                         {card.value.toLocaleString("en-IN")}
                                     </p>
                                 </div>
-
-                                <span className={`flex h-9 w-9 items-center justify-center rounded-full ${colors[index]}`}>
-                                    {index === 0 && <Users size={18} />}
-                                    {index === 1 && <UserRound size={18} />}
-                                    {index === 2 && <UserRound size={18} />}
-                                    {index === 3 && <Users size={18} />}
-                                </span>
                             </div>
 
                             <p className="mt-3 text-xs text-gray-500 dark:text-[#A5A5A5]">
