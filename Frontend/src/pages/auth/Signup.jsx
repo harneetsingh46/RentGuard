@@ -255,10 +255,9 @@ const Signup = () => {
     };
 
     const inputClass = (name) =>
-        `w-full min-w-0 rounded-xs border bg-white border-[#5a574c76] px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D] ${
-            fieldErrors[name]
-                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                : ""
+        `w-full min-w-0 rounded-xs border bg-white border-[#5a574c76] px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-gray-600 focus:border-black focus:ring-2 focus:ring-slate-900/20 dark:bg-[#111111] dark:border-[#373737] dark:text-[#F1F0ED] dark:placeholder:text-[#85827D] ${fieldErrors[name]
+            ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+            : ""
         }`;
 
     const fieldLabelClass = "mb-1 block text-xs font-medium text-black dark:text-[#F1F0ED]";
@@ -285,22 +284,20 @@ const Signup = () => {
                         <button
                             type="button"
                             onClick={() => handleRoleSwitch("owner")}
-                            className={`rounded-xs py-1.5 text-xs font-meduim transition sm:py-2 sm:text-sm ${
-                                role === "owner"
+                            className={`rounded-xs py-1.5 text-xs font-meduim transition sm:py-2 sm:text-sm ${role === "owner"
                                     ? "bg-white text-black shadow dark:bg-neutral-800 dark:text-yellow-400"
                                     : "text-gray-700 hover:text-black dark:text-neutral-400 dark:hover:text-white"
-                            }`}
+                                }`}
                         >
                             Property Owner
                         </button>
                         <button
                             type="button"
                             onClick={() => handleRoleSwitch("tenant")}
-                            className={`rounded-xs py-1.5 text-xs font-meduim transition sm:py-2 sm:text-sm ${
-                                role === "tenant"
+                            className={`rounded-xs py-1.5 text-xs font-meduim transition sm:py-2 sm:text-sm ${role === "tenant"
                                     ? "bg-white text-black shadow dark:bg-neutral-800 dark:text-yellow-400"
                                     : "text-gray-700 hover:text-black dark:text-neutral-400 dark:hover:text-white"
-                            }`}
+                                }`}
                         >
                             Tenant
                         </button>
@@ -309,43 +306,45 @@ const Signup = () => {
                     {role === "owner" ? (
                         <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 sm:gap-y-3">
                             <div className="min-w-0">
-                                <label htmlFor="username" className={fieldLabelClass}>Username</label>
+                                <label htmlFor="fullName" className={fieldLabelClass}>Full Name</label>
                                 <input
-                                    id="username" type="text" name="username"
-                                    value={ownerData.username} onChange={handleOwnerChange}
-                                    required minLength={3} maxLength={30} autoComplete="username"
-                                    placeholder="Enter your username" className={inputClass("username")}
+                                    id="fullName" type="text" name="fullName"
+                                    value={tenantData.fullName} onChange={handleTenantChange}
+                                    required placeholder="e.g. Rahul Sharma" className={inputClass("fullName")}
                                 />
-                                {fieldErrors.username && <p className={fieldErrorClass}>{fieldErrors.username}</p>}
+                                {fieldErrors.fullName && <p className={fieldErrorClass}>{fieldErrors.fullName}</p>}
                             </div>
                             <div className="min-w-0">
-                                <label htmlFor="email" className={fieldLabelClass}>Email address</label>
+                                <label htmlFor="tenantEmail" className={fieldLabelClass}>Email address</label>
                                 <input
-                                    id="email" type="email" name="email"
-                                    value={ownerData.email} onChange={handleOwnerChange}
-                                    required autoComplete="email" placeholder="Enter your email"
+                                    id="tenantEmail" type="email" name="email"
+                                    value={tenantData.email} onChange={handleTenantChange}
+                                    required autoComplete="email" placeholder="e.g. rahul@example.com"
                                     className={inputClass("email")}
                                 />
                                 {fieldErrors.email && <p className={fieldErrorClass}>{fieldErrors.email}</p>}
                             </div>
                             <div className="min-w-0">
-                                <label htmlFor="phone" className={fieldLabelClass}>Phone</label>
+                                <label htmlFor="tenantPhone" className={fieldLabelClass}>Phone Number</label>
                                 <input
-                                    id="phone" type="tel" name="phone"
-                                    value={ownerData.phone} onChange={handleOwnerChange}
+                                    id="tenantPhone" type="tel" name="phone"
+                                    value={tenantData.phone} onChange={handleTenantChange}
                                     required autoComplete="tel" inputMode="tel"
                                     placeholder="10-digit mobile number" className={inputClass("phone")}
                                 />
                                 {fieldErrors.phone && <p className={fieldErrorClass}>{fieldErrors.phone}</p>}
                             </div>
                             <div className="min-w-0">
-                                <label htmlFor="ownerAadhaar" className={fieldLabelClass}>Aadhaar Number</label>
+                                <label htmlFor="aadhaarNumber" className={fieldLabelClass}>Aadhaar Number</label>
                                 <input
-                                    id="ownerAadhaar" type="text" name="aadhaarNumber"
-                                    value={ownerData.aadhaarNumber} onChange={handleOwnerChange}
-                                    required maxLength={12} inputMode="numeric" autoComplete="off"
+                                    id="aadhaarNumber" type="text" name="aadhaarNumber"
+                                    value={tenantData.aadhaarNumber} onChange={handleTenantChange}
+                                    required maxLength={12} inputMode="numeric"
                                     placeholder="12-digit Aadhaar number" className={inputClass("aadhaarNumber")}
                                 />
+                                <p className="mt-1 text-[10px] leading-tight text-gray-700 dark:text-[#85827D]">
+                                    12 numeric digits. Always masked and protected securely.
+                                </p>
                                 {fieldErrors.aadhaarNumber && <p className={fieldErrorClass}>{fieldErrors.aadhaarNumber}</p>}
                             </div>
                             <div className="min-w-0 sm:col-span-2">
@@ -430,8 +429,8 @@ const Signup = () => {
                         {loading
                             ? "Creating account..."
                             : role === "owner"
-                            ? "Create owner account"
-                            : "Register as Tenant"}
+                                ? "Create owner account"
+                                : "Register as Tenant"}
                     </button>
 
                     <p className="mt-2 text-center text-xs font-medium text-black dark:text-[#F1F0ED] sm:mt-3 sm:text-sm">
