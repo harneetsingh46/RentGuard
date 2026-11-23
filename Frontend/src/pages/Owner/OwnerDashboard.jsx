@@ -44,7 +44,7 @@ const OwnerDashboard = () => {
         if (isMounted) {
           setError(
             requestError.response?.data?.message ||
-            "Unable to load dashboard data. Please try again.",
+              "Unable to load dashboard data. Please try again.",
           );
         }
       } finally {
@@ -101,10 +101,10 @@ const OwnerDashboard = () => {
 
   if (loading && !dashboard) {
     return (
-      <div className="w-full min-w-0 bg-[#f7f5f0] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
+      <div className="min-h-screen w-full min-w-0 bg-[#f7f5f0] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
         <main className="w-full min-w-0">
-          <section className="p-8">
-            <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+          <section className="p-4 sm:p-6 lg:p-8">
+            <h1 className="text-2xl font-medium tracking-tight sm:text-3xl lg:text-4xl">
               Owner Overview
             </h1>
             <p className="mt-3 text-gray-500 dark:text-[#A5A5A5]">
@@ -118,12 +118,10 @@ const OwnerDashboard = () => {
 
   const overview = dashboard?.overview || {};
   const billOverview = dashboard?.billOverview || {};
-  const maintenance = dashboard?.maintenanceOverview || {};
   const recentPayments = dashboard?.recentPayments || [];
   const recentTenants = dashboard?.recentTenants || [];
   const recentBills = dashboard?.recentBills || [];
   const recentComplaints = dashboard?.recentComplaints || [];
-  const properties = dashboard?.properties || [];
 
   const financialCards = [
     {
@@ -164,24 +162,25 @@ const OwnerDashboard = () => {
   const periodLabel = `${months.find((item) => item.value === month)?.label} ${year}`;
 
   return (
-    <div className="w-full min-w-0 bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
+    <div className="min-h-screen w-full min-w-0 bg-[#f2f2f1] text-[#171717] dark:bg-[#101010] dark:text-[#F1F0ED]">
       <main className="w-full min-w-0">
-        <section className="p-8">
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
+        <section className="p-4 sm:p-6 lg:p-8">
+          {/* Header & Period Controls */}
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div>
-              <h1 className="text-3xl font-medium tracking-tight sm:text-4xl">
+              <h1 className="text-2xl font-medium tracking-tight sm:text-3xl lg:text-4xl">
                 Owner Overview
               </h1>
-              <p className="mt-2 text-sm text-gray-500 dark:text-[#A5A5A5]">
+              <p className="mt-1.5 text-sm text-gray-500 dark:text-[#A5A5A5]">
                 Your properties, billing, payments and maintenance at a glance.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex w-full items-center gap-3 sm:w-auto">
               <select
                 value={month}
                 onChange={(event) => setMonth(Number(event.target.value))}
-                className="rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-900"
+                className="flex-1 rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none sm:flex-none dark:border-neutral-700 dark:bg-neutral-900"
                 aria-label="Select month"
               >
                 {months.map((item) => (
@@ -194,7 +193,7 @@ const OwnerDashboard = () => {
               <select
                 value={year}
                 onChange={(event) => setYear(Number(event.target.value))}
-                className="rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none dark:border-neutral-700 dark:bg-neutral-900"
+                className="flex-1 rounded-xs border border-stone-300 bg-white px-3 py-2 text-sm outline-none sm:flex-none dark:border-neutral-700 dark:bg-neutral-900"
                 aria-label="Select year"
               >
                 {Array.from(
@@ -231,34 +230,35 @@ const OwnerDashboard = () => {
           )}
 
           {loading && dashboard && (
-            <p className="mt-5 text-sm text-gray-500 dark:text-[#A5A5A5]">
+            <p className="mt-4 text-sm text-gray-500 dark:text-[#A5A5A5]">
               Updating dashboard...
             </p>
           )}
 
           {!error && dashboard && (
             <>
+              {/* Financial Overview */}
               <div className="mt-8">
-                <h2 className="text-xl font-medium tracking-tight">
+                <h2 className="text-lg font-medium tracking-tight sm:text-xl">
                   Financial Overview
                 </h2>
                 <p className="mt-1 text-sm text-gray-500 dark:text-[#A5A5A5]">
                   Bill period: {periodLabel}
                 </p>
 
-                <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
                   {financialCards.map((card) => (
                     <div
                       key={card.title}
-                      className="rounded-xs border border-stone-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-950"
+                      className="rounded-xs border border-stone-200 bg-white p-4 sm:p-5 dark:border-neutral-800 dark:bg-neutral-950"
                     >
                       <p className="text-sm text-gray-500 dark:text-[#A5A5A5]">
                         {card.title}
                       </p>
-                      <p className="mt-3 text-2xl font-medium tracking-tight">
+                      <p className="mt-2.5 text-xl font-medium tracking-tight sm:mt-3 sm:text-2xl">
                         {formatCurrency(card.amount)}
                       </p>
-                      <p className="mt-2 text-xs text-gray-500 dark:text-[#A5A5A5]">
+                      <p className="mt-1.5 text-xs text-gray-500 sm:mt-2 dark:text-[#A5A5A5]">
                         {card.description}
                       </p>
                     </div>
@@ -271,212 +271,274 @@ const OwnerDashboard = () => {
                 </p>
               </div>
 
-              <div className="mt-10">
+              {/* Property Overview */}
+              <div className="mt-8 sm:mt-10">
                 <div className="flex flex-wrap items-end justify-between gap-3">
-                  <h2 className="text-xl font-medium tracking-tight">
+                  <h2 className="text-lg font-medium tracking-tight sm:text-xl">
                     Property Overview
                   </h2>
                 </div>
-                <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5">
                   {propertyCards.map((card) => (
                     <div
                       key={card.title}
-                      className="rounded-xs border border-stone-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-950"
+                      className="rounded-xs border border-stone-200 bg-white p-4 sm:p-5 dark:border-neutral-800 dark:bg-neutral-950"
                     >
                       <p className="text-sm text-gray-500 dark:text-[#A5A5A5]">
                         {card.title}
                       </p>
-                      <p className="mt-3 text-2xl font-medium tracking-tight">
+                      <p className="mt-2.5 text-xl font-medium tracking-tight sm:mt-3 sm:text-2xl">
                         {card.value ?? 0}
                       </p>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="mt-10 grid grid-cols-1 gap-8 xl:grid-cols-2">
-                <div className="min-w-0">
-                  <h2 className="text-xl font-medium tracking-tight">
-                    Recent Payments
-                  </h2>
-                  <div className="mt-5 max-h-[230px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-                    <table className="w-full text-left text-sm">
-                      <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
 
-                        <tr>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Tenant</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Property / Unit</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Amount</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Paid On</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentPayments.map((payment) => (
-                          <tr
-                            key={payment._id}
-                            className="border-b border-stone-100 last:border-b-0 dark:border-neutral-900"
-                          >
-                            <td className="whitespace-nowrap px-4 py-4">
-                              {payment.tenant?.fullName || "Unknown tenant"}
-                            </td>
-                            <td className="px-4 py-4">
-                              <p>{payment.property?.propertyName || "Unknown property"}</p>
-                              <p className="mt-1 text-xs text-gray-500 dark:text-[#A5A5A5]">
-                                {payment.unit?.unitName || "Unknown unit"}
-                              </p>
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-4">
-                              {formatCurrency(payment.amount)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-4 text-gray-500 dark:text-[#A5A5A5]">
-                              {formatDate(payment.paidAt || payment.createdAt)}
-                            </td>
+              {/* Activity Tables: Independent columns eliminate vertical gap */}
+              <div className="mt-8 grid grid-cols-1 items-start gap-6 sm:mt-10 xl:grid-cols-2 xl:gap-8">
+                {/* Left Column */}
+                <div className="flex min-w-0 flex-col gap-6 sm:gap-8">
+                  {/* Recent Payments */}
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-medium tracking-tight sm:text-xl">
+                      Recent Payments
+                    </h2>
+                    <div className="mt-3 max-h-[240px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+                      <table className="w-full min-w-[480px] text-left text-sm">
+                        <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
+                          <tr>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Tenant
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Property / Unit
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Amount
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Paid On
+                            </th>
                           </tr>
-                        ))}
-                        {recentPayments.length === 0 && (
-                          <TableEmpty columns={4}>No successful payments found.</TableEmpty>
-                        )}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {recentPayments.map((payment) => (
+                            <tr
+                              key={payment._id}
+                              className="border-b border-stone-100 last:border-b-0 dark:border-neutral-900"
+                            >
+                              <td className="whitespace-nowrap px-4 py-3.5">
+                                {payment.tenant?.fullName || "Unknown tenant"}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <p>
+                                  {payment.property?.propertyName ||
+                                    "Unknown property"}
+                                </p>
+                                <p className="mt-0.5 text-xs text-gray-500 dark:text-[#A5A5A5]">
+                                  {payment.unit?.unitName || "Unknown unit"}
+                                </p>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3.5">
+                                {formatCurrency(payment.amount)}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3.5 text-gray-500 dark:text-[#A5A5A5]">
+                                {formatDate(payment.paidAt || payment.createdAt)}
+                              </td>
+                            </tr>
+                          ))}
+                          {recentPayments.length === 0 && (
+                            <TableEmpty columns={4}>
+                              No successful payments found.
+                            </TableEmpty>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Recent Bills */}
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-medium tracking-tight sm:text-xl">
+                      Recent Bills — {periodLabel}
+                    </h2>
+                    <div className="mt-3 max-h-[240px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+                      <table className="w-full min-w-[480px] text-left text-sm">
+                        <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
+                          <tr>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Bill
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Tenant
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Amount
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Status
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentBills.map((bill) => (
+                            <tr
+                              key={bill._id}
+                              className="border-b border-stone-100 last:border-b-0 dark:border-neutral-900"
+                            >
+                              <td className="px-4 py-3.5">
+                                <p>{bill.billName}</p>
+                                <p className="mt-0.5 text-xs capitalize text-gray-500 dark:text-[#A5A5A5]">
+                                  {bill.category}
+                                </p>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3.5">
+                                {bill.tenant?.fullName || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3.5">
+                                {formatCurrency(bill.amount)}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3.5">
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-xs capitalize ${statusClass(bill.paymentStatus)}`}
+                                >
+                                  {bill.paymentStatus}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                          {recentBills.length === 0 && (
+                            <TableEmpty columns={4}>
+                              No bills found for this period.
+                            </TableEmpty>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
 
-                <div className="min-w-0">
-                  <h2 className="text-xl font-medium tracking-tight">
-                    Recent Tenants
-                  </h2>
-                  <div className="mt-5 max-h-[230px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-                    <table className="w-full text-left text-sm">
-                      <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
-
-                        <tr>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Tenant</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Property</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Unit</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Joined</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentTenants.map((tenant) => (
-                          <tr
-                            key={tenant._id}
-                            className="border-b border-stone-100 last:border-b-0 dark:border-neutral-900"
-                          >
-                            <td className="whitespace-nowrap px-4 py-4">
-                              <p>{tenant.fullName}</p>
-                              <p className="mt-1 text-xs text-gray-500 dark:text-[#A5A5A5]">
-                                {tenant.email}
-                              </p>
-                            </td>
-                            <td className="px-4 py-4">
-                              {tenant.property?.propertyName || "Unknown property"}
-                            </td>
-                            <td className="px-4 py-4">
-                              {tenant.unit?.unitName || "Unknown unit"}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-4 text-gray-500 dark:text-[#A5A5A5]">
-                              {formatDate(tenant.createdAt)}
-                            </td>
+                {/* Right Column */}
+                <div className="flex min-w-0 flex-col gap-6 sm:gap-8">
+                  {/* Recent Tenants */}
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-medium tracking-tight sm:text-xl">
+                      Recent Tenants
+                    </h2>
+                    <div className="mt-3 max-h-[240px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+                      <table className="w-full min-w-[480px] text-left text-sm">
+                        <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
+                          <tr>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Tenant
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Property
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Unit
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Joined
+                            </th>
                           </tr>
-                        ))}
-                        {recentTenants.length === 0 && (
-                          <TableEmpty columns={4}>No active tenants found.</TableEmpty>
-                        )}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {recentTenants.map((tenant) => (
+                            <tr
+                              key={tenant._id}
+                              className="border-b border-stone-100 last:border-b-0 dark:border-neutral-900"
+                            >
+                              <td className="whitespace-nowrap px-4 py-3.5">
+                                <p>{tenant.fullName}</p>
+                                <p className="mt-0.5 text-xs text-gray-500 dark:text-[#A5A5A5]">
+                                  {tenant.email}
+                                </p>
+                              </td>
+                              <td className="px-4 py-3.5">
+                                {tenant.property?.propertyName ||
+                                  "Unknown property"}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3.5">
+                                {tenant.unit?.unitName || "Unknown unit"}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3.5 text-gray-500 dark:text-[#A5A5A5]">
+                                {formatDate(tenant.createdAt)}
+                              </td>
+                            </tr>
+                          ))}
+                          {recentTenants.length === 0 && (
+                            <TableEmpty columns={4}>
+                              No active tenants found.
+                            </TableEmpty>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
 
-                <div className="min-w-0">
-                  <h2 className="text-xl font-medium tracking-tight">
-                    Recent Bills — {periodLabel}
-                  </h2>
-                  <div className="mt-5 max-h-[230px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-                    <table className="w-full text-left text-sm">
-                      <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
-
-                        <tr>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Bill</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Tenant</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Amount</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentBills.map((bill) => (
-                          <tr
-                            key={bill._id}
-                            className="border-b border-stone-100 last:border-b-0 dark:border-neutral-900"
-                          >
-                            <td className="px-4 py-4">
-                              <p>{bill.billName}</p>
-                              <p className="mt-1 text-xs capitalize text-gray-500 dark:text-[#A5A5A5]">
-                                {bill.category}
-                              </p>
-                            </td>
-                            <td className="px-4 py-4">{bill.tenant?.fullName || "—"}</td>
-                            <td className="whitespace-nowrap px-4 py-4">
-                              {formatCurrency(bill.amount)}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-4">
-                              <span className={`rounded-full px-2.5 py-1 text-xs capitalize ${statusClass(bill.paymentStatus)}`}>
-                                {bill.paymentStatus}
-                              </span>
-                            </td>
+                  {/* Recent Maintenance Complaints */}
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-medium tracking-tight sm:text-xl">
+                      Recent Maintenance Complaints
+                    </h2>
+                    <div className="mt-3 max-h-[240px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+                      <table className="w-full min-w-[480px] text-left text-sm">
+                        <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
+                          <tr>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Issue
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Tenant
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Priority
+                            </th>
+                            <th className="whitespace-nowrap px-4 py-3 font-normal">
+                              Status
+                            </th>
                           </tr>
-                        ))}
-                        {recentBills.length === 0 && (
-                          <TableEmpty columns={4}>No bills found for this period.</TableEmpty>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="min-w-0">
-                  <h2 className="text-xl font-medium tracking-tight">
-                    Recent Maintenance Complaints
-                  </h2>
-                  <div className="mt-5 max-h-[230px] overflow-auto rounded-xs border border-stone-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-                    <table className="w-full text-left text-sm">
-                      <thead className="sticky top-0 z-10 border-b border-stone-200 bg-gray-200 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
-
-                        <tr>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Issue</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Tenant</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Priority</th>
-                          <th className="whitespace-nowrap px-4 py-3 font-normal">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentComplaints.map((complaint) => (
-                          <tr
-                            key={complaint._id}
-                            className="border-b border-stone-100 last:border-b-0 dark:border-neutral-900"
-                          >
-                            <td className="px-4 py-4">
-                              <p>{complaint.title}</p>
-                              <p className="mt-1 text-xs text-gray-500 dark:text-[#A5A5A5]">
-                                {complaint.property?.propertyName || "Unknown property"} · {complaint.unit?.unitName || "Unknown unit"}
-                              </p>
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-4">
-                              {complaint.tenant?.fullName || "—"}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-4">
-                              {complaint.priority}
-                            </td>
-                            <td className="whitespace-nowrap px-4 py-4">
-                              <span className={`rounded-full px-2.5 py-1 text-xs ${statusClass(complaint.status)}`}>
-                                {complaint.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                        {recentComplaints.length === 0 && (
-                          <TableEmpty columns={4}>No maintenance complaints found.</TableEmpty>
-                        )}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {recentComplaints.map((complaint) => (
+                            <tr
+                              key={complaint._id}
+                              className="border-b border-stone-100 last:border-b-0 dark:border-neutral-900"
+                            >
+                              <td className="px-4 py-3.5">
+                                <p>{complaint.title}</p>
+                                <p className="mt-0.5 text-xs text-gray-500 dark:text-[#A5A5A5]">
+                                  {complaint.property?.propertyName ||
+                                    "Unknown property"}{" "}
+                                  ·{" "}
+                                  {complaint.unit?.unitName || "Unknown unit"}
+                                </p>
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3.5">
+                                {complaint.tenant?.fullName || "—"}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3.5">
+                                {complaint.priority}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3.5">
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-xs ${statusClass(complaint.status)}`}
+                                >
+                                  {complaint.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                          {recentComplaints.length === 0 && (
+                            <TableEmpty columns={4}>
+                              No maintenance complaints found.
+                            </TableEmpty>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               </div>
