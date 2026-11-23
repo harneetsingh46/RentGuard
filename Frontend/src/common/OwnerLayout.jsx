@@ -11,14 +11,19 @@ import {
   X,
   UserRound,
   LogOut,
-  WrenchOff
+  WrenchOff,
+  ShieldAlert,
 } from "lucide-react";
 
 import ThemeToggle from "../components/ThemeToggle";
+import { useAuth } from "../context/AuthContext";
 
 const OwnerLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const isApproved = user?.verificationStatus === "approved";
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
@@ -26,38 +31,46 @@ const OwnerLayout = () => {
   const dropdownRef = useRef(null);
   const accountButtonRef = useRef(null);
 
-  const navItems = [
-    {
-      label: "Overview",
-      path: "/owner/dashboard",
-      icon: ChartNoAxesCombined,
-    },
-    {
-      label: "Properties & Units",
-      path: "/owner/properties",
-      icon: Building2,
-    },
-    {
-      label: "Tenants",
-      path: "/owner/tenants",
-      icon: Users,
-    },
-    {
-      label: "Bills & Transactions",
-      path: "/owner/bill",
-      icon: Wallet,
-    },
-    {
-      label: "Documents",
-      path: "/owner/documents",
-      icon: Files,
-    },
-    {
-      label: "Maintenance",
-      path: "/owner/maintenance",
-      icon: WrenchOff,
-    },
-  ];
+  const navItems = isApproved
+    ? [
+        {
+          label: "Overview",
+          path: "/owner/dashboard",
+          icon: ChartNoAxesCombined,
+        },
+        {
+          label: "Properties & Units",
+          path: "/owner/properties",
+          icon: Building2,
+        },
+        {
+          label: "Tenants",
+          path: "/owner/tenants",
+          icon: Users,
+        },
+        {
+          label: "Bills & Transactions",
+          path: "/owner/bill",
+          icon: Wallet,
+        },
+        {
+          label: "Documents",
+          path: "/owner/documents",
+          icon: Files,
+        },
+        {
+          label: "Maintenance",
+          path: "/owner/maintenance",
+          icon: WrenchOff,
+        },
+      ]
+    : [
+        {
+          label: "Verification status",
+          path: "/owner/verification",
+          icon: ShieldAlert,
+        },
+      ];
 
   // Close menus when navigating to another page.
   useEffect(() => {
@@ -138,7 +151,7 @@ const OwnerLayout = () => {
           </button>
 
           <NavLink
-            to="/owner/dashboard"
+            to={isApproved ? "/owner/dashboard" : "/owner/verification"}
             onClick={closeMenu}
             className="flex min-w-0 items-center gap-2"
           >

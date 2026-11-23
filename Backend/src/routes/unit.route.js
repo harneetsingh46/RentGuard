@@ -7,7 +7,7 @@ import {
   updateUnit,
 } from "../controllers/unit.controller.js";
 
-import { protect, isApprovedOwner } from "../utils/protect.js";
+import { protect, isApprovedOwner, blockUnverifiedOwner } from "../utils/protect.js";
 import { uploadUnitImages } from "../config/multer.js";
 
 const router = express.Router();
@@ -20,9 +20,9 @@ router.post(
   createUnit,
 );
 
-router.get("/:propertyId/units", protect, getUnits);
+router.get("/:propertyId/units", protect, blockUnverifiedOwner, getUnits);
 
-router.get("/:propertyId/units/:unitId", protect, getUnit);
+router.get("/:propertyId/units/:unitId", protect, blockUnverifiedOwner, getUnit);
 
 router.put(
   "/:propertyId/units/:unitId",

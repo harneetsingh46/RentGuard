@@ -101,6 +101,21 @@ export const isAdmin = (req, res, next) => {
   next();
 };
 
+// Block unverified owners from accessing owner-facing resources
+export const blockUnverifiedOwner = (req, res, next) => {
+  if (req.authRole === "owner" && req.user?.verificationStatus !== "approved") {
+    return res.status(403).json({
+      message:
+        req.user?.verificationStatus === "rejected"
+          ? "Your owner verification was rejected. Please contact support."
+          : "Your account is awaiting admin verification. You cannot perform this action yet.",
+      verificationStatus: req.user?.verificationStatus || "pending",
+    });
+  }
+
+  next();
+};
+
 // Only approved owners can create or modify listings
 export const isApprovedOwner = (req, res, next) => {
   if (req.authRole !== "owner") {

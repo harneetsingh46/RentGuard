@@ -1,5 +1,5 @@
 import express from "express";
-import { protect, isTenant, isOwner } from "../utils/protect.js";
+import { protect, isTenant, isOwner, blockUnverifiedOwner } from "../utils/protect.js";
 import { uploadImage } from "../config/multer.js";
 import {
   createComplaint,
@@ -26,14 +26,14 @@ router.get("/my-complaints", protect, isTenant, getTenantComplaints);
 
 // --- Owner Routes ---
 // View all complaints across properties owned by the logged-in owner
-router.get("/owner-complaints", protect, isOwner, getOwnerComplaints);
+router.get("/owner-complaints", protect, blockUnverifiedOwner, isOwner, getOwnerComplaints);
 
 // Update status and remarks for a complaint
-router.patch("/complaint/:id/status", protect, isOwner, updateComplaintStatus);
+router.patch("/complaint/:id/status", protect, blockUnverifiedOwner, isOwner, updateComplaintStatus);
 
 // --- Shared Route ---
 // View specific complaint details
-router.get("/complaint/:id", protect, getComplaintById);
+router.get("/complaint/:id", protect, blockUnverifiedOwner, getComplaintById);
 
 export default router;
 

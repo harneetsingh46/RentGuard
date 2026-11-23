@@ -29,6 +29,8 @@ import Contact from "./pages/Contact";
 import Maintenance from "./pages/Tenant/Maintenance";
 import OwnerMaintenance from "./pages/Owner/OwnerMaintenance";
 import BrowseRentals from "./pages/Tenant/BrowseRentals";
+import ApprovedOwnerRoute from "./utils/ApprovedOwnerRoute";
+import VerificationStatus from "./pages/Owner/VerificationStatus";
 
 const router = createBrowserRouter([
   // Public pages: Navbar + page + Footer
@@ -107,36 +109,45 @@ const router = createBrowserRouter([
         element: <OwnerLayout />,
         children: [
           {
-            path: "/owner/dashboard",
-            element: <OwnerDashboard />,
-          },
-          {
-            path: "/owner/properties",
-            element: <Property />,
-          },
-          {
-            path: "/owner/tenants",
-            element: <Tenant />,
-          },
-          {
-            path: "/owner/bill",
-            element: <Bill />,
-          },
-          {
-            path: "/owner/documents",
-            element: <Documents />
-          },
-          {
-            path: "/owner/documents/:propertyId",
-            element: <Documents />
+            element: <ApprovedOwnerRoute />,
+            children: [
+              {
+                path: "/owner/dashboard",
+                element: <OwnerDashboard />,
+              },
+              {
+                path: "/owner/properties",
+                element: <Property />,
+              },
+              {
+                path: "/owner/tenants",
+                element: <Tenant />,
+              },
+              {
+                path: "/owner/bill",
+                element: <Bill />,
+              },
+              {
+                path: "/owner/documents",
+                element: <Documents />,
+              },
+              {
+                path: "/owner/documents/:propertyId",
+                element: <Documents />,
+              },
+              {
+                path: "/owner/maintenance",
+                element: <OwnerMaintenance />,
+              },
+            ],
           },
           {
             path: "/owner/profile",
-            element: <OwnerProfile />
+            element: <OwnerProfile />,
           },
           {
-            path: "/owner/maintenance",
-            element: <OwnerMaintenance />
+            path: "/owner/verification",
+            element: <VerificationStatus />,
           },
         ],
       },

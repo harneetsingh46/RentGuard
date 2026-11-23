@@ -47,13 +47,18 @@ export const AuthProvider = ({ children }) => {
     const getUser = async () => {
         try {
             const response = await apiClient.get("/auth/me");
-            setUser(response.data.data);
+            const userData = response.data?.data || null;
+            setUser(userData);
+            return userData;
         } catch (error) {
             setUser(null);
+            return null;
         } finally {
             setLoading(false);
         }
     };
+
+    const refreshUser = getUser;
 
     // Logout
     const logout = async () => {
@@ -78,6 +83,8 @@ export const AuthProvider = ({ children }) => {
         verifyOtp,
         adminLogin,
         logout,
+        getUser,
+        refreshUser,
         loading,
         isAuthenticated,
     };

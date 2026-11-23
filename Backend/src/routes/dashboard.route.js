@@ -1,9 +1,9 @@
 import express from "express"
-import { protect } from "../utils/protect.js"
+import { protect, blockUnverifiedOwner } from "../utils/protect.js"
 import { getOwnerDashboard } from "../controllers/dashboard.controller.js"
 
 const router = express.Router()
 
-router.get("/owner",protect,getOwnerDashboard)
+router.get("/owner", protect, blockUnverifiedOwner, getOwnerDashboard)
 
 export default router

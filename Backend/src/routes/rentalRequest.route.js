@@ -1,5 +1,5 @@
 import express from "express";
-import { protect, isTenant, isOwner } from "../utils/protect.js";
+import { protect, isTenant, isOwner, blockUnverifiedOwner } from "../utils/protect.js";
 import {
   createRentalRequest,
   getMyRentalRequests,
@@ -21,9 +21,9 @@ router.patch("/:id/decline", protect, isTenant, declineApprovedRentalRequest);
 router.patch("/:id/cancel", protect, isTenant, cancelMyRentalRequest);
 
 // --- Owner Routes ---
-router.get("/owner-requests", protect, isOwner, getOwnerRentalRequests);
-router.patch("/:id/approve", protect, isOwner, approveRentalRequest);
-router.patch("/:id/reject", protect, isOwner, rejectRentalRequest);
+router.get("/owner-requests", protect, blockUnverifiedOwner, isOwner, getOwnerRentalRequests);
+router.patch("/:id/approve", protect, blockUnverifiedOwner, isOwner, approveRentalRequest);
+router.patch("/:id/reject", protect, blockUnverifiedOwner, isOwner, rejectRentalRequest);
 
 export default router;
 

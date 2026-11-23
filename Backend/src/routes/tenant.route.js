@@ -21,7 +21,7 @@ import {
   rejectMoveOutRequest,
 } from "../controllers/tenant.controller.js";
 import { uploadImage } from "../config/multer.js";
-import { protect } from "../utils/protect.js";
+import { protect, blockUnverifiedOwner } from "../utils/protect.js";
 
 const router = express.Router();
 
@@ -29,11 +29,11 @@ const router = express.Router();
 router.post("/register-self", registerSelfTenant);
 router.get("/available-listings", getAvailableProperties);
 
-router.post("/:propertyId/units/:unitId/tenants", protect, registerTenant);
+router.post("/:propertyId/units/:unitId/tenants", protect, blockUnverifiedOwner, registerTenant);
 
-router.get("/:propertyId/tenants", protect, getAllTenants);
+router.get("/:propertyId/tenants", protect, blockUnverifiedOwner, getAllTenants);
 
-router.get("/:propertyId/tenants/history", protect, getTenantHistory);
+router.get("/:propertyId/tenants/history", protect, blockUnverifiedOwner, getTenantHistory);
 
 // TENANT MOVE-OUT REQUEST
 router.post("/me/move-out-request", protect, createMoveOutRequest);
@@ -43,24 +43,27 @@ router.get("/me/move-out-request", protect, getMyMoveOutRequest);
 router.get(
   "/:propertyId/move-out-requests",
   protect,
+  blockUnverifiedOwner,
   getPropertyMoveOutRequests,
 );
 
 router.patch(
   "/:propertyId/move-out-requests/:tenantId/approve",
   protect,
+  blockUnverifiedOwner,
   approveMoveOutRequest,
 );
 
 router.patch(
   "/:propertyId/move-out-requests/:tenantId/reject",
   protect,
+  blockUnverifiedOwner,
   rejectMoveOutRequest,
 );
 
-router.get("/:propertyId/tenants/:tenantId", protect, getOneTenant);
+router.get("/:propertyId/tenants/:tenantId", protect, blockUnverifiedOwner, getOneTenant);
 
-router.put("/:propertyId/tenants/:tenantId", protect, updateTenant);
+router.put("/:propertyId/tenants/:tenantId", protect, blockUnverifiedOwner, updateTenant);
 
 router.get("/me", protect, getMyProfile);
 

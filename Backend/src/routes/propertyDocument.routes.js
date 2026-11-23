@@ -1,6 +1,6 @@
 import express from "express";
 
-import { protect } from "../utils/protect.js";
+import { protect, blockUnverifiedOwner } from "../utils/protect.js";
 import upload from "../config/multer.js";
 
 import {
@@ -30,12 +30,13 @@ const router = express.Router();
 // Only owners of the tenant's property are allowed (checked in the controller).
 
 // GET /document/tenants/:tenantId
-router.get("/tenants/:tenantId", protect, getTenantDocumentsForOwner);
+router.get("/tenants/:tenantId", protect, blockUnverifiedOwner, getTenantDocumentsForOwner);
 
 // POST /document/tenants/:tenantId
 router.post(
   "/tenants/:tenantId",
   protect,
+  blockUnverifiedOwner,
   upload.single("document"),
   uploadDocumentForTenant,
 );
@@ -44,6 +45,7 @@ router.post(
 router.get(
   "/tenants/:tenantId/:documentId/download",
   protect,
+  blockUnverifiedOwner,
   getDocumentDownloadUrlForOwner,
 );
 
@@ -52,6 +54,7 @@ router.get(
 router.delete(
   "/tenants/:tenantId/:documentId",
   protect,
+  blockUnverifiedOwner,
   deleteTenantDocument,
 );
 
@@ -97,18 +100,20 @@ router.get(
 router.post(
   "/:propertyId",
   protect,
+  blockUnverifiedOwner,
   upload.single("document"),
   uploadPropertyDocument,
 );
 
-router.get("/:propertyId", protect, getPropertyDocuments);
+router.get("/:propertyId", protect, blockUnverifiedOwner, getPropertyDocuments);
 
 router.get(
   "/:propertyId/:documentId/download",
   protect,
+  blockUnverifiedOwner,
   getPropertyDocumentDownloadUrl,
 );
 
-router.delete("/:propertyId/:documentId", protect, deletePropertyDocument);
+router.delete("/:propertyId/:documentId", protect, blockUnverifiedOwner, deletePropertyDocument);
 
 export default router;

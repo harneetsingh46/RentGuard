@@ -1,5 +1,5 @@
 import express from "express";
-import { protect, isApprovedOwner } from "../utils/protect.js";
+import { protect, isApprovedOwner, blockUnverifiedOwner } from "../utils/protect.js";
 
 import {
   createPaymentOrder,
@@ -15,7 +15,7 @@ import {
 const router = express.Router();
 
 // Owner: Record cash payment for tenant bills
-router.post("/cash", protect, isApprovedOwner, recordCashPayment);
+router.post("/cash", protect, blockUnverifiedOwner, isApprovedOwner, recordCashPayment);
 
 // Tenant: Create Razorpay order using RentGuard Order ID
 router.post("/:orderId/order", protect, createPaymentOrder);
@@ -34,12 +34,13 @@ router.get(
 );
 
 // Owner: Get property payments
-router.get("/property/:propertyId", protect, getPropertyPayments);
+router.get("/property/:propertyId", protect, blockUnverifiedOwner, getPropertyPayments);
 
 // Owner: Download payment receipt by payment ID
 router.get(
   "/property/:propertyId/:paymentId/receipt",
   protect,
+  blockUnverifiedOwner,
   downloadPaymentReceipt,
 );
 
@@ -47,6 +48,7 @@ router.get(
 router.get(
   "/property/:propertyId/bill/:billId/receipt",
   protect,
+  blockUnverifiedOwner,
   downloadBillReceipt,
 );
 
