@@ -8,8 +8,51 @@ import AddTenantModal from "./AddTenantModal.jsx";
 
 const emptyProperty = {
     propertyName: "",
-    address: "",
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    pincode: "",
 };
+
+const INDIAN_STATES = [
+    "Andaman and Nicobar Islands",
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chandigarh",
+    "Chhattisgarh",
+    "Dadra and Nagar Haveli and Daman and Diu",
+    "Delhi",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jammu and Kashmir",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Ladakh",
+    "Lakshadweep",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Puducherry",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
+];
 
 const emptyUnit = {
     unitName: "",
@@ -53,6 +96,7 @@ const Property = () => {
     // Property modal state
     const [propertyModalOpen, setPropertyModalOpen] = useState(false);
     const [isEditingProperty, setIsEditingProperty] = useState(false);
+    const [propertyErrors, setPropertyErrors] = useState({});
 
     // Unit state
     const [units, setUnits] = useState([]);
@@ -183,10 +227,21 @@ const Property = () => {
 
     // Property form input
     const handleChange = (e) => {
+        const { name, value } = e.target;
+        const sanitizedValue =
+            name === "pincode" ? value.replace(/\D/g, "").slice(0, 6) : value;
+
         setProperty((current) => ({
             ...current,
-            [e.target.name]: e.target.value,
+            [name]: sanitizedValue,
         }));
+
+        if (propertyErrors[name]) {
+            setPropertyErrors((prev) => ({
+                ...prev,
+                [name]: "",
+            }));
+        }
     };
 
     // Unit form input
@@ -304,6 +359,7 @@ const Property = () => {
         if (!isApproved) return;
 
         setProperty({ ...emptyProperty });
+        setPropertyErrors({});
         setIsEditingProperty(false);
         setError("");
         setPropertyModalOpen(true);
@@ -313,12 +369,20 @@ const Property = () => {
     const openEditForm = (item) => {
         if (!isApproved) return;
 
+        const line1 =
+            item.addressLine1 || (item.address ? item.address : "");
+
         setProperty({
-            propertyName: item.propertyName,
-            address: item.address,
+            propertyName: item.propertyName || "",
+            addressLine1: line1,
+            addressLine2: item.addressLine2 || "",
+            city: item.city || "",
+            state: item.state || "",
+            pincode: item.pincode || "",
         });
 
         setSelectedProperty(item);
+        setPropertyErrors({});
         setIsEditingProperty(true);
         setError("");
         setPropertyModalOpen(true);
@@ -330,6 +394,7 @@ const Property = () => {
 
         setPropertyModalOpen(false);
         setProperty({ ...emptyProperty });
+        setPropertyErrors({});
         setError("");
     };
 
@@ -342,19 +407,48 @@ const Property = () => {
             return;
         }
 
-        const formData = {
-            propertyName: property.propertyName.trim(),
-            address: property.address.trim(),
-        };
+        const fieldErrors = {};
 
-        if (!formData.propertyName || !formData.address) {
-            setError("Please enter both property name and address.");
+        if (!property.propertyName.trim()) {
+            fieldErrors.propertyName = "Property name is required.";
+        }
+
+        if (!property.addressLine1.trim()) {
+            fieldErrors.addressLine1 = "Address line 1 is required.";
+        }
+
+        if (!property.city.trim()) {
+            fieldErrors.city = "City is required.";
+        }
+
+        if (!property.state.trim()) {
+            fieldErrors.state = "State is required.";
+        }
+
+        if (!property.pincode.trim()) {
+            fieldErrors.pincode = "Pincode is required.";
+        } else if (!/^[1-9]\d{5}$/.test(property.pincode.trim())) {
+            fieldErrors.pincode = "Pincode must be a 6-digit number not starting with 0.";
+        }
+
+        if (Object.keys(fieldErrors).length > 0) {
+            setPropertyErrors(fieldErrors);
             return;
         }
+
+        const formData = {
+            propertyName: property.propertyName.trim(),
+            addressLine1: property.addressLine1.trim(),
+            addressLine2: property.addressLine2.trim(),
+            city: property.city.trim(),
+            state: property.state.trim(),
+            pincode: property.pincode.trim(),
+        };
 
         try {
             setSubmitting(true);
             setError("");
+            setPropertyErrors({});
 
             if (isEditingProperty && selectedProperty) {
                 await apiClient.put(
@@ -367,6 +461,7 @@ const Property = () => {
 
             setPropertyModalOpen(false);
             setProperty({ ...emptyProperty });
+            setPropertyErrors({});
             setSuccess(
                 isEditingProperty
                     ? "Property updated successfully!"
@@ -1090,13 +1185,13 @@ const Property = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-5">
+                        <form onSubmit={handleSubmit} noValidate>
+                            <div className="mb-4">
                                 <label
                                     htmlFor="propertyName"
-                                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
+                                    className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-200"
                                 >
-                                    Property Name
+                                    Property Name <span className="text-red-500">*</span>
                                 </label>
 
                                 <input
@@ -1108,29 +1203,136 @@ const Property = () => {
                                     placeholder="e.g. Green Valley Apartments"
                                     required
                                     disabled={submitting}
+                                    className={`w-full rounded-xs border p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20 ${propertyErrors.propertyName ? "border-red-500 dark:border-red-500" : "border-gray-300 bg-white dark:border-stone-800"}`}
+                                />
+                                {propertyErrors.propertyName && (
+                                    <p className="mt-1 text-xs text-red-500">{propertyErrors.propertyName}</p>
+                                )}
+                            </div>
+
+                            <div className="mb-4">
+                                <label
+                                    htmlFor="addressLine1"
+                                    className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-200"
+                                >
+                                    Address Line 1 <span className="text-red-500">*</span>
+                                </label>
+
+                                <input
+                                    id="addressLine1"
+                                    name="addressLine1"
+                                    type="text"
+                                    value={property.addressLine1}
+                                    onChange={handleChange}
+                                    placeholder="House / Flat / Block no., Building name, Street"
+                                    required
+                                    disabled={submitting}
+                                    className={`w-full rounded-xs border p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20 ${propertyErrors.addressLine1 ? "border-red-500 dark:border-red-500" : "border-gray-300 bg-white dark:border-stone-800"}`}
+                                />
+                                {propertyErrors.addressLine1 && (
+                                    <p className="mt-1 text-xs text-red-500">{propertyErrors.addressLine1}</p>
+                                )}
+                            </div>
+
+                            <div className="mb-4">
+                                <label
+                                    htmlFor="addressLine2"
+                                    className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-200"
+                                >
+                                    Address Line 2 <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(optional)</span>
+                                </label>
+
+                                <input
+                                    id="addressLine2"
+                                    name="addressLine2"
+                                    type="text"
+                                    value={property.addressLine2}
+                                    onChange={handleChange}
+                                    placeholder="Apartment, suite, landmark, area"
+                                    disabled={submitting}
                                     className="w-full rounded-xs border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
                             </div>
 
+                            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label
+                                        htmlFor="city"
+                                        className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-200"
+                                    >
+                                        City <span className="text-red-500">*</span>
+                                    </label>
+
+                                    <input
+                                        id="city"
+                                        name="city"
+                                        type="text"
+                                        value={property.city}
+                                        onChange={handleChange}
+                                        placeholder="e.g. Pune"
+                                        required
+                                        disabled={submitting}
+                                        className={`w-full rounded-xs border p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20 ${propertyErrors.city ? "border-red-500 dark:border-red-500" : "border-gray-300 bg-white dark:border-stone-800"}`}
+                                    />
+                                    {propertyErrors.city && (
+                                        <p className="mt-1 text-xs text-red-500">{propertyErrors.city}</p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label
+                                        htmlFor="state"
+                                        className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-200"
+                                    >
+                                        State <span className="text-red-500">*</span>
+                                    </label>
+
+                                    <select
+                                        id="state"
+                                        name="state"
+                                        value={property.state}
+                                        onChange={handleChange}
+                                        required
+                                        disabled={submitting}
+                                        className={`w-full rounded-xs border p-3 text-gray-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:bg-[#262626] dark:text-white dark:focus:ring-yellow-400/20 ${propertyErrors.state ? "border-red-500 dark:border-red-500" : "border-gray-300 bg-white dark:border-stone-800"}`}
+                                    >
+                                        <option value="">Select State / UT</option>
+                                        {INDIAN_STATES.map((st) => (
+                                            <option key={st} value={st}>
+                                                {st}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {propertyErrors.state && (
+                                        <p className="mt-1 text-xs text-red-500">{propertyErrors.state}</p>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className="mb-6">
                                 <label
-                                    htmlFor="address"
-                                    className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
+                                    htmlFor="pincode"
+                                    className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-200"
                                 >
-                                    Property Address
+                                    Pincode <span className="text-red-500">*</span>
                                 </label>
 
                                 <input
-                                    id="address"
-                                    name="address"
+                                    id="pincode"
+                                    name="pincode"
                                     type="text"
-                                    value={property.address}
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                    value={property.pincode}
                                     onChange={handleChange}
-                                    placeholder="Enter property address"
+                                    placeholder="6-digit pincode (e.g. 411001)"
                                     required
                                     disabled={submitting}
-                                    className="w-full rounded-xs border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                                    className={`w-full rounded-xs border p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20 ${propertyErrors.pincode ? "border-red-500 dark:border-red-500" : "border-gray-300 bg-white dark:border-stone-800"}`}
                                 />
+                                {propertyErrors.pincode && (
+                                    <p className="mt-1 text-xs text-red-500">{propertyErrors.pincode}</p>
+                                )}
                             </div>
 
 

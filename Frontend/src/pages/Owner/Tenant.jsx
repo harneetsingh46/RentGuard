@@ -153,6 +153,9 @@ const Tenant = () => {
     }
   }
 
+  // Alias for backward compatibility / callbacks
+  const fetchTenants = getTenants
+
   useEffect(() => {
     getTenants()
   }, [])

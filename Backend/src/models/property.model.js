@@ -15,6 +15,31 @@ const propertySchema = new mongoose.Schema({
         type:String,
         required:true,
         trim:true
+    },
+    addressLine1:{
+        type:String,
+        trim:true,
+        default:""
+    },
+    addressLine2:{
+        type:String,
+        trim:true,
+        default:""
+    },
+    city:{
+        type:String,
+        trim:true,
+        default:""
+    },
+    state:{
+        type:String,
+        trim:true,
+        default:""
+    },
+    pincode:{
+        type:String,
+        trim:true,
+        default:""
     }
 },{timestamps:true})
 
