@@ -229,6 +229,7 @@ export const sendPaidEmails = async (paymentId) => {
       receiptNumber: `RG-${payment._id.toString().slice(-8).toUpperCase()}`,
       paidAt: payment.paidAt,
       bills,
+      method: payment.method || "online",
     });
   } catch (error) {
     console.error("Payment confirmation email error:", error);

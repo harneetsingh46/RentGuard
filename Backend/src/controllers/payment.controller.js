@@ -6,6 +6,7 @@ import { Payment } from "../models/payment.model.js";
 import { Order } from "../models/order.model.js";
 import { Bill } from "../models/bill.model.js";
 import { Property } from "../models/property.model.js";
+import { Tenant } from "../models/tenant.model.js";
 
 import razorpay from "../utils/razorpay.js";
 
@@ -413,6 +414,216 @@ export const getPropertyPayments = async (req, res) => {
   }
 };
 
+// 4b. OWNER: RECORD CASH PAYMENT
+export const recordCashPayment = async (req, res) => {
+  try {
+    if (req.authRole !== "owner") {
+      return res.status(403).json({
+        success: false,
+        message: "Only owners can record cash payments.",
+      });
+    }
+
+    const { tenantId, billIds, receivedOn, note } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(tenantId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Tenant ID.",
+      });
+    }
+
+    if (!Array.isArray(billIds) || billIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one Bill ID is required.",
+      });
+    }
+
+    for (const bId of billIds) {
+      if (!mongoose.Types.ObjectId.isValid(bId)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid Bill ID: ${bId}.`,
+        });
+      }
+    }
+
+    // Tenant must belong to this owner
+    const tenant = await Tenant.findOne({
+      _id: tenantId,
+      owner: req.user._id,
+    });
+
+    if (!tenant) {
+      return res.status(404).json({
+        success: false,
+        message: "Tenant not found or does not belong to you.",
+      });
+    }
+
+    // Every bill must belong to that tenant
+    const bills = await Bill.find({
+      _id: { $in: billIds },
+      tenant: tenant._id,
+    });
+
+    if (bills.length !== billIds.length) {
+      return res.status(400).json({
+        success: false,
+        message: "One or more bills were not found for this tenant.",
+      });
+    }
+
+    // Verify all bills belong to one of owner's properties and same unit
+    const propertyId = bills[0].property;
+    const unitId = bills[0].unit;
+
+    for (const b of bills) {
+      if (b.property.toString() !== propertyId.toString()) {
+        return res.status(400).json({
+          success: false,
+          message: "All bills must belong to the same property.",
+        });
+      }
+      if (b.unit.toString() !== unitId.toString()) {
+        return res.status(400).json({
+          success: false,
+          message: "All bills must belong to the same unit.",
+        });
+      }
+      if (b.paymentStatus !== "unpaid") {
+        return res.status(409).json({
+          success: false,
+          message: "Some bills are already paid or part of a pending online payment.",
+        });
+      }
+    }
+
+    const property = await Property.findOne({
+      _id: propertyId,
+      owner: req.user._id,
+    });
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: "Property not found or does not belong to you.",
+      });
+    }
+
+    let paymentDate = new Date();
+    if (receivedOn) {
+      const parsed = new Date(receivedOn);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid receivedOn date.",
+        });
+      }
+      if (parsed > new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: "receivedOn date cannot be in the future.",
+        });
+      }
+      paymentDate = parsed;
+    }
+
+    const sanitizedNote = typeof note === "string" ? note.trim().slice(0, 300) : "";
+    const totalAmount = Math.round(bills.reduce((sum, b) => sum + Number(b.amount || 0), 0) * 100) / 100;
+    const items = bills.map((b) => ({
+      bill: b._id,
+      amount: b.amount,
+    }));
+
+    const session = await mongoose.startSession();
+    let createdPaymentId = null;
+
+    try {
+      await session.withTransaction(async () => {
+        const now = new Date();
+        const order = new Order({
+          tenant: tenant._id,
+          property: property._id,
+          unit: unitId,
+          items,
+          totalAmount,
+          status: "paid",
+          method: "cash",
+          expiresAt: now,
+        });
+        await order.save({ session });
+
+        const payment = new Payment({
+          order: order._id,
+          tenant: tenant._id,
+          property: property._id,
+          unit: unitId,
+          amount: totalAmount,
+          method: "cash",
+          status: "paid",
+          paidAt: paymentDate,
+          receivedOn: paymentDate,
+          recordedBy: req.user._id,
+          note: sanitizedNote,
+        });
+        await payment.save({ session });
+
+        const updateResult = await Bill.updateMany(
+          {
+            _id: { $in: billIds },
+            tenant: tenant._id,
+            paymentStatus: "unpaid",
+          },
+          {
+            $set: {
+              paymentStatus: "paid",
+              paidAt: paymentDate,
+              reservedByOrder: order._id,
+            },
+          },
+          { session }
+        );
+
+        if (updateResult.modifiedCount !== billIds.length) {
+          throw new Error("BILLS_ALREADY_PAID_OR_RESERVED");
+        }
+
+        createdPaymentId = payment._id;
+      });
+    } catch (txError) {
+      if (txError.message === "BILLS_ALREADY_PAID_OR_RESERVED") {
+        return res.status(409).json({
+          success: false,
+          message: "Some bills are already paid or part of a pending online payment.",
+        });
+      }
+      throw txError;
+    } finally {
+      await session.endSession();
+    }
+
+    if (createdPaymentId) {
+      sendPaidEmails(createdPaymentId).catch((err) => {
+        console.error("Payment confirmation email error:", err);
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Cash payment recorded successfully.",
+      data: { paymentId: createdPaymentId },
+    });
+  } catch (error) {
+    console.error("Record cash payment error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to record cash payment.",
+    });
+  }
+};
+
 // SHARED: GENERATE MINIMAL TABLE-STYLE PAYMENT RECEIPT PDF
 
 const generatePaymentReceipt = (res, payment, property) => {
@@ -590,8 +801,18 @@ const generatePaymentReceipt = (res, payment, property) => {
 
   drawTable(
     [
-      ["Receipt Number", "Payment Date", "Payment ID"],
-      [receiptNumber, formattedDate, payment.razorpayPaymentId || "N/A"],
+      [
+        "Receipt Number",
+        "Payment Date",
+        payment.method === "cash" ? "Payment Method" : "Payment ID",
+      ],
+      [
+        receiptNumber,
+        formattedDate,
+        payment.method === "cash"
+          ? "Cash"
+          : payment.razorpayPaymentId || "N/A",
+      ],
     ],
     [pageWidth * 0.3, pageWidth * 0.3, pageWidth * 0.4],
     { headerRows: 1 },

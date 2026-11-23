@@ -33,10 +33,36 @@ const paymentSchema = new mongoose.Schema(
       min: 0.01,
     },
 
+    method: {
+      type: String,
+      enum: ["online", "cash"],
+      default: "online",
+    },
+
+    recordedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    receivedOn: {
+      type: Date,
+      default: null,
+    },
+
+    note: {
+      type: String,
+      trim: true,
+      maxLength: 300,
+      default: null,
+    },
+
     razorpayOrderId: {
       type: String,
-      required: true,
-      unique: true,
+      required: function () {
+        return this.method === "online";
+      },
+      default: null,
     },
 
     razorpayPaymentId: {
@@ -63,5 +89,12 @@ const paymentSchema = new mongoose.Schema(
 );
 
 paymentSchema.index({ tenant: 1, createdAt: -1 });
+paymentSchema.index(
+  { razorpayOrderId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { razorpayOrderId: { $type: "string" } },
+  },
+);
 
 export const Payment = mongoose.model("Payment", paymentSchema);

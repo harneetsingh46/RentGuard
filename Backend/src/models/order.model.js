@@ -54,6 +54,12 @@ const orderSchema = new mongoose.Schema(
       default: "pending",
     },
 
+    method: {
+      type: String,
+      enum: ["online", "cash"],
+      default: "online",
+    },
+
     razorpayOrderId: {
       type: String,
       default: null,

@@ -355,6 +355,7 @@ export const sendPaymentConfirmationEmails = async ({
   receiptNumber,
   paidAt,
   bills = [],
+  method = "online",
 }) => {
   try {
     const formatAmount = (value) =>
@@ -392,7 +393,11 @@ export const sendPaymentConfirmationEmails = async ({
         <p><strong>Address:</strong> ${escapeHtml(propertyAddress)}</p>
         <p><strong>Unit:</strong> ${escapeHtml(unitName)}</p>
         <p><strong>Payment date:</strong> ${escapeHtml(formattedDate)}</p>
-        <p><strong>Payment ID:</strong> ${escapeHtml(paymentId)}</p>
+        ${
+          method === "cash"
+            ? `<p><strong>Payment method:</strong> Cash (recorded by owner)</p>`
+            : `<p><strong>Payment ID:</strong> ${escapeHtml(paymentId || "N/A")}</p>`
+        }
         <p><strong>Receipt number:</strong> ${escapeHtml(receiptNumber)}</p>
 
         <table style="width:100%;border-collapse:collapse;margin-top:15px;">

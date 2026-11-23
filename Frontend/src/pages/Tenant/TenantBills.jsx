@@ -568,7 +568,9 @@ const TenantBills = () => {
                               {payment.order?.items?.length || 0} bill(s)
                             </p>
                             <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                              {payment.razorpayPaymentId || "Payment record"}
+                              {payment.method === "cash"
+                                ? `Cash (${formatDate(payment.receivedOn || payment.paidAt || payment.createdAt)})`
+                                : payment.razorpayPaymentId || "Payment record"}
                             </p>
                           </td>
                           <td className="px-6 py-4 text-sm text-neutral-500 dark:text-neutral-400">

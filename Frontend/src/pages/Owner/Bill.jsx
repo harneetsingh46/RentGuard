@@ -58,13 +58,20 @@ const formatDate = (date) => {
   });
 };
 
-const renderStatusBadge = (status) => {
+const renderStatusBadge = (status, isCash = false) => {
   const normalized = status?.toLowerCase() || "unpaid";
   if (normalized === "paid") {
     return (
-      <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400">
-        Paid
-      </span>
+      <div className="inline-flex items-center gap-1.5">
+        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400">
+          Paid
+        </span>
+        {isCash && (
+          <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-950/60 dark:text-blue-400">
+            Cash
+          </span>
+        )}
+      </div>
     );
   }
   if (normalized === "reserved") {
@@ -98,6 +105,14 @@ const Bill = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [editingBill, setEditingBill] = useState(null);
+
+  // Cash payment modal state
+  const [cashModalOpen, setCashModalOpen] = useState(false);
+  const [cashModalBill, setCashModalBill] = useState(null);
+  const [cashReceivedOn, setCashReceivedOn] = useState(() => new Date().toISOString().slice(0, 10));
+  const [cashNote, setCashNote] = useState("");
+  const [recordingCash, setRecordingCash] = useState(false);
+  const [cashPaidBillIds, setCashPaidBillIds] = useState(() => new Set());
   const [form, setForm] = useState(emptyForm);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [tenantFilter, setTenantFilter] = useState(searchParams.get("tenantId") || "all");
@@ -217,16 +232,35 @@ const Bill = () => {
   const fetchBills = async (propertyId) => {
     if (!propertyId) {
       setBills([]);
+      setCashPaidBillIds(new Set());
       return;
     }
 
     try {
       setLoadingBills(true);
       setError("");
-      const response = await apiClient.get(`/bill/${propertyId}`);
-      setBills(response.data.data || []);
+      const [billsRes, paymentsRes] = await Promise.all([
+        apiClient.get(`/bill/${propertyId}`),
+        apiClient
+          .get(`/payment/property/${propertyId}`)
+          .catch(() => ({ data: { data: [] } })),
+      ]);
+
+      setBills(billsRes.data.data || []);
+
+      const cashIds = new Set();
+      (paymentsRes.data?.data || []).forEach((p) => {
+        if (p.method === "cash" && p.status === "paid") {
+          p.order?.items?.forEach((item) => {
+            const bId = item.bill?._id || item.bill;
+            if (bId) cashIds.add(String(bId));
+          });
+        }
+      });
+      setCashPaidBillIds(cashIds);
     } catch (err) {
       setBills([]);
+      setCashPaidBillIds(new Set());
       setError(err.response?.data?.message || "Failed to load bills.");
     } finally {
       setLoadingBills(false);
@@ -410,6 +444,44 @@ const Bill = () => {
     setEditingBill(null);
     setForm(emptyForm());
     setError("");
+  };
+
+  const openCashPaymentModal = (bill) => {
+    setCashModalBill(bill);
+    setCashReceivedOn(new Date().toISOString().slice(0, 10));
+    setCashNote("");
+    setCashModalOpen(true);
+  };
+
+  const closeCashPaymentModal = () => {
+    if (recordingCash) return;
+    setCashModalOpen(false);
+    setCashModalBill(null);
+    setCashNote("");
+  };
+
+  const handleConfirmCashPayment = async (e) => {
+    e.preventDefault();
+    if (!cashModalBill) return;
+
+    try {
+      setRecordingCash(true);
+      await apiClient.post("/payment/cash", {
+        tenantId: cashModalBill.tenant?._id || cashModalBill.tenant,
+        billIds: [cashModalBill._id],
+        receivedOn: cashReceivedOn,
+        note: cashNote.trim(),
+      });
+
+      toast.success("Cash payment recorded.");
+      setCashModalOpen(false);
+      setCashModalBill(null);
+      await fetchBills(selectedProperty);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to record cash payment.");
+    } finally {
+      setRecordingCash(false);
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -647,7 +719,7 @@ const Bill = () => {
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
                       <span className="rounded-full bg-stone-100 px-2 py-1 text-xs capitalize dark:bg-neutral-800">{bill.category}</span>
-                      {renderStatusBadge(bill.paymentStatus)}
+                      {renderStatusBadge(bill.paymentStatus, cashPaidBillIds.has(String(bill._id)))}
                     </div>
                   </div>
                   <div className="mt-3 flex items-end justify-between gap-3 border-t border-stone-200 pt-3 dark:border-neutral-800">
@@ -696,7 +768,22 @@ const Bill = () => {
                           In Checkout
                         </span>
                       ) : (
-                        <button type="button" onClick={() => openEditModal(bill)} className="mt-2 rounded-xs border border-stone-300 px-3 py-1.5 text-xs font-medium dark:border-neutral-700">Edit</button>
+                        <div className="mt-2 flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openCashPaymentModal(bill)}
+                            className="rounded-xs bg-yellow-400 px-2.5 py-1 text-xs font-semibold text-stone-900 transition hover:bg-yellow-500"
+                          >
+                            Record cash payment
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(bill)}
+                            className="rounded-xs border border-stone-300 px-3 py-1 text-xs font-medium dark:border-neutral-700"
+                          >
+                            Edit
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -734,7 +821,7 @@ const Bill = () => {
                       <td className="px-5 py-4">{formatDate(bill.startDate)}</td>
                       <td className="px-5 py-4">{formatDate(bill.endDate)}</td>
                       <td className="px-5 py-4 font-medium">{currency(bill.amount)}</td>
-                      <td className="px-5 py-4">{renderStatusBadge(bill.paymentStatus)}</td>
+                      <td className="px-5 py-4">{renderStatusBadge(bill.paymentStatus, cashPaidBillIds.has(String(bill._id)))}</td>
                       <td className="px-5 py-4">{formatDate(bill.dueDate)}</td>
                       <td className="px-5 py-4">
                         {bill.paymentStatus === "paid" ? (
@@ -774,13 +861,22 @@ const Bill = () => {
                             In Checkout
                           </span>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(bill)}
-                            className="rounded-xs border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openCashPaymentModal(bill)}
+                              className="rounded-xs bg-yellow-400 px-2.5 py-1.5 text-xs font-semibold text-stone-900 transition hover:bg-yellow-500"
+                            >
+                              Record cash payment
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(bill)}
+                              className="rounded-xs border border-stone-300 px-3 py-1.5 text-xs font-medium hover:bg-stone-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                            >
+                              Edit
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -1108,6 +1204,132 @@ const Bill = () => {
                 </div>
               </form>
             </div>
+          </div>
+        </div>
+      )}
+
+      {cashModalOpen && cashModalBill && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cash-modal-title"
+            className="w-full max-w-md rounded-xs border border-stone-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between border-b border-stone-200 pb-3 dark:border-neutral-800">
+              <h3 id="cash-modal-title" className="text-lg font-semibold text-stone-900 dark:text-stone-100">
+                Record Cash Payment
+              </h3>
+              <button
+                type="button"
+                onClick={closeCashPaymentModal}
+                disabled={recordingCash}
+                className="rounded-xs p-1 text-stone-400 hover:text-stone-600 disabled:opacity-50 dark:hover:text-stone-300"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmCashPayment} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-stone-500 dark:text-stone-400">
+                  Tenant
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={cashModalBill.tenant?.fullName || "—"}
+                  className={inputClass + " cursor-not-allowed bg-stone-100 text-stone-600 dark:bg-neutral-800 dark:text-stone-300"}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-stone-500 dark:text-stone-400">
+                  Bill
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={`${cashModalBill.billName || "—"} (${cashModalBill.category || "—"})`}
+                  className={inputClass + " cursor-not-allowed bg-stone-100 text-stone-600 dark:bg-neutral-800 dark:text-stone-300"}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-stone-500 dark:text-stone-400">
+                  Amount
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={currency(cashModalBill.amount)}
+                  className={inputClass + " cursor-not-allowed font-semibold bg-stone-100 text-stone-900 dark:bg-neutral-800 dark:text-stone-100"}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="cash-received-on" className="mb-1 block text-xs font-medium text-stone-700 dark:text-stone-300">
+                  Received on <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="cash-received-on"
+                  type="date"
+                  required
+                  max={new Date().toISOString().slice(0, 10)}
+                  value={cashReceivedOn}
+                  onChange={(e) => setCashReceivedOn(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="cash-note" className="mb-1 block text-xs font-medium text-stone-700 dark:text-stone-300">
+                  Note <span className="text-stone-400">(optional, max 300 chars)</span>
+                </label>
+                <textarea
+                  id="cash-note"
+                  rows={3}
+                  maxLength={300}
+                  value={cashNote}
+                  onChange={(e) => setCashNote(e.target.value)}
+                  placeholder="e.g. Paid in cash at management office"
+                  className={inputClass}
+                />
+                <p className="mt-1 text-right text-xs text-stone-400">
+                  {cashNote.length}/300
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-stone-200 pt-3 dark:border-neutral-800">
+                <button
+                  type="button"
+                  onClick={closeCashPaymentModal}
+                  disabled={recordingCash}
+                  className="rounded-xs border border-stone-300 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 disabled:opacity-50 dark:border-neutral-700 dark:text-stone-300 dark:hover:bg-neutral-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={recordingCash}
+                  className="inline-flex items-center gap-1.5 rounded-xs bg-yellow-400 px-4 py-2 text-sm font-semibold text-stone-900 hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {recordingCash ? (
+                    <>
+                      <LoaderCircle size={15} className="animate-spin text-stone-900" />
+                      <span>Recording...</span>
+                    </>
+                  ) : (
+                    "Confirm Payment"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

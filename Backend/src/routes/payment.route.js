@@ -1,5 +1,5 @@
 import express from "express";
-import { protect } from "../utils/protect.js";
+import { protect, isApprovedOwner } from "../utils/protect.js";
 
 import {
   createPaymentOrder,
@@ -8,10 +8,14 @@ import {
   downloadPaymentReceipt,
   getMyPayments,
   getPropertyPayments,
+  recordCashPayment,
   verifyPayment,
 } from "../controllers/payment.controller.js";
 
 const router = express.Router();
+
+// Owner: Record cash payment for tenant bills
+router.post("/cash", protect, isApprovedOwner, recordCashPayment);
 
 // Tenant: Create Razorpay order using RentGuard Order ID
 router.post("/:orderId/order", protect, createPaymentOrder);
