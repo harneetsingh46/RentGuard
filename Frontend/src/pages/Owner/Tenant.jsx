@@ -552,95 +552,14 @@ const Tenant = () => {
         </p>
       )}
 
-      {/* Search tenants */}
-      <div className="relative mb-4 max-w-xl" ref={searchRef}>
-        <label
-          htmlFor="tenant-management-search"
-          className="sr-only"
-        >
-          Search tenants
-        </label>
-
-        <div className="relative">
-          <Search
-            size={18}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-
-          <input
-            id="tenant-management-search"
-            type="search"
-            value={tenantSearch}
-            onChange={(event) => {
-              setTenantSearch(event.target.value)
-              setCurrentPage(1)
-              setSearchDropdownOpen(true)
-            }}
-            onFocus={() => setSearchDropdownOpen(true)}
-            onKeyDown={(event) => {
-              if (event.key === 'Escape') {
-                setSearchDropdownOpen(false)
-              }
-
-              if (
-                event.key === 'Enter' &&
-                matchingTenants.length > 0
-              ) {
-                event.preventDefault()
-                selectSearchTenant(matchingTenants[0])
-              }
-            }}
-            placeholder="Search tenant by name, email, phone, property, or unit..."
-            className="w-full rounded-xs border border-gray-300 bg-white py-3 pl-10 pr-10 text-sm text-gray-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 dark:border-stone-700 dark:bg-[#1b1b1b] dark:text-white"
-            autoComplete="off"
-          />
-        </div>
-
-        {searchDropdownOpen && tenantSearch.trim() && (
-          <div className="absolute z-40 mt-1 max-h-72 w-full overflow-y-auto rounded-xs border border-gray-200 bg-white py-1 shadow-xl dark:border-stone-700 dark:bg-neutral-900">
-            {matchingTenants.length ? (
-              matchingTenants.map((tenant) => (
-                <button
-                  key={`${tenant._id}-${tenant.property}`}
-                  type="button"
-                  onClick={() => selectSearchTenant(tenant)}
-                  className="flex w-full flex-col items-start px-4 py-3 text-left hover:bg-yellow-50 focus:bg-yellow-50 focus:outline-none dark:hover:bg-stone-800 dark:focus:bg-stone-800"
-                >
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    {tenant.fullName || 'Unnamed tenant'}
-                  </span>
-
-                  <span className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                    {[
-                      tenant.propertyName,
-                      tenant.unit?.unitName,
-                      tenant.email || tenant.phone,
-                    ].filter(Boolean).join(' · ')}
-                  </span>
-                </button>
-              ))
-            ) : (
-              <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                No matching tenants found.
-              </p>
-            )}
-          </div>
-        )}
-
-        {tenantSearch.trim() && !searchDropdownOpen && (
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            {filteredTenants.length} matching tenant
-            {filteredTenants.length === 1 ? '' : 's'}
-          </p>
-        )}
-      </div>
-
       {/* Navigation tabs */}
       <div className="mb-4 flex flex-wrap gap-x-2 gap-y-1 border-b border-gray-200 dark:border-stone-800 sm:mb-5 sm:gap-3">
         <button
           type="button"
           onClick={() => {
             setCurrentPage(1)
+            setTenantSearch('')
+            setSearchDropdownOpen(false)
             setActiveSection('active')
             setError('')
             setSuccess('')
@@ -658,6 +577,8 @@ const Tenant = () => {
           type="button"
           onClick={() => {
             setCurrentPage(1)
+            setTenantSearch('')
+            setSearchDropdownOpen(false)
             setActiveSection('history')
             setError('')
             setSuccess('')
@@ -675,6 +596,8 @@ const Tenant = () => {
           type="button"
           onClick={() => {
             setCurrentPage(1)
+            setTenantSearch('')
+            setSearchDropdownOpen(false)
             setActiveSection('requests')
             setError('')
             setSuccess('')
@@ -696,6 +619,8 @@ const Tenant = () => {
           type="button"
           onClick={() => {
             setCurrentPage(1)
+            setTenantSearch('')
+            setSearchDropdownOpen(false)
             setActiveSection('applications')
             setError('')
             setSuccess('')
@@ -713,6 +638,95 @@ const Tenant = () => {
           })
         </button>
       </div>
+
+      {/* Search tenants */}
+      {(activeSection === 'active' || activeSection === 'history') && (
+        <div className="relative mb-4 max-w-xl" ref={searchRef}>
+          <label
+            htmlFor="tenant-management-search"
+            className="sr-only"
+          >
+            Search tenants
+          </label>
+
+          <div className="relative">
+            <Search
+              size={18}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+
+            <input
+              id="tenant-management-search"
+              type="search"
+              value={tenantSearch}
+              onChange={(event) => {
+                setTenantSearch(event.target.value)
+                setCurrentPage(1)
+                setSearchDropdownOpen(true)
+              }}
+              onFocus={() => setSearchDropdownOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setSearchDropdownOpen(false)
+                }
+
+                if (
+                  event.key === 'Enter' &&
+                  matchingTenants.length > 0
+                ) {
+                  event.preventDefault()
+                  selectSearchTenant(matchingTenants[0])
+                }
+              }}
+              placeholder={
+                activeSection === 'history'
+                  ? 'Search past tenants by name, email, phone, property, or unit...'
+                  : 'Search active tenants by name, email, phone, property, or unit...'
+              }
+              className="w-full rounded-xs border border-gray-300 bg-white py-3 pl-10 pr-10 text-sm text-gray-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 dark:border-stone-700 dark:bg-[#1b1b1b] dark:text-white"
+              autoComplete="off"
+            />
+          </div>
+
+          {searchDropdownOpen && tenantSearch.trim() && (
+            <div className="absolute z-40 mt-1 max-h-72 w-full overflow-y-auto rounded-xs border border-gray-200 bg-white py-1 shadow-xl dark:border-stone-700 dark:bg-neutral-900">
+              {matchingTenants.length ? (
+                matchingTenants.map((tenant) => (
+                  <button
+                    key={`${tenant._id}-${tenant.property}`}
+                    type="button"
+                    onClick={() => selectSearchTenant(tenant)}
+                    className="flex w-full flex-col items-start px-4 py-3 text-left hover:bg-yellow-50 focus:bg-yellow-50 focus:outline-none dark:hover:bg-stone-800 dark:focus:bg-stone-800"
+                  >
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {tenant.fullName || 'Unnamed tenant'}
+                    </span>
+
+                    <span className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                      {[
+                        tenant.propertyName,
+                        tenant.unit?.unitName,
+                        tenant.email || tenant.phone,
+                      ].filter(Boolean).join(' · ')}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <p className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                  No matching tenants found.
+                </p>
+              )}
+            </div>
+          )}
+
+          {tenantSearch.trim() && !searchDropdownOpen && (
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              {filteredTenants.length} matching tenant
+              {filteredTenants.length === 1 ? '' : 's'}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Applications section */}
       {activeSection === 'applications' ? (

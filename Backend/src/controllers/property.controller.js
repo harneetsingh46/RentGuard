@@ -66,16 +66,17 @@ export const getProperty = async (req, res, next) => {
 
     // Search by property name or address
     if (search) {
+      const safeSearch = String(search).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       query.$or = [
         {
           propertyName: {
-            $regex: search,
+            $regex: safeSearch,
             $options: "i",
           },
         },
         {
           address: {
-            $regex: search,
+            $regex: safeSearch,
             $options: "i",
           },
         },

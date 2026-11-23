@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import apiClient from "../../ApiClient/interceptor.js"
 import { useAuth } from "../../context/AuthContext";
-import { Pencil, Trash2, X, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, X, AlertTriangle, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
 const emptyProperty = {
@@ -26,6 +26,15 @@ const Property = () => {
     const [properties, setProperties] = useState([]);
     const [selectedProperty, setSelectedProperty] = useState(null);
     const [property, setProperty] = useState(emptyProperty);
+    const [propertySearch, setPropertySearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(propertySearch);
+        }, 400);
+        return () => clearTimeout(timer);
+    }, [propertySearch]);
 
     // Property modal state
     const [propertyModalOpen, setPropertyModalOpen] = useState(false);
@@ -75,17 +84,20 @@ const Property = () => {
     // Fetch all properties
     const getProperties = async () => {
         try {
-            setLoading(true);
             setError("");
 
-            const response = await apiClient.get("/property/");
+            const response = await apiClient.get("/property/", {
+                params: { search: debouncedSearch || undefined },
+            });
             const data = response.data.data || [];
 
             setProperties(data);
 
-            setSelectedProperty((current) =>
-                data.find((item) => item._id === current?._id) || null
-            );
+            setSelectedProperty((current) => {
+                if (!current) return null;
+                const match = data.find((item) => item._id === current._id);
+                return match || null;
+            });
         } catch (err) {
             if (err.response?.status === 404) {
                 setProperties([]);
@@ -103,7 +115,7 @@ const Property = () => {
 
     useEffect(() => {
         getProperties();
-    }, []);
+    }, [debouncedSearch]);
 
     // Fetch units belonging to the selected property
     const getUnits = async (propertyId) => {
@@ -602,30 +614,66 @@ const Property = () => {
                     </span>
                 </div>
 
+                {/* Search input */}
+                <div className="relative mb-5 max-w-xl">
+                    <Search
+                        size={18}
+                        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                    />
+                    <input
+                        type="text"
+                        value={propertySearch}
+                        onChange={(e) => setPropertySearch(e.target.value)}
+                        placeholder="Search properties by name or address..."
+                        className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-10 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                    />
+                    {propertySearch && (
+                        <button
+                            type="button"
+                            onClick={() => setPropertySearch("")}
+                            aria-label="Clear search"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+                        >
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
+
                 {loading ? (
                     <p className="py-10 text-center text-gray-500 dark:text-gray-400">
                         Loading properties...
                     </p>
                 ) : properties.length === 0 ? (
-                    <div className="rounded-xs border border-gray-200 bg-white p-10 text-center dark:border-stone-800 dark:bg-[#1b1b1b]">
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                            No properties yet
-                        </h3>
+                    debouncedSearch.trim() ? (
+                        <div className="rounded-xs border border-gray-200 bg-white p-10 text-center dark:border-stone-800 dark:bg-[#1b1b1b]">
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                No properties match "{debouncedSearch}".
+                            </h3>
+                            <p className="mt-2 text-gray-500 dark:text-gray-400">
+                                Try searching with a different property name or address.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="rounded-xs border border-gray-200 bg-white p-10 text-center dark:border-stone-800 dark:bg-[#1b1b1b]">
+                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                No properties yet
+                            </h3>
 
-                        <p className="mt-2 text-gray-500 dark:text-gray-400">
-                            Add your first property to get started.
-                        </p>
+                            <p className="mt-2 text-gray-500 dark:text-gray-400">
+                                Add your first property to get started.
+                            </p>
 
-                        <button
-                            type="button"
-                            onClick={openAddForm}
-                            disabled={!isApproved}
-                            title={!isApproved ? "Available after owner verification" : "Add property"}
-                            className="mt-5 rounded-sm bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            + Add Your First Property
-                        </button>
-                    </div>
+                            <button
+                                type="button"
+                                onClick={openAddForm}
+                                disabled={!isApproved}
+                                title={!isApproved ? "Available after owner verification" : "Add property"}
+                                className="mt-5 rounded-sm bg-yellow-300 px-5 py-3 font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                + Add Your First Property
+                            </button>
+                        </div>
+                    )
                 ) : (
                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                         {properties.map((item) => {
