@@ -532,7 +532,9 @@ const Tenant = () => {
 
       showToast('Document uploaded successfully.', 'success')
 
+      const uploadedTenantId = uploadTenant._id
       closeUploadModalAfterSuccess()
+      navigate('/owner/documents', { state: { tenantId: uploadedTenantId } })
     } catch (err) {
       const message =
         err.response?.data?.message ||

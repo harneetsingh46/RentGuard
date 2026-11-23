@@ -414,7 +414,7 @@ export const AddTenantModal = ({
               </label>
               <input
                 id="tenant-aadhaar"
-                type="password"
+                type="text"
                 inputMode="numeric"
                 maxLength={12}
                 required
@@ -425,7 +425,7 @@ export const AddTenantModal = ({
                     e.target.value.replace(/\D/g, "").slice(0, 12)
                   )
                 }
-                placeholder="•••• •••• ••••"
+                placeholder="Enter Tenant's Aadhaar Number"
                 disabled={submitting}
                 className={inputClass}
                 autoComplete="off"

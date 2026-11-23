@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import apiClient from "../../ApiClient/interceptor.js";
 import {
@@ -49,6 +50,9 @@ const isPdfDocument = (document) =>
   getDocumentFormat(document) === "pdf";
 
 const Documents = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [tenants, setTenants] = useState([]);
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [tenantSearch, setTenantSearch] = useState("");
@@ -92,11 +96,25 @@ const Documents = () => {
             const response = await apiClient.get(
               `/property/${property._id}/tenants`
             );
-            return (response.data?.data || []).map((tenant) => ({
-              ...tenant,
-              propertyName: property.propertyName || property.name || "Property",
-              propertyAddress: property.address || "",
-            }));
+            return (response.data?.data || []).map((tenant) => {
+              const propObj =
+                typeof tenant.property === "object" && tenant.property !== null
+                  ? tenant.property
+                  : null;
+              return {
+                ...tenant,
+                propertyName:
+                  property.propertyName ||
+                  property.name ||
+                  propObj?.propertyName ||
+                  propObj?.name ||
+                  "Property",
+                propertyAddress:
+                  property.address ||
+                  propObj?.address ||
+                  "",
+              };
+            });
           } catch (err) {
             if (err.response?.status === 404) return [];
             throw err;
@@ -106,6 +124,18 @@ const Documents = () => {
 
       const tenantList = tenantGroups.flat();
       setTenants(tenantList);
+
+      const incomingTenantId = location.state?.tenantId;
+      if (incomingTenantId) {
+        const matchingTenant = tenantList.find((t) => t._id === incomingTenantId);
+        if (matchingTenant) {
+          setSelectedTenantId(matchingTenant._id);
+          setTenantSearch(matchingTenant.fullName || "Unnamed tenant");
+          navigate(location.pathname, { replace: true, state: null });
+          return;
+        }
+      }
+
       setSelectedTenantId((currentId) =>
         tenantList.some((tenant) => tenant._id === currentId) ? currentId : ""
       );
@@ -116,7 +146,7 @@ const Documents = () => {
     } finally {
       setLoadingTenants(false);
     }
-  }, []);
+  }, [location.state?.tenantId, location.pathname, navigate]);
 
   const fetchDocuments = useCallback(async (tenantId) => {
     const requestId = ++documentRequestId.current;
@@ -629,7 +659,9 @@ const Documents = () => {
               <span className="font-medium text-stone-800 dark:text-stone-200">
                 {selectedTenant.fullName || "Tenant"}
               </span>
-              {selectedTenant.propertyName ? ` · ${selectedTenant.propertyName}` : ""}
+              {selectedTenant.propertyName || (typeof selectedTenant.property === "object" ? selectedTenant.property?.propertyName : "")
+                ? ` · ${selectedTenant.propertyName || selectedTenant.property?.propertyName}`
+                : ""}
             </p>
           )}
         </section>
