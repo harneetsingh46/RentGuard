@@ -40,6 +40,14 @@ const BrowseRentals = () => {
   });
   const [processingConfirm, setProcessingConfirm] = useState(false);
 
+  const todayStr = (() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
   // Fetch available listings
   const fetchListings = async () => {
     try {
@@ -605,6 +613,7 @@ const BrowseRentals = () => {
                     id="moveInDate"
                     type="date"
                     required
+                    min={todayStr}
                     value={applyModal.moveInDate}
                     onChange={(e) =>
                       setApplyModal((prev) => ({ ...prev, moveInDate: e.target.value }))

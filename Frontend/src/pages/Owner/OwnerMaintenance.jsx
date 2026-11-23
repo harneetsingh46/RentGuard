@@ -1,6 +1,5 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import apiClient from "../../ApiClient/interceptor";
 
 const STATUSES = ["Pending", "In Progress", "Resolved", "Rejected"];
@@ -182,24 +181,14 @@ const OwnerMaintenance = () => {
             <div className="mx-auto w-full max-w-7xl">
 
                 {/* Header */}
-                <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                    <div className="min-w-0">
+                <div className="mb-8">
+                    <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
+                        Maintenance Complaints
+                    </h1>
 
-                        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
-                            Maintenance Complaints
-                        </h1>
-
-                        <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-                            Manage tenant complaints and track maintenance progress.
-                        </p>
-                    </div>
-
-                    <Link
-                        to="/owner/dashboard"
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xs border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-[#171717] dark:hover:bg-neutral-800 sm:w-fit"
-                    >
-                        ← Back to Dashboard
-                    </Link>
+                    <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+                        Manage tenant complaints and track maintenance progress.
+                    </p>
                 </div>
 
                 {/* Feedback */}

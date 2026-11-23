@@ -1,6 +1,5 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import apiClient from "../../ApiClient/interceptor";
 
 const TenantDocument = () => {
@@ -156,23 +155,14 @@ const TenantDocument = () => {
       <div className="mx-auto max-w-7xl">
 
         {/* Header */}
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              My Documents
-            </h1>
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            My Documents
+          </h1>
 
-            <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-              Access documents shared with you by your property owner.
-            </p>
-          </div>
-
-          <Link
-            to="/tenant/dashboard"
-            className="inline-flex w-fit items-center gap-2 rounded-xs border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-[#171717] dark:text-yellow-300 dark:hover:bg-neutral-800"
-          >
-            ← Back to Dashboard
-          </Link>
+          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+            Access documents shared with you by your property owner.
+          </p>
         </div>
 
         {/* Feedback */}

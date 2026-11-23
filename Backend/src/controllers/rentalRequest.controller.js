@@ -68,9 +68,31 @@ export const createRentalRequest = async (req, res) => {
       });
     }
 
-    const parsedMoveInDate = moveInDate ? new Date(moveInDate) : null;
-    if (parsedMoveInDate && Number.isNaN(parsedMoveInDate.getTime())) {
-      return res.status(400).json({ message: "Please provide a valid move-in date." });
+    let parsedMoveInDate = null;
+    if (moveInDate) {
+      const parsed = new Date(moveInDate);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({ message: "Please provide a valid move-in date." });
+      }
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (typeof moveInDate === "string" && /^\d{4}-\d{2}-\d{2}/.test(moveInDate)) {
+        const [y, m, d] = moveInDate.split("T")[0].split("-").map(Number);
+        const checkDate = new Date(y, m - 1, d);
+        if (checkDate < today) {
+          return res.status(400).json({ message: "Move-in date cannot be in the past." });
+        }
+      } else {
+        const checkDate = new Date(parsed);
+        checkDate.setHours(0, 0, 0, 0);
+        if (checkDate < today) {
+          return res.status(400).json({ message: "Move-in date cannot be in the past." });
+        }
+      }
+
+      parsedMoveInDate = parsed;
     }
 
     const request = await RentalRequest.create({

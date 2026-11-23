@@ -877,7 +877,6 @@ const Property = () => {
             {propertyModalOpen && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-                    onClick={closeForm}
                 >
                     <div
                         role="dialog"
@@ -987,7 +986,6 @@ const Property = () => {
             {unitModalOpen && (
                 <div
                     className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm"
-                    onClick={closeUnitForm}
                 >
                     <div
                         role="dialog"

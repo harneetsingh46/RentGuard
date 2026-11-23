@@ -177,24 +177,14 @@ const Maintenance = () => {
       <div className="mx-auto max-w-6xl">
 
         {/* Header */}
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            Maintenance & Complaints
+          </h1>
 
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Maintenance & Complaints
-            </h1>
-
-            <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-              Report an issue and track its progress.
-            </p>
-          </div>
-
-          <Link
-            to="/tenant/dashboard"
-            className="inline-flex w-fit items-center gap-2 rounded-xs border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-neutral-100 dark:border-neutral-800 dark:bg-[#171717] dark:hover:bg-neutral-800"
-          >
-            ← Back to Dashboard
-          </Link>
+          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+            Report an issue and track its progress.
+          </p>
         </div>
 
         {/* Information Card */}

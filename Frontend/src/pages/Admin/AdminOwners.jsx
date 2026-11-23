@@ -36,14 +36,6 @@ const AdminOwners = () => {
     const [total, setTotal] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
 
-    const [historyOwner, setHistoryOwner] = useState(null);
-    const [reviewHistory, setReviewHistory] = useState([]);
-    const [historyLoading, setHistoryLoading] = useState(false);
-    const [historyError, setHistoryError] = useState("");
-    const [historyPage, setHistoryPage] = useState(1);
-    const [historyTotalPages, setHistoryTotalPages] = useState(0);
-    const [historyTotal, setHistoryTotal] = useState(0);
-
     // FETCH OWNERS
     const fetchOwners = useCallback(async () => {
         try {
@@ -247,59 +239,6 @@ const AdminOwners = () => {
         }
     };
 
-    // FETCH OWNER VERIFICATION HISTORY
-    const fetchOwnerHistory = async (owner, page = 1) => {
-        try {
-            setHistoryLoading(true);
-            setHistoryError("");
-
-            const response = await apiClient.get(
-                `/admin/owners/${owner._id}/verification-history`,
-                {
-                    params: {
-                        page,
-                        limit: 5,
-                    },
-                }
-            );
-
-            const result = response.data.data;
-
-            setReviewHistory(result.history || []);
-            setHistoryPage(result.pagination?.page || 1);
-            setHistoryTotalPages(result.pagination?.totalPages || 0);
-            setHistoryTotal(result.pagination?.total || 0);
-        } catch (error) {
-            console.error("Fetch owner history error:", error);
-
-            setHistoryError(
-                error.response?.data?.message ||
-                "Unable to fetch verification history."
-            );
-        } finally {
-            setHistoryLoading(false);
-        }
-    };
-
-    // OPEN HISTORY MODAL
-    const openHistory = (owner) => {
-        setHistoryOwner(owner);
-        setReviewHistory([]);
-        setHistoryPage(1);
-        setHistoryTotalPages(0);
-        setHistoryTotal(0);
-
-        fetchOwnerHistory(owner, 1);
-    };
-
-    // CLOSE HISTORY MODAL
-    const closeHistory = () => {
-        if (historyLoading) return;
-
-        setHistoryOwner(null);
-        setReviewHistory([]);
-        setHistoryError("");
-    };
     // FILTERS
     const filters = [
         { label: "All Owners", value: "all" },
@@ -565,14 +504,6 @@ const AdminOwners = () => {
                                                     View Details
                                                 </button>
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openHistory(owner)}
-                                                    className="border border-stone-300 px-3 py-2 text-xs font-medium transition hover:bg-stone-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                                                >
-                                                    View History
-                                                </button>
-
                                                 {owner.verificationStatus !== "rejected" && (
                                                     <button
                                                         type="button"
@@ -652,14 +583,6 @@ const AdminOwners = () => {
                                         className="flex-1 border border-blue-200 px-3 py-2.5 text-xs font-medium text-blue-700 transition hover:bg-blue-50 dark:border-blue-900 dark:text-blue-400 dark:hover:bg-blue-400/10"
                                     >
                                         View Details
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => openHistory(owner)}
-                                        className="flex-1 border border-stone-300 px-3 py-2.5 text-xs font-medium transition hover:bg-stone-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                                    >
-                                        View History
                                     </button>
 
                                     {owner.verificationStatus !== "rejected" && (
@@ -878,196 +801,6 @@ const AdminOwners = () => {
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            )}
-
-
-            {/* OWNER VERIFICATION HISTORY MODAL */}
-            {historyOwner && (
-                <div
-                    className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4"
-                    onMouseDown={(event) => {
-                        if (event.target === event.currentTarget) {
-                            closeHistory();
-                        }
-                    }}
-                >
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="history-modal-title"
-                        className="max-h-[85vh] w-full max-w-2xl overflow-y-auto border border-stone-200 bg-white p-5 shadow-2xl dark:border-neutral-700 dark:bg-[#1b1b1b] sm:p-6"
-                    >
-                        {/* HEADER */}
-                        <div className="flex items-start justify-between gap-3">
-                            <div>
-                                <h2
-                                    id="history-modal-title"
-                                    className="text-xl font-medium"
-                                >
-                                    Verification History
-                                </h2>
-
-                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    {historyOwner.username}
-                                </p>
-
-                                <p className="mt-1 text-xs text-gray-400">
-                                    {historyTotal} review records
-                                </p>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={closeHistory}
-                                disabled={historyLoading}
-                                aria-label="Close history"
-                                className="rounded-lg p-2 text-xl leading-none hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-neutral-800"
-                            >
-                                ×
-                            </button>
-                        </div>
-
-                        {/* LOADING */}
-                        {historyLoading && (
-                            <div className="mt-6 space-y-3">
-                                {Array.from({ length: 3 }).map((_, index) => (
-                                    <div
-                                        key={index}
-                                        className="h-24 animate-pulse border border-stone-200 bg-stone-50 dark:border-neutral-700 dark:bg-neutral-900"
-                                    />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* ERROR */}
-                        {!historyLoading && historyError && (
-                            <div className="mt-6 border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-                                <p>{historyError}</p>
-
-                                <button
-                                    type="button"
-                                    onClick={() => fetchOwnerHistory(historyOwner, historyPage)}
-                                    className="mt-2 font-semibold underline"
-                                >
-                                    Try Again
-                                </button>
-                            </div>
-                        )}
-
-                        {/* EMPTY HISTORY */}
-                        {!historyLoading &&
-                            !historyError &&
-                            reviewHistory.length === 0 && (
-                                <div className="mt-8 border border-stone-200 px-4 py-10 text-center dark:border-neutral-700">
-                                    <p className="font-medium">
-                                        No review history yet
-                                    </p>
-
-                                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                                        This owner has not been reviewed yet.
-                                    </p>
-                                </div>
-                            )}
-
-                        {/* HISTORY RECORDS */}
-                        {!historyLoading &&
-                            !historyError &&
-                            reviewHistory.length > 0 && (
-                                <div className="mt-6 space-y-3">
-                                    {reviewHistory.map((record) => (
-                                        <article
-                                            key={record._id}
-                                            className="border border-stone-200 p-4 dark:border-neutral-700"
-                                        >
-                                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                                <span
-                                                    className={`inline-flex rounded-full px-3 py-1.5 text-xs font-medium capitalize ${statusStyle(record.status)}`}
-                                                >
-                                                    {record.status}
-                                                </span>
-
-                                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {formatDateTime(record.reviewedAt)}
-                                                </span>
-                                            </div>
-
-                                            <div className="mt-4">
-                                                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                                                    Reviewed by
-                                                </p>
-
-                                                <p className="mt-1 text-sm font-medium">
-                                                    {record.reviewedBy?.name || "Admin"}
-                                                </p>
-
-                                                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                                    {record.reviewedBy?.email || "Email unavailable"}
-                                                </p>
-                                            </div>
-
-                                            {record.status === "rejected" &&
-                                                record.rejectionReason && (
-                                                    <div className="mt-4 border-l-2 border-red-400 pl-3">
-                                                        <p className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">
-                                                            Rejection Reason
-                                                        </p>
-
-                                                        <p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-600 dark:text-gray-300">
-                                                            {record.rejectionReason}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                        </article>
-                                    ))}
-                                </div>
-                            )}
-
-                        {/* PAGINATION */}
-                        {!historyLoading &&
-                            !historyError &&
-                            historyTotalPages > 1 && (
-                                <div className="mt-6 flex items-center justify-between gap-3 border-t border-stone-200 pt-4 dark:border-neutral-700">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            fetchOwnerHistory(historyOwner, historyPage - 1)
-                                        }
-                                        disabled={historyPage <= 1}
-                                        className="border border-stone-300 px-4 py-2 text-sm transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                                    >
-                                        Previous
-                                    </button>
-
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                                        Page {historyPage} of {historyTotalPages}
-                                    </span>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            fetchOwnerHistory(historyOwner, historyPage + 1)
-                                        }
-                                        disabled={historyPage >= historyTotalPages}
-                                        className="border border-stone-300 px-4 py-2 text-sm transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                                    >
-                                        Next
-                                    </button>
-                                </div>
-                            )}
-
-                        {/* FOOTER */}
-                        <div className="mt-6 flex justify-end border-t border-stone-200 pt-4 dark:border-neutral-700">
-                            <button
-                                type="button"
-                                onClick={closeHistory}
-                                disabled={historyLoading}
-                                className="border border-stone-300 px-5 py-2.5 text-sm font-medium transition hover:bg-stone-100 disabled:opacity-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
-                            >
-                                Close
-                            </button>
-                        </div>
                     </div>
                 </div>
             )}

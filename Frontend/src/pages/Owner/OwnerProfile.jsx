@@ -1,6 +1,5 @@
 
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import apiClient from "../../ApiClient/interceptor";
 
@@ -158,28 +157,18 @@ const OwnerProfile = () => {
       <div className="mx-auto max-w-5xl">
 
         {/* Page Header */}
-        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
-              Owner Portal / Profile
-            </p>
+        <div className="mb-8">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
+            Owner Portal / Profile
+          </p>
 
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              My Profile
-            </h1>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            My Profile
+          </h1>
 
-            <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-              View and manage your personal account information.
-            </p>
-          </div>
-
-          <Link
-            to="/owner/dashboard"
-            className="inline-flex w-fit items-center gap-2 rounded-sm border border-neutral-200 bg-white px-5 py-3 text-sm font-medium transition hover:bg-yellow-300 hover:text-black dark:border-neutral-800 dark:bg-[#171717] dark:hover:bg-neutral-800"
-          >
-            <span aria-hidden="true">←</span>
-            Back to Dashboard
-          </Link>
+          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
+            View and manage your personal account information.
+          </p>
         </div>
 
         {/* Profile Card */}

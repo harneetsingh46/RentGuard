@@ -1,4 +1,6 @@
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
+const FRONTEND_URL =
+  process.env.FRONTEND_URL?.trim() || "https://rent-guard-1.vercel.app";
 
 const getBrevoConfig = () => {
   const apiKey = process.env.BREVO_API_KEY?.trim();
@@ -562,12 +564,31 @@ export const sendRentalApplicationNotification = async ({
     "font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:25px;color:#333;line-height:1.6;";
   const emails = [];
 
+  const loginUrl = `${FRONTEND_URL}/login`;
+  const actionButton =
+    event === "approved"
+      ? `
+        <div style="margin:25px 0;text-align:center;">
+          <a
+            href="${loginUrl}"
+            style="display:inline-block;padding:12px 24px;background-color:#d4a017;color:#000000;text-decoration:none;font-weight:bold;border-radius:6px;font-size:14px;"
+          >
+            Log in to RentGuard
+          </a>
+        </div>
+        <p style="color:#6b7280;font-size:13px;word-break:break-all;">
+          Or copy and paste this link into your browser:<br />
+          <a href="${loginUrl}" style="color:#2563eb;">${loginUrl}</a>
+        </p>
+      `
+      : "";
+
   if (tenantEmail) {
     emails.push(
       sendEmail({
         to: tenantEmail,
         subject: template.subject,
-        html: `<div style="${baseStyle}"><h2 style="color:#d4a017;">RentGuard</h2><p>Hello ${escapeHtml(tenantName || "Tenant")},</p><p>${template.tenantText}</p>${details}<p>Thank you for using RentGuard.</p></div>`,
+        html: `<div style="${baseStyle}"><h2 style="color:#d4a017;">RentGuard</h2><p>Hello ${escapeHtml(tenantName || "Tenant")},</p><p>${template.tenantText}</p>${details}${actionButton}<p>Thank you for using RentGuard.</p></div>`,
       }),
     );
   }
@@ -826,6 +847,8 @@ export const sendOwnerApprovalEmail = async ({
       },
     );
 
+    const loginUrl = `${FRONTEND_URL}/login`;
+
     return await sendEmail({
       to: ownerEmail,
       senderName: "RentGuard",
@@ -870,6 +893,20 @@ export const sendOwnerApprovalEmail = async ({
 
           <p>
             Log in to your RentGuard account to get started.
+          </p>
+
+          <div style="margin:25px 0;text-align:center;">
+            <a
+              href="${loginUrl}"
+              style="display:inline-block;padding:12px 24px;background-color:#d4a017;color:#000000;text-decoration:none;font-weight:bold;border-radius:6px;font-size:14px;"
+            >
+              Log in to RentGuard
+            </a>
+          </div>
+
+          <p style="color:#6b7280;font-size:13px;word-break:break-all;">
+            Or copy and paste this link into your browser:<br />
+            <a href="${loginUrl}" style="color:#2563eb;">${loginUrl}</a>
           </p>
 
           <p>
