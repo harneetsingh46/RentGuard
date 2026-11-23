@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import apiClient from "../../ApiClient/interceptor.js"
 import { useAuth } from "../../context/AuthContext";
-import { Pencil, Trash2, X, AlertTriangle, Search } from "lucide-react";
+import { Pencil, Trash2, X, AlertTriangle, Search, Eye } from "lucide-react";
 import toast from "react-hot-toast";
 
 const emptyProperty = {
@@ -944,7 +944,7 @@ const Property = () => {
                             ) : (
                                 <div className="overflow-x-auto rounded-xs border border-gray-200 dark:border-stone-800">
                                     {/* Table Header */}
-                                    <div className="grid min-w-[800px] grid-cols-[2fr_1.4fr_1.4fr_1.2fr_1fr] items-center gap-4 border-b border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-700 dark:border-stone-800 dark:bg-[#1b1b1b] dark:text-gray-300">
+                                    <div className="grid min-w-[860px] grid-cols-[1.6fr_1.1fr_1.1fr_1fr_1.6fr] items-center gap-4 border-b border-gray-200 bg-gray-100 px-6 py-3 text-sm font-semibold text-gray-700 dark:border-stone-800 dark:bg-[#1b1b1b] dark:text-gray-300">
                                         <span>Unit Name</span>
                                         <span className="text-center">Type</span>
                                         <span className="text-center">Monthly Rent</span>
@@ -956,7 +956,7 @@ const Property = () => {
                                     {units.map((item, index) => (
                                         <div
                                             key={item._id}
-                                            className={`grid min-w-[800px] grid-cols-[2fr_1.4fr_1.4fr_1.2fr_1fr] items-center gap-4 bg-white px-6 py-4 transition hover:bg-yellow-50 dark:bg-[#151515] dark:hover:bg-[#222222] ${index !== units.length - 1
+                                            className={`grid min-w-[860px] grid-cols-[1.6fr_1.1fr_1.1fr_1fr_1.6fr] items-center gap-4 bg-white px-6 py-4 transition hover:bg-yellow-50 dark:bg-[#151515] dark:hover:bg-[#222222] ${index !== units.length - 1
                                                 ? "border-b border-gray-200 dark:border-stone-800"
                                                 : ""
                                                 }`}
@@ -979,7 +979,7 @@ const Property = () => {
                                             {/* Status */}
                                             <div className="flex justify-center">
                                                 <span
-                                                    className={`inline-block rounded-xs px-2 py-1 text-xs font-medium ${item.status === "available"
+                                                    className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium capitalize ${item.status === "available"
                                                         ? "bg-green-100 text-green-800"
                                                         : item.status === "occupied"
                                                             ? "bg-yellow-100 text-yellow-800"
@@ -996,8 +996,9 @@ const Property = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => openTenantDetails(item)}
-                                                        className="rounded-xs border border-black bg-yellow-200 px-3 py-1 text-sm font-medium text-gray-800 hover:bg-yellow-300 dark:text-gray-900 dark:hover:bg-yellow-400"
+                                                        className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-yellow-500 bg-yellow-400 px-3 text-sm font-medium text-gray-900 transition hover:bg-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
+                                                        <Eye size={16} />
                                                         View Tenant
                                                     </button>
                                                 )}
@@ -1008,7 +1009,7 @@ const Property = () => {
                                                     disabled={!isApproved}
                                                     aria-label={`Edit ${item.unitName}`}
                                                     title="Edit unit"
-                                                    className="inline-flex items-center justify-center rounded-xs border border-black bg-yellow-300 p-2 text-gray-900 transition hover:bg-yellow-300 hover:text-black dark:text-gray-900 dark:hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 transition hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-transparent dark:text-gray-200 dark:hover:bg-neutral-800"
                                                 >
                                                     <Pencil size={16} />
                                                 </button>
@@ -1019,7 +1020,7 @@ const Property = () => {
                                                     disabled={!isApproved}
                                                     aria-label={`Delete ${item.unitName}`}
                                                     title="Delete unit"
-                                                    className="inline-flex items-center justify-center rounded-xs border border-red-200 p-2 text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-300 text-sm text-red-600 transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
