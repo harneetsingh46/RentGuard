@@ -1,4 +1,5 @@
 import { Property } from "../models/property.model.js";
+import { Unit } from "../models/unit.model.js";
 import mongoose from "mongoose";
 // CREATE PROPERTY
 
@@ -414,6 +415,17 @@ export const deleteProperty = async (req, res, next) => {
     if (!property) {
       return res.status(404).json({
         message: "Property not found!",
+      });
+    }
+
+    const occupiedUnit = await Unit.findOne({
+      property: id,
+      status: { $in: ["Occupied", "occupied"] },
+    });
+
+    if (occupiedUnit) {
+      return res.status(400).json({
+        message: "Cannot delete property: one or more units are occupied.",
       });
     }
 
