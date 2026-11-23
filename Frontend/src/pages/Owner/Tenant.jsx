@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import apiClient from '../../ApiClient/interceptor.js'
 import { useToast } from "../../common/ToastProvider"
 import Pagination from "../../common/Pagination"
-import AddTenantModal from "./components/AddTenantModal.jsx"
+import AddTenantModal from "./AddTenantModal.jsx";
 import {
   Pencil,
   Search,
@@ -575,11 +575,10 @@ const Tenant = () => {
             setError('')
             setSuccess('')
           }}
-          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${
-            activeSection === 'active'
+          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${activeSection === 'active'
               ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400'
               : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
-          }`}
+            }`}
         >
           Active Tenants ({tenants.length})
         </button>
@@ -594,11 +593,10 @@ const Tenant = () => {
             setError('')
             setSuccess('')
           }}
-          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${
-            activeSection === 'history'
+          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${activeSection === 'history'
               ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400'
               : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
-          }`}
+            }`}
         >
           Tenant History ({history.length})
         </button>
@@ -613,11 +611,10 @@ const Tenant = () => {
             setError('')
             setSuccess('')
           }}
-          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${
-            activeSection === 'requests'
+          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${activeSection === 'requests'
               ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400'
               : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
-          }`}
+            }`}
         >
           Move-out Requests ({
             moveOutRequests.filter(
@@ -636,11 +633,10 @@ const Tenant = () => {
             setError('')
             setSuccess('')
           }}
-          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${
-            activeSection === 'applications'
+          className={`border-b-2 px-2 py-3 text-sm font-medium sm:px-4 sm:text-base ${activeSection === 'applications'
               ? 'border-yellow-400 text-yellow-600 dark:text-yellow-400'
               : 'border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
-          }`}
+            }`}
         >
           Rental Applications ({
             rentalRequests.filter(
@@ -772,15 +768,14 @@ const Tenant = () => {
                       </p>
                     </div>
 
-                    <span className={`rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${
-                      request.status === "Pending"
+                    <span className={`rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${request.status === "Pending"
                         ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
                         : request.status === "Approved"
-                        ? "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400"
-                        : request.status === "Accepted"
-                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400"
-                        : "bg-gray-100 text-gray-700 dark:bg-stone-800 dark:text-stone-300"
-                    }`}>
+                          ? "bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400"
+                          : request.status === "Accepted"
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-400"
+                            : "bg-gray-100 text-gray-700 dark:bg-stone-800 dark:text-stone-300"
+                      }`}>
                       {request.status === "Approved" ? "Approved · Awaiting Tenant Confirmation" : request.status}
                     </span>
                   </div>
@@ -895,13 +890,12 @@ const Tenant = () => {
                       </p>
                     </div>
 
-                    <span className={`rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${
-                      request.status === "pending"
+                    <span className={`rounded-xs px-2.5 py-1 text-xs font-medium capitalize ${request.status === "pending"
                         ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
                         : request.status === "approved"
                           ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
                           : "bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
-                    }`}>
+                      }`}>
                       {request.status}
                     </span>
                   </div>
@@ -1009,11 +1003,10 @@ const Tenant = () => {
                     </p>
                   </div>
 
-                  <span className={`shrink-0 rounded-xs px-2 py-1 text-xs font-medium ${
-                    tenant.isActive
+                  <span className={`shrink-0 rounded-xs px-2 py-1 text-xs font-medium ${tenant.isActive
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                       : 'bg-gray-200 text-gray-700 dark:bg-stone-700 dark:text-gray-300'
-                  }`}>
+                    }`}>
                     {tenant.isActive ? 'Active' : 'Moved Out'}
                   </span>
                 </div>
@@ -1187,11 +1180,10 @@ const Tenant = () => {
                     )}
 
                     <td className="whitespace-nowrap px-4 py-3">
-                      <span className={`rounded-xs px-2 py-1 text-xs font-medium ${
-                        tenant.isActive
+                      <span className={`rounded-xs px-2 py-1 text-xs font-medium ${tenant.isActive
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           : 'bg-gray-200 text-gray-700 dark:bg-stone-700 dark:text-gray-300'
-                      }`}>
+                        }`}>
                         {tenant.isActive ? 'Active' : 'Moved Out'}
                       </span>
                     </td>
@@ -1314,11 +1306,10 @@ const Tenant = () => {
                     </h3>
                   </div>
 
-                  <span className={`rounded-xs px-3 py-1 text-xs font-medium ${
-                    viewTenant.isActive
+                  <span className={`rounded-xs px-3 py-1 text-xs font-medium ${viewTenant.isActive
                       ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                       : "bg-gray-200 text-gray-700 dark:bg-stone-700 dark:text-gray-200"
-                  }`}>
+                    }`}>
                     {viewTenant.isActive ? "Active" : "Moved Out"}
                   </span>
                 </div>
@@ -1843,7 +1834,7 @@ const Tenant = () => {
       <AddTenantModal
         isOpen={addTenantModalOpen}
         onClose={() => setAddTenantModalOpen(false)}
-        onSuccess={fetchTenants}
+        onSuccess={getTenants}
       />
     </div>
   )

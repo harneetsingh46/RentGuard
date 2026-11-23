@@ -4,7 +4,7 @@ import apiClient from "../../ApiClient/interceptor.js"
 import { useAuth } from "../../context/AuthContext";
 import { Pencil, Trash2, X, AlertTriangle, Search, Eye } from "lucide-react";
 import toast from "react-hot-toast";
-import AddTenantModal from "./components/AddTenantModal.jsx";
+import AddTenantModal from "./AddTenantModal.jsx";
 
 const emptyProperty = {
     propertyName: "",
