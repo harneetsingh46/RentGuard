@@ -3,6 +3,7 @@ import { Property } from "../models/property.model.js";
 import { Tenant } from "../models/tenant.model.js";
 import { Unit } from "../models/unit.model.js";
 import { Bill } from "../models/bill.model.js";
+import { RentalRequest } from "../models/rentalRequest.model.js";
 import uploadToCloudinary from "../utils/uploadToCloudinary.js";
 import cloudinary from "../config/cloudinary.js";
 import {
@@ -1574,6 +1575,162 @@ export const approveMoveOutRequest = async (req, res) => {
 
     return res.status(500).json({
       message: "Unable to approve move-out request!",
+    });
+  } finally {
+    if (session) {
+      await session.endSession();
+    }
+  }
+};
+
+// OWNER: REJECT MOVE-OUT REQUEST
+export const rejectMoveOutRequest = async (req, res) => {
+  let session;
+
+  try {
+    const { propertyId, tenantId } = req.params;
+    const { reason } = req.body;
+
+    if (req.authRole !== "owner") {
+      return res.status(403).json({
+        message: "Only owners can reject move-out requests!",
+      });
+    }
+
+    if (
+      !mongoose.isValidObjectId(propertyId) ||
+      !mongoose.isValidObjectId(tenantId)
+    ) {
+      return res.status(400).json({
+        message: "Invalid property or tenant ID!",
+      });
+    }
+
+    const property = await getOwnedProperty(propertyId, req.user._id);
+
+    if (!property) {
+      return res.status(404).json({
+        message: "Property not found or access denied!",
+      });
+    }
+
+    if (
+      reason !== undefined &&
+      typeof reason === "string" &&
+      reason.trim().length > 300
+    ) {
+      return res.status(400).json({
+        message: "Reason cannot exceed 300 characters.",
+      });
+    }
+
+    const sanitizedReason = typeof reason === "string" ? reason.trim() : "";
+    const now = new Date();
+
+    // Expire this request first if its validity has passed.
+    await Tenant.updateOne(
+      {
+        _id: tenantId,
+        owner: req.user._id,
+        property: propertyId,
+        "moveOutRequest.status": "pending",
+        "moveOutRequest.expiresAt": { $lte: now },
+      },
+      {
+        $set: {
+          "moveOutRequest.status": "expired",
+        },
+      },
+    );
+
+    session = await mongoose.startSession();
+    let rejectedTenant;
+
+    await session.withTransaction(async () => {
+      const tenant = await Tenant.findOne({
+        _id: tenantId,
+        owner: req.user._id,
+        property: propertyId,
+        isActive: true,
+        "moveOutRequest.status": "pending",
+        "moveOutRequest.expiresAt": { $gt: now },
+      }).session(session);
+
+      if (!tenant) {
+        const error = new Error(
+          "Move-out request is not pending or has expired.",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      tenant.moveOutRequest.status = "rejected";
+      tenant.moveOutRequest.reviewedAt = new Date();
+      tenant.moveOutRequest.rejectionReason = sanitizedReason;
+
+      await tenant.save({ session });
+
+      await RentalRequest.updateMany(
+        {
+          tenant: tenant._id,
+          status: { $in: ["Pending", "Approved"] },
+        },
+        {
+          $set: {
+            status: "Cancelled",
+            rejectionReason: "Your move-out request was rejected.",
+          },
+        },
+        { session },
+      );
+
+      rejectedTenant = tenant;
+    });
+
+    await rejectedTenant.populate([
+      { path: "owner", select: "fullName name email" },
+      { path: "property", select: "propertyName address" },
+      { path: "unit", select: "unitName rent" },
+    ]);
+
+    try {
+      await sendTenancyNotificationEmails({
+        event: "rejected",
+        tenantEmail: rejectedTenant.email,
+        tenantName: rejectedTenant.fullName,
+        ownerEmail: rejectedTenant.owner?.email,
+        ownerName:
+          rejectedTenant.owner?.fullName ||
+          rejectedTenant.owner?.name ||
+          "Property Owner",
+        propertyName: rejectedTenant.property?.propertyName,
+        propertyAddress: rejectedTenant.property?.address,
+        unitName: rejectedTenant.unit?.unitName,
+        requestedAt: rejectedTenant.moveOutRequest.requestedAt,
+        reviewedAt: rejectedTenant.moveOutRequest.reviewedAt,
+        reason: sanitizedReason,
+      });
+    } catch (emailErr) {
+      console.error("Move-out rejection email failed:", emailErr);
+    }
+
+    return res.status(200).json({
+      message: "Move-out request rejected.",
+      data: {
+        tenant: safeTenantData(rejectedTenant),
+      },
+    });
+  } catch (error) {
+    console.error("Reject move-out request error:", error);
+
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Unable to reject move-out request!",
     });
   } finally {
     if (session) {

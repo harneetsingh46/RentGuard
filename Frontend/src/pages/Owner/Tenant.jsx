@@ -38,6 +38,8 @@ const Tenant = () => {
 
   const [approvingRequestId, setApprovingRequestId] = useState(null)
   const [approvalRequest, setApprovalRequest] = useState(null)
+  const [rejectMoveOutModal, setRejectMoveOutModal] = useState({ open: false, request: null, reason: "" })
+  const [rejectingMoveOut, setRejectingMoveOut] = useState(false)
   const [viewTenant, setViewTenant] = useState(null)
   const [activeSection, setActiveSection] = useState('active')
 
@@ -269,6 +271,33 @@ const Tenant = () => {
       }
     } finally {
       setApprovingRequestId(null)
+    }
+  }
+
+  // Reject move-out request
+  const handleRejectMoveOut = async (e) => {
+    if (e) e.preventDefault()
+    if (!rejectMoveOutModal.request) return
+
+    const { request, reason } = rejectMoveOutModal
+
+    try {
+      setRejectingMoveOut(true)
+
+      await apiClient.patch(
+        `/property/${request.property}/move-out-requests/${request._id}/reject`,
+        { reason: reason.trim() }
+      )
+
+      showToast("Move-out request rejected.", "success")
+      setRejectMoveOutModal({ open: false, request: null, reason: "" })
+      await getTenants()
+    } catch (err) {
+      const message =
+        err.response?.data?.message || "Failed to reject move-out request."
+      showToast(message, "error")
+    } finally {
+      setRejectingMoveOut(false)
     }
   }
 
@@ -948,17 +977,29 @@ const Tenant = () => {
                         Approval is allowed only when every bill for this tenancy is fully paid.
                       </p>
 
-                      <button
-                        type="button"
-                        onClick={() => setApprovalRequest(request)}
-                        disabled={approvingRequestId === request._id}
-                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xs bg-yellow-300 px-4 py-2.5 text-sm font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <CheckCircle2 size={16} />
-                        {approvingRequestId === request._id
-                          ? "Approving..."
-                          : "Approve move-out"}
-                      </button>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setRejectMoveOutModal({ open: true, request, reason: "" })}
+                          disabled={approvingRequestId === request._id || rejectingMoveOut}
+                          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xs border border-red-500 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-500 dark:text-red-400 dark:hover:bg-red-950/40"
+                        >
+                          <X size={16} />
+                          Reject
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setApprovalRequest(request)}
+                          disabled={approvingRequestId === request._id || rejectingMoveOut}
+                          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xs bg-yellow-300 px-4 py-2.5 text-sm font-medium text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <CheckCircle2 size={16} />
+                          {approvingRequestId === request._id
+                            ? "Approving..."
+                            : "Approve move-out"}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </article>
@@ -1827,6 +1868,74 @@ const Tenant = () => {
                 {processingRentalId ? "Rejecting..." : "Confirm Reject"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Move-out Request Modal */}
+      {rejectMoveOutModal.open && rejectMoveOutModal.request && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reject-moveout-modal-title"
+            className="w-full max-w-md rounded-xs border border-gray-200 bg-white p-5 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="reject-moveout-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+              Reject Move-out Request
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Are you sure you want to reject the move-out request for <span className="font-medium text-gray-800 dark:text-white">{rejectMoveOutModal.request.tenant?.fullName || "this tenant"}</span>?
+            </p>
+
+            <form onSubmit={handleRejectMoveOut} className="mt-4">
+              <div>
+                <label htmlFor="moveoutRejectReason" className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Reason for Rejection <span className="text-gray-400">(optional, max 300 chars)</span>
+                </label>
+                <textarea
+                  id="moveoutRejectReason"
+                  rows={3}
+                  maxLength={300}
+                  value={rejectMoveOutModal.reason}
+                  onChange={(e) => setRejectMoveOutModal(prev => ({ ...prev, reason: e.target.value }))}
+                  placeholder="e.g. Pending physical inspection or unresolved damage."
+                  className="mt-1 w-full rounded border border-gray-300 bg-white p-2.5 text-sm outline-none focus:border-yellow-400 dark:border-stone-700 dark:bg-stone-900 dark:text-white"
+                />
+                <p className="mt-1 text-right text-xs text-gray-400">
+                  {rejectMoveOutModal.reason.length}/300
+                </p>
+              </div>
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectMoveOutModal({ open: false, request: null, reason: "" })}
+                  disabled={rejectingMoveOut}
+                  className="rounded-xs border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={rejectingMoveOut}
+                  className="inline-flex items-center justify-center gap-2 rounded-xs bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {rejectingMoveOut ? (
+                    <>
+                      <LoaderCircle size={15} className="animate-spin" />
+                      Rejecting...
+                    </>
+                  ) : (
+                    "Confirm Reject"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

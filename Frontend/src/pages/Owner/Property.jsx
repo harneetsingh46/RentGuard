@@ -1060,7 +1060,7 @@ const Property = () => {
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="property-form-title"
-                        className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b] md:p-8"
+                        className="w-full max-w-lg rounded-xs border border-gray-200 bg-white p-6 shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b] md:p-8"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="mb-6 flex items-center justify-between">
@@ -1106,7 +1106,7 @@ const Property = () => {
                                     placeholder="e.g. Green Valley Apartments"
                                     required
                                     disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                                    className="w-full rounded-xs border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
                             </div>
 
@@ -1127,7 +1127,7 @@ const Property = () => {
                                     placeholder="Enter property address"
                                     required
                                     disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                                    className="w-full rounded-xs border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
                             </div>
 
@@ -1271,7 +1271,7 @@ const Property = () => {
                                         multiple
                                         onChange={handleUnitImagesChange}
                                         disabled={submitting}
-                                        className="w-full rounded-xl border border-gray-300 bg-white p-3 text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-yellow-300 file:px-4 file:py-2 file:font-medium file:text-black dark:border-stone-800 dark:bg-[#262626] dark:text-gray-200"
+                                        className="w-full rounded-xs border border-gray-300 bg-white p-3 text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-yellow-300 file:px-4 file:py-2 file:font-medium file:text-black dark:border-stone-800 dark:bg-[#262626] dark:text-gray-200"
                                     />
                                 )}
 
@@ -1297,7 +1297,7 @@ const Property = () => {
                                     placeholder="e.g. Flat 101"
                                     required
                                     disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                                    className="w-full rounded-xs border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
                             </div>
 
@@ -1316,7 +1316,7 @@ const Property = () => {
                                     onChange={handleUnitChange}
                                     required
                                     disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:focus:ring-yellow-400/20"
+                                    className="w-full rounded-xs border border-gray-300 bg-white p-3 text-gray-900 outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:focus:ring-yellow-400/20"
                                 >
                                     <option value="residential">Residential</option>
                                     <option value="commercial">Commercial</option>
@@ -1342,7 +1342,7 @@ const Property = () => {
                                     placeholder="e.g. 12000"
                                     required
                                     disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                                    className="w-full rounded-xs border border-gray-300 bg-white p-3 text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
                             </div>
 
@@ -1368,7 +1368,7 @@ const Property = () => {
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="Tell tenants about the unit, space, layout, natural light, etc."
                                     disabled={submitting}
-                                    className="w-full rounded-xl border border-gray-300 bg-white p-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                                    className="w-full rounded-xs border border-gray-300 bg-white p-3 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                 />
                             </div>
 
@@ -1417,13 +1417,13 @@ const Property = () => {
                                         }}
                                         placeholder="Add custom facility (e.g. Geyser, Swimming pool)..."
                                         disabled={submitting || facilities.length >= 15}
-                                        className="flex-1 rounded-xl border border-gray-300 bg-white p-2.5 text-xs text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
+                                        className="flex-1 rounded-xs border border-gray-300 bg-white p-2.5 text-xs text-gray-900 outline-none placeholder:text-gray-400 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100 disabled:opacity-60 dark:border-stone-800 dark:bg-[#262626] dark:text-white dark:placeholder:text-gray-500 dark:focus:ring-yellow-400/20"
                                     />
                                     <button
                                         type="button"
                                         onClick={handleAddCustomFacility}
                                         disabled={submitting || !customFacility.trim() || facilities.length >= 15}
-                                        className="rounded-xl border border-yellow-400 bg-yellow-300 px-4 py-2 text-xs font-semibold text-black transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="rounded-xs border border-yellow-400 bg-yellow-300 px-4 py-2 text-xs font-semibold text-black transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         Add
                                     </button>
@@ -1493,7 +1493,7 @@ const Property = () => {
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="tenant-details-title"
-                        className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b]"
+                        className="flex max-h-[90dvh] w-full max-w-3xl flex-col overflow-hidden rounded-xs border border-gray-200 bg-white shadow-2xl dark:border-stone-800 dark:bg-[#1b1b1b]"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="shrink-0 flex items-start justify-between gap-3 border-b border-gray-100 p-5 dark:border-stone-800 sm:p-7">
@@ -1565,7 +1565,7 @@ const Property = () => {
                         aria-modal="true"
                         aria-labelledby="confirm-delete-title"
                         aria-describedby="confirm-delete-message"
-                        className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-stone-700 dark:bg-[#1b1b1b]"
+                        className="w-full max-w-md rounded-xs border border-gray-200 bg-white p-6 shadow-2xl dark:border-stone-700 dark:bg-[#1b1b1b]"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="mb-4 flex items-start gap-3">

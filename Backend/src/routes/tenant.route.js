@@ -18,6 +18,7 @@ import {
   getMyMoveOutRequest,
   getPropertyMoveOutRequests,
   approveMoveOutRequest,
+  rejectMoveOutRequest,
 } from "../controllers/tenant.controller.js";
 import { uploadImage } from "../config/multer.js";
 import { protect } from "../utils/protect.js";
@@ -49,6 +50,12 @@ router.patch(
   "/:propertyId/move-out-requests/:tenantId/approve",
   protect,
   approveMoveOutRequest,
+);
+
+router.patch(
+  "/:propertyId/move-out-requests/:tenantId/reject",
+  protect,
+  rejectMoveOutRequest,
 );
 
 router.get("/:propertyId/tenants/:tenantId", protect, getOneTenant);

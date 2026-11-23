@@ -186,6 +186,7 @@ export const sendTenancyNotificationEmails = async ({
   expiresAt,
   reviewedAt,
   bills = [],
+  reason,
 }) => {
   try {
     const date = (value) =>
@@ -223,8 +224,17 @@ export const sendTenancyNotificationEmails = async ({
         subject: "RentGuard - Move-out Request Rejected",
         heading: "Move-out Request Rejected",
         tenantMessage:
-          "Your move-out request was rejected because some bills are unpaid or pending. Please clear your outstanding bills before submitting another request. You may submit a new request immediately.",
-        ownerMessage: `The move-out request for ${escapeHtml(tenantName)} was rejected because unpaid or pending bills were found.`,
+          reason !== undefined && reason !== null
+            ? typeof reason === "string" && reason.trim()
+              ? `Your move-out request was rejected by the owner. Reason: ${escapeHtml(reason.trim())}`
+              : "Your move-out request was rejected by the owner."
+            : "Your move-out request was rejected because some bills are unpaid or pending. Please clear your outstanding bills before submitting another request. You may submit a new request immediately.",
+        ownerMessage:
+          reason !== undefined && reason !== null
+            ? typeof reason === "string" && reason.trim()
+              ? `You rejected the move-out request for ${escapeHtml(tenantName)}. Reason: ${escapeHtml(reason.trim())}`
+              : `You rejected the move-out request for ${escapeHtml(tenantName)}.`
+            : `The move-out request for ${escapeHtml(tenantName)} was rejected because unpaid or pending bills were found.`,
       },
     };
 
