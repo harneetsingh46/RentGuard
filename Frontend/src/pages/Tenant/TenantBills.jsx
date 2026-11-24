@@ -1,35 +1,19 @@
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import apiClient from "../../ApiClient/interceptor";
-
-
-const loadRazorpayScript = () => {
-  return new Promise((resolve) => {
-    if (window.Razorpay) {
-      resolve(true);
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-
-    document.body.appendChild(script);
-  });
-};
+import notify from "../../utils/notify";
 
 const TenantBills = () => {
-  const [paying, setPaying] = useState(false);
+  const navigate = useNavigate();
   const [bills, setBills] = useState([]);
   const [selectedBills, setSelectedBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [createdOrder, setCreatedOrder] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
   const [payments, setPayments] = useState([]);
   const [receiptPayment, setReceiptPayment] = useState(null);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
@@ -68,28 +52,24 @@ const TenantBills = () => {
     }
   };
 
-  // Fetch existing pending orders
-  const fetchPendingOrder = async () => {
+  // Fetch tenant's orders
+  const fetchOrders = async () => {
     try {
+      setLoadingOrders(true);
       const { data } = await apiClient.get("/order/my-orders");
-
-      const orders = data.data || [];
-
-      const pendingOrder = orders.find(
-        (order) =>
-          order.status === "pending" &&
-          new Date(order.expiresAt).getTime() > Date.now()
-      );
-
-      setCreatedOrder(pendingOrder || null);
+      setOrders(data.data || []);
+      return data.data || [];
     } catch (err) {
       console.error("Unable to fetch existing orders:", err);
+      return [];
+    } finally {
+      setLoadingOrders(false);
     }
   };
 
   useEffect(() => {
     fetchBills();
-    fetchPendingOrder();
+    fetchOrders();
     fetchPayments();
   }, []);
 
@@ -204,7 +184,6 @@ const TenantBills = () => {
 
     setError("");
     setSuccess("");
-    setCreatedOrder(null);
   };
 
   // Select all bills
@@ -217,13 +196,12 @@ const TenantBills = () => {
 
     setError("");
     setSuccess("");
-    setCreatedOrder(null);
   };
 
   // Create combined Order
   const handleCreateOrder = async () => {
     if (selectedBills.length === 0) {
-      setError("Please select at least one bill.");
+      notify.error("Please select at least one bill.");
       return;
     }
 
@@ -231,191 +209,20 @@ const TenantBills = () => {
       setSubmitting(true);
       setError("");
       setSuccess("");
-      setCreatedOrder(null);
 
       const { data } = await apiClient.post("/order/create", {
         billIds: selectedBills,
       });
 
-      setCreatedOrder(data.data);
-      setSuccess("Your Order has been created successfully!");
       setSelectedBills([]);
-
-      // Refresh bills because selected bills are now reserved
-      await fetchBills();
-
+      notify.success("Order created successfully.");
+      navigate(`/tenant/pay/${data.data._id}`);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Unable to create order."
-      );
+      const errMsg = err.response?.data?.message || "Unable to create order.";
+      setError(errMsg);
+      notify.error(errMsg);
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handlePayment = async () => {
-    if (!createdOrder?._id || paying) return;
-
-    try {
-      setPaying(true);
-      setError("");
-      setSuccess("");
-
-      // Load Razorpay Checkout
-      const scriptLoaded = await loadRazorpayScript();
-
-      if (!scriptLoaded) {
-        throw new Error("Unable to load Razorpay. Please try again.");
-      }
-
-      // Create Razorpay order through backend
-      const { data } = await apiClient.post(
-        `/payment/${createdOrder._id}/order`
-      );
-
-      const paymentOrder = data.data;
-
-      if (!paymentOrder?.orderId) {
-        throw new Error("Unable to create payment order.");
-      }
-
-
-      let dismissalHandled = false;
-      let paymentVerified = false;
-
-      const handleCheckoutDismissal = async () => {
-        if (dismissalHandled || paymentVerified) return;
-
-        dismissalHandled = true;
-        setPaying(false);
-
-        try {
-          const { data } = await apiClient.post(
-            `/order/${createdOrder._id}/checkout-dismissed`
-          );
-
-          const result = data.data;
-
-          if (result?.status === "cancelled") {
-            setCreatedOrder(null);
-            setSelectedBills([]);
-            setSuccess(
-              "Your order was cancelled after two checkout dismissals. You can select your bills and create a new order."
-            );
-          } else if (result?.status === "retry_available") {
-            setSuccess(
-              "Checkout closed. You have one more attempt to complete your payment."
-            );
-          } else if (result?.status === "paid") {
-            setSuccess("Your payment has already been completed.");
-            setCreatedOrder((previous) =>
-              previous ? { ...previous, status: "paid" } : previous
-            );
-          }
-
-          await Promise.all([fetchBills(), fetchPendingOrder(), fetchPayments()]);
-        } catch (err) {
-          setError(
-            err.response?.data?.message ||
-            "Unable to confirm checkout status. Please refresh before trying again."
-          );
-
-          await Promise.all([fetchBills(), fetchPendingOrder(), fetchPayments()]);
-        }
-      };
-
-
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: paymentOrder.amount,
-        currency: paymentOrder.currency,
-        name: "RentGuard",
-        description: "Rent and Bill Payment",
-        order_id: paymentOrder.orderId,
-
-        notes: {
-          rentGuardOrderId: createdOrder._id,
-        },
-
-        theme: {
-          color: "#f9c83d",
-        },
-
-        handler: async (response) => {
-          try {
-            // Verify payment through backend only once
-            await apiClient.post("/payment/verify", {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-            });
-
-            // Prevent checkout dismissal from being counted
-            paymentVerified = true;
-
-            setCreatedOrder((previous) =>
-              previous ? { ...previous, status: "paid" } : previous
-            );
-
-            setSuccess("Payment completed successfully!");
-            setSelectedBills([]);
-
-            // Refresh transactions and locate the payment just completed
-            const [, refreshedPayments] = await Promise.all([
-              fetchBills(),
-              fetchPayments(),
-            ]);
-
-            const completedPayment = refreshedPayments.find(
-              (payment) =>
-                payment.razorpayPaymentId === response.razorpay_payment_id &&
-                payment.status === "paid"
-            );
-
-            if (completedPayment) {
-              setReceiptPayment(completedPayment);
-              setReceiptError("");
-            } else {
-              setReceiptError(
-                "Payment succeeded, but the receipt could not be prepared. You can download it from Recent Transactions."
-              );
-            }
-          } catch (err) {
-            setError(
-              err.response?.data?.message ||
-              "Payment verification failed. Please contact support before trying again."
-            );
-          } finally {
-            setPaying(false);
-          }
-        },
-
-
-        modal: {
-          ondismiss: handleCheckoutDismissal,
-        },
-
-      };
-
-      const razorpay = new window.Razorpay(options);
-
-      razorpay.on("payment.failed", (response) => {
-        setError(
-          response.error?.description ||
-          "Payment failed. Please try again."
-        );
-        setPaying(false);
-      });
-
-      razorpay.open();
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        err.message ||
-        "Unable to start payment."
-      );
-
-      setPaying(false);
     }
   };
 
@@ -434,7 +241,7 @@ const TenantBills = () => {
           </p>
         </div>
 
-        {/* Bills and transaction history tabs */}
+        {/* Bills, orders, and transaction history tabs */}
         <div className="mb-6 flex gap-2 border-b border-neutral-200 dark:border-neutral-800" role="tablist" aria-label="Bill sections">
           <button
             type="button"
@@ -447,6 +254,21 @@ const TenantBills = () => {
               }`}
           >
             Pay Bills
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "orders"}
+            onClick={() => setActiveTab("orders")}
+            className={`border-b-2 px-5 py-3 text-sm font-semibold transition ${activeTab === "orders"
+              ? "border-[#f9c83d] text-neutral-900 dark:text-white"
+              : "border-transparent text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+              }`}
+          >
+            Order History
+            <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-xs dark:bg-neutral-800">
+              {orders.length}
+            </span>
           </button>
           <button
             type="button"
@@ -465,61 +287,96 @@ const TenantBills = () => {
           </button>
         </div>
 
-        {/* Created Order Confirmation */}
-        {activeTab === "bills" && createdOrder && (
-          <section className="mt-6 rounded-xs border border-green-200 bg-white p-6 shadow-sm dark:border-green-900 dark:bg-[#171717] sm:p-7">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-green-700 dark:text-green-400">
-                  Order Created
-                </p>
+        {/* Order History tab content */}
+        {activeTab === "orders" && (
+          <section className="mb-6 overflow-hidden rounded-xs border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-[#171717]">
+            <div className="border-b border-neutral-100 p-6 dark:border-neutral-800 sm:p-7">
+              <h2 className="text-xl font-semibold tracking-tight">
+                Order History
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                Track your combined payment orders and resume pending checkouts.
+              </p>
+            </div>
 
-                <h2 className="mt-2 text-xl font-semibold">
-                  Your Order is ready
-                </h2>
-
-                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                  Order ID: {createdOrder._id}
-                </p>
+            {loadingOrders ? (
+              <div className="px-6 py-10 text-center text-sm text-neutral-500 dark:text-neutral-400">
+                Loading orders...
               </div>
+            ) : orders.length === 0 ? (
+              <div className="px-6 py-10 text-center text-sm text-neutral-500 dark:text-neutral-400">
+                No orders yet. When you create an order to pay bills, it will appear here.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[650px] text-left">
+                  <thead className="bg-[#faf9f6] dark:bg-[#1d1d1d]">
+                    <tr className="text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                      <th className="px-6 py-4 font-medium">Order ID</th>
+                      <th className="px-6 py-4 font-medium">Date</th>
+                      <th className="px-6 py-4 font-medium">Bills</th>
+                      <th className="px-6 py-4 font-medium">Amount</th>
+                      <th className="px-6 py-4 font-medium">Status</th>
+                      <th className="px-6 py-4 text-right font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((order) => {
+                      const isPending =
+                        order.status === "pending" &&
+                        (!order.expiresAt || new Date(order.expiresAt).getTime() > Date.now());
 
-              <span className="w-fit rounded-xs bg-amber-50 px-4 py-2 text-xs font-semibold capitalize text-amber-700 dark:bg-amber-400/10 dark:text-amber-400">
-                {createdOrder.status}
-              </span>
-            </div>
-
-            <div className="mt-6 border-t border-neutral-100 pt-5 dark:border-neutral-800">
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                Total Order Amount
-              </p>
-
-              <p className="mt-2 text-3xl font-semibold">
-                {formatCurrency(createdOrder.totalAmount)}
-              </p>
-
-              {createdOrder.status === "paid" ? (
-                <p className="mt-4 text-sm font-semibold text-green-600 dark:text-green-400">
-                  Payment completed successfully.
-                </p>
-              ) : (
-                <>
-                  <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                    Your selected bills are reserved for this order. Complete payment
-                    to mark them as paid.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={handlePayment}
-                    disabled={paying}
-                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-xs bg-[#f9c83d] px-7 py-3 text-sm font-semibold text-black transition hover:bg-[#edbb2e] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {paying ? "Processing Payment..." : "Pay Now"}
-                    {!paying && <span aria-hidden="true">→</span>}
-                  </button>
-                </>
-              )}
-            </div>
+                      return (
+                        <tr
+                          key={order._id}
+                          className="border-t border-neutral-100 dark:border-neutral-800"
+                        >
+                          <td className="px-6 py-4">
+                            <span className="font-mono text-xs">{order._id}</span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-neutral-500 dark:text-neutral-400">
+                            {formatDate(order.createdAt)}
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            {order.items?.length || 0} bill(s)
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold">
+                            {formatCurrency(order.totalAmount)}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-flex rounded-xs px-3 py-1.5 text-xs font-medium capitalize ${
+                                order.status === "paid"
+                                  ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
+                                  : order.status === "pending"
+                                  ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
+                                  : order.status === "cancelled"
+                                  ? "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                                  : "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400"
+                              }`}
+                            >
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {isPending ? (
+                              <Link
+                                to={`/tenant/pay/${order._id}`}
+                                className="inline-flex items-center gap-1 rounded-xs bg-[#f9c83d] px-3.5 py-1.5 text-xs font-semibold text-black transition hover:bg-[#edbb2e]"
+                              >
+                                Pay Now →
+                              </Link>
+                            ) : (
+                              <span className="text-xs text-neutral-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
 

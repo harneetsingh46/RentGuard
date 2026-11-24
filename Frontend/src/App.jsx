@@ -19,6 +19,7 @@ import Property from "../src/pages/Owner/Property";
 import Tenant from "../src/pages/Owner/Tenant";
 import Bill from "../src/pages/Owner/Bill";
 import TenantBills from "./pages/Tenant/TenantBills";
+import TenantPayment from "./pages/Tenant/TenantPayment";
 import Documents from "../src/pages/Owner/Documents";
 import OwnerProfile from "../src/pages/Owner/OwnerProfile";
 import TenantDocument from "./pages/Tenant/TenantDocument";
@@ -172,6 +173,10 @@ const router = createBrowserRouter([
           {
             path: "/tenant/bills",
             element: <TenantBills />,
+          },
+          {
+            path: "/tenant/pay/:orderId",
+            element: <TenantPayment />,
           },
           {
             path: "/tenant/documents",

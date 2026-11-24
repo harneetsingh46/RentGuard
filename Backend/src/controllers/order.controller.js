@@ -215,6 +215,54 @@ export const getMyOrders = async (req, res) => {
 };
 
 
+export const getOrderById = async (req, res) => {
+  try {
+    if (req.authRole !== "tenant") {
+      return res.status(403).json({
+        success: false,
+        message: "Tenant access required.",
+      });
+    }
+
+    const { orderId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID.",
+      });
+    }
+
+    const order = await Order.findOne({
+      _id: orderId,
+      tenant: req.user._id,
+    })
+      .populate("items.bill")
+      .populate("property", "propertyName address")
+      .populate("unit", "unitName");
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: order,
+    });
+  } catch (error) {
+    console.error("Get order by ID error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to fetch order.",
+    });
+  }
+};
+
+
 export const handleCheckoutDismissal = async (req, res) => {
   let session;
 
