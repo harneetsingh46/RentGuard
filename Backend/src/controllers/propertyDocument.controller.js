@@ -76,11 +76,14 @@ const uploadDocumentFile = async (req, { propertyId, tenantId = null }) => {
     type: "authenticated",
   });
 
+  const uploadedByModel = req.authRole === "tenant" ? "Tenant" : "User";
+
   try {
     const document = await PropertyDocument.create({
       property: propertyId,
       tenant: tenantId,
       uploadedBy: req.user._id,
+      uploadedByModel,
       documentName: documentName.trim(),
       documentType,
       fileUrl: uploadedFile.secure_url,
@@ -210,7 +213,7 @@ export const getPropertyDocuments = async (req, res) => {
     const documents = await PropertyDocument.find({
       property: property._id,
     })
-      .populate("uploadedBy", "username email role")
+      .populate("uploadedBy", "username fullName email role")
       .populate("tenant", "fullName")
       .select("-fileUrl -cloudinaryPublicId")
       .sort({ createdAt: -1 });
@@ -231,14 +234,14 @@ export const getPropertyDocuments = async (req, res) => {
  */
 export const uploadMyTenantDocument = async (req, res) => {
   try {
-    if (req.user.role !== "tenant") {
+    if (req.authRole !== "tenant") {
       return res.status(403).json({
         message: "Only tenants can upload tenancy documents.",
       });
     }
 
     const tenant = await Tenant.findOne({
-      user: req.user._id,
+      _id: req.user._id,
       isActive: true,
     });
 
@@ -297,7 +300,7 @@ export const getMyTenantDocuments = async (req, res) => {
       tenant: tenant._id,
       property: tenant.property._id,
     })
-      .populate("uploadedBy", "username email role")
+      .populate("uploadedBy", "username fullName email role")
       .select("-fileUrl -cloudinaryPublicId")
       .sort({ createdAt: -1 });
 
@@ -607,7 +610,7 @@ export const getTenantDocumentsForOwner = async (req, res) => {
     const tenant = await getOwnerTenant(req.user._id, req.params.tenantId);
 
     const documents = await PropertyDocument.find({ tenant: tenant._id })
-      .populate("uploadedBy", "username email role")
+      .populate("uploadedBy", "username fullName email role")
       .select("-fileUrl -cloudinaryPublicId")
       .sort({ createdAt: -1 });
 

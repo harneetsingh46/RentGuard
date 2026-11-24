@@ -1,6 +1,7 @@
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import apiClient from "../../ApiClient/interceptor";
+import { notify } from "../../utils/notify";
 
 const TenantDocument = () => {
   const [documents, setDocuments] = useState([]);
@@ -9,6 +10,13 @@ const TenantDocument = () => {
   const [openingDocumentId, setOpeningDocumentId] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [uploadForm, setUploadForm] = useState({
+    documentName: "",
+    documentType: "other",
+  });
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Fetch documents uploaded/shared by the owner
   const loadDocuments = useCallback(async () => {
@@ -144,6 +152,82 @@ const TenantDocument = () => {
     }
   };
 
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) {
+      setFile(null);
+      return;
+    }
+
+    const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
+    if (selectedFile.size > MAX_SIZE) {
+      notify.error("File size cannot exceed 5 MB.");
+      e.target.value = "";
+      setFile(null);
+      return;
+    }
+
+    const allowedExtensions = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
+    const fileName = selectedFile.name.toLowerCase();
+    const isAllowed = allowedExtensions.some((ext) => fileName.endsWith(ext));
+    if (!isAllowed) {
+      notify.error("Only .pdf, .jpg, .jpeg, .png, and .webp files are allowed.");
+      e.target.value = "";
+      setFile(null);
+      return;
+    }
+
+    setFile(selectedFile);
+  };
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!uploadForm.documentName.trim()) {
+      notify.error("Document name is required.");
+      return;
+    }
+
+    if (uploadForm.documentName.trim().length > 100) {
+      notify.error("Document name cannot exceed 100 characters.");
+      return;
+    }
+
+    if (!file) {
+      notify.error("Please select a document file.");
+      return;
+    }
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("documentName", uploadForm.documentName.trim());
+      formData.append("documentType", uploadForm.documentType);
+      formData.append("document", file);
+
+      await apiClient.post("/document/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      notify.success("Document uploaded successfully.");
+      setUploadForm({
+        documentName: "",
+        documentType: "other",
+      });
+      setFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      await loadDocuments();
+    } catch (err) {
+      notify.error(err.response?.data?.message || "Failed to upload document.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const leaseCount = documents.filter(
     (document) => getDocumentCategory(document) === "Lease"
   ).length;
@@ -213,6 +297,80 @@ const TenantDocument = () => {
               Agreements and lease-related documents
             </p>
           </div>
+        </section>
+
+        {/* Upload document */}
+        <section className="mb-6 rounded-xs border border-neutral-200 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-[#171717]">
+          <h2 className="text-xl font-semibold tracking-tight">Upload Document</h2>
+          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+            Upload lease agreements, identification, receipts, or other tenancy documents.
+          </p>
+
+          <form onSubmit={handleUploadSubmit} className="mt-5 space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Document Name */}
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
+                  Document Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={100}
+                  placeholder="e.g. Identity Proof / Rent Receipt"
+                  value={uploadForm.documentName}
+                  onChange={(e) =>
+                    setUploadForm((prev) => ({ ...prev, documentName: e.target.value }))
+                  }
+                  className="mt-1.5 block w-full border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-yellow-400 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
+                />
+              </div>
+
+              {/* Document Type */}
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
+                  Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={uploadForm.documentType}
+                  onChange={(e) =>
+                    setUploadForm((prev) => ({ ...prev, documentType: e.target.value }))
+                  }
+                  className="mt-1.5 block w-full border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-yellow-400 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
+                >
+                  <option value="agreement">Agreement</option>
+                  <option value="ownership">Ownership</option>
+                  <option value="tax">Tax</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              {/* File Input */}
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
+                  File (.pdf, .jpg, .jpeg, .png, .webp, max 5 MB) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  required
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  onChange={handleFileChange}
+                  className="mt-1.5 block w-full text-xs text-neutral-600 file:mr-3 file:border-0 file:bg-neutral-100 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-neutral-800 hover:file:bg-neutral-200 dark:text-neutral-300 dark:file:bg-neutral-800 dark:file:text-neutral-200 dark:hover:file:bg-neutral-700"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end pt-2">
+              <button
+                type="submit"
+                disabled={uploading}
+                className="inline-flex items-center justify-center rounded-xs bg-[#f9c83d] px-5 py-2.5 text-xs font-bold text-black transition hover:bg-[#edbb2f] disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
+              >
+                {uploading ? "Uploading..." : "Upload Document"}
+              </button>
+            </div>
+          </form>
         </section>
 
         {/* Document List */}
@@ -294,8 +452,19 @@ const TenantDocument = () => {
                         className="border-t border-neutral-100 transition hover:bg-neutral-50 dark:border-neutral-800 dark:hover:bg-[#1d1d1d]"
                       >
                         <td className="px-6 py-5 font-medium">
-                          <div>
-                            {document.documentName || "Untitled document"}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span>{document.documentName || "Untitled document"}</span>
+                            <span
+                              className={`inline-flex items-center rounded-xs px-2 py-0.5 text-[11px] font-medium ${
+                                document.uploadedByModel === "Tenant"
+                                  ? "border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800/50 dark:bg-blue-400/10 dark:text-blue-400"
+                                  : "border border-stone-200 bg-stone-100 text-stone-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
+                              }`}
+                            >
+                              {document.uploadedByModel === "Tenant"
+                                ? "Uploaded by you"
+                                : "Shared by owner"}
+                            </span>
                           </div>
 
                           {document.originalFileName && (
@@ -310,10 +479,11 @@ const TenantDocument = () => {
                         </td>
 
                         <td className="px-6 py-5 text-sm text-neutral-500 dark:text-neutral-400">
-                          {document.uploadedBy?.role === "owner"
-                            ? "Property Owner"
-                            : document.uploadedBy?.username ||
-                              "Property Team"}
+                          {document.uploadedByModel === "Tenant"
+                            ? (document.uploadedBy?.fullName || "You")
+                            : (document.uploadedBy?.role === "owner"
+                                ? "Property Owner"
+                                : document.uploadedBy?.username || "Property Owner")}
                         </td>
 
                         <td className="px-6 py-5 text-sm text-neutral-500 dark:text-neutral-400">

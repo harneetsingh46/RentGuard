@@ -19,11 +19,17 @@ const propertyDocumentSchema = new mongoose.Schema(
       index: true,
     },
 
-    // User account that uploaded the document
+    // User or Tenant account that uploaded the document
     uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      refPath: "uploadedByModel",
       required: true,
+    },
+
+    uploadedByModel: {
+      type: String,
+      enum: ["User", "Tenant"],
+      default: "User",
     },
 
     // Name displayed in the application
