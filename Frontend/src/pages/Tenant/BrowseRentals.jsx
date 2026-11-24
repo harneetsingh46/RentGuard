@@ -119,16 +119,44 @@ const BrowseRentals = () => {
     loadData();
   }, []);
 
-  // Filter listings by name or address
+  // Filter listings by property name, address, unit name, unit type, description, or facilities
   const filteredListings = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return listings;
-    return listings.filter(
-      (p) =>
-        (p.propertyName || "").toLowerCase().includes(q) ||
-        (p.address || "").toLowerCase().includes(q)
-    );
+    return listings
+      .map((p) => {
+        const propNameMatches = (p.propertyName || "").toLowerCase().includes(q);
+        const addressMatches = (p.address || "").toLowerCase().includes(q);
+
+        const matchingUnits = (p.availableUnits || []).filter((u) => {
+          if (propNameMatches || addressMatches) return true;
+          const unitNameMatches = (u.unitName || "").toLowerCase().includes(q);
+          const unitTypeMatches = (u.unitType || "").toLowerCase().includes(q);
+          const descMatches = (u.description || "").toLowerCase().includes(q);
+          const facilityMatches = (u.facilities || []).some((f) =>
+            (f || "").toLowerCase().includes(q)
+          );
+          return (
+            unitNameMatches ||
+            unitTypeMatches ||
+            descMatches ||
+            facilityMatches
+          );
+        });
+
+        if (matchingUnits.length === 0) return null;
+        return { ...p, availableUnits: matchingUnits };
+      })
+      .filter(Boolean);
   }, [listings, searchQuery]);
+
+  const unitCards = useMemo(
+    () =>
+      filteredListings.flatMap((prop) =>
+        (prop.availableUnits || []).map((u) => ({ prop, u }))
+      ),
+    [filteredListings]
+  );
 
   // Open apply modal for a unit
   const openApplyModal = (property, unit) => {
@@ -364,7 +392,7 @@ const BrowseRentals = () => {
                 : "border-transparent text-gray-500 hover:text-black dark:text-neutral-400 dark:hover:text-white"
                 }`}
             >
-              Available Properties ({listings.length})
+              Available Units ({unitCards.length})
             </button>
             <button
               type="button"
@@ -398,7 +426,7 @@ const BrowseRentals = () => {
               <div className="py-12 text-center text-sm text-gray-500">
                 Loading available rental properties...
               </div>
-            ) : filteredListings.length === 0 ? (
+            ) : unitCards.length === 0 ? (
               <div className="rounded-xs border border-stone-200 bg-white p-10 text-center dark:border-neutral-800 dark:bg-neutral-900">
                 <Home className="mx-auto h-10 w-10 text-stone-400" />
                 <h3 className="mt-3 text-base font-semibold">No Available Listings Found</h3>
@@ -407,157 +435,139 @@ const BrowseRentals = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                {filteredListings.map((prop) => (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {unitCards.map(({ prop, u }) => (
                   <div
-                    key={prop._id}
-                    className="flex flex-col justify-between rounded-xs border border-stone-200 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-[#171717]"
+                    key={u._id}
+                    className="flex flex-col overflow-hidden rounded-xs border border-stone-200 bg-white shadow-sm transition hover:shadow-md dark:border-neutral-800 dark:bg-[#171717]"
                   >
-                    <div>
+                    {/* ImageSlider full width, h-48 */}
+                    <div className="w-full h-48 shrink-0 bg-gray-100 dark:bg-neutral-800">
+                      <ImageSlider
+                        images={
+                          Array.isArray(u.images) && u.images.length > 0
+                            ? u.images
+                            : u.image?.url
+                              ? [u.image]
+                              : []
+                        }
+                        className="w-full h-48"
+                        fitClass="object-cover"
+                        onImageClick={(index) =>
+                          setLightbox({
+                            images:
+                              Array.isArray(u.images) && u.images.length > 0
+                                ? u.images
+                                : u.image?.url
+                                  ? [u.image]
+                                  : [],
+                            initialIndex: index,
+                          })
+                        }
+                      />
+                    </div>
+
+                    {/* Card Content */}
+                    <div className="flex flex-1 flex-col p-4 sm:p-5">
+                      {/* Header row: unit name and type on left, rent on right */}
                       <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                            {prop.propertyName}
-                          </h2>
-                          <p className="mt-1 flex items-center gap-1.5 text-xs text-stone-500 dark:text-[#A5A5A5]">
-                            <MapPin className="h-3.5 w-3.5 shrink-0" />
-                            {prop.address}
-                          </p>
-                          <p className="mt-1 text-xs text-stone-500 dark:text-[#A5A5A5]">
-                            Owner: <span className="font-semibold text-stone-700 dark:text-stone-300">
-                              {prop.owner?.username || "Not available"}
-                            </span>
+                        <div className="min-w-0">
+                          <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">
+                            {u.unitName}
+                          </h3>
+                          <p className="mt-0.5 text-xs capitalize text-stone-500 dark:text-neutral-400">
+                            {u.unitType || "Residential"}
                           </p>
                         </div>
-                        <span className="rounded-xs bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800">
-                          {prop.availableCount} {prop.availableCount === 1 ? "unit" : "units"} available
-                        </span>
+                        <div className="text-right shrink-0">
+                          <p className="text-base font-semibold text-gray-900 dark:text-white">
+                            ₹{Number(u.rent || 0).toLocaleString("en-IN")}
+                          </p>
+                          <span className="text-xs font-normal text-stone-500 dark:text-neutral-400">
+                            {" "}/ month
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Available units list */}
-                      <div className="mt-4 border-t border-stone-100 pt-3 dark:border-neutral-800">
-                        <p className="text-xs font-medium uppercase tracking-wider text-stone-400">
-                          Available Units
+                      {/* Property, Address, Owner */}
+                      <div className="mt-3 space-y-1 text-xs text-stone-500 dark:text-[#A5A5A5]">
+                        <p className="font-medium text-stone-800 dark:text-stone-200">
+                          {prop.propertyName}
                         </p>
-                        <div className="mt-2 space-y-2">
-                          {prop.availableUnits?.map((u) => (
+                        <p className="flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          <span>{prop.address}</span>
+                        </p>
+                        <p>
+                          Owner:{" "}
+                          <span className="font-semibold text-stone-700 dark:text-stone-300">
+                            {prop.owner?.username || "Not available"}
+                          </span>
+                        </p>
+                      </div>
 
-                            <div
-                              key={u._id}
-                              className="overflow-hidden rounded border border-stone-100 bg-[#fbfaf8] dark:border-neutral-800 dark:bg-neutral-900/60"
+                      {/* Description */}
+                      {u.description && (
+                        <p className="mt-3 line-clamp-3 text-xs text-stone-600 dark:text-stone-300">
+                          {u.description}
+                        </p>
+                      )}
+
+                      {/* Facility chips */}
+                      {Array.isArray(u.facilities) && u.facilities.length > 0 && (
+                        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                          {u.facilities.slice(0, 4).map((facility, fIdx) => (
+                            <span
+                              key={fIdx}
+                              className="inline-flex items-center rounded-xs border border-stone-200 bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-stone-300"
                             >
-                              <div className="flex flex-col sm:flex-row">
-                                {/* Unit Picture */}
-                                <div className="w-full sm:w-48 sm:h-44 shrink-0 bg-gray-100 dark:bg-neutral-800">
-                                  <ImageSlider
-                                    images={
-                                      Array.isArray(u.images) && u.images.length > 0
-                                        ? u.images
-                                        : u.image?.url
-                                          ? [u.image]
-                                          : []
-                                    }
-                                    className="w-full h-44"
-                                    fitClass="object-cover"
-                                    onImageClick={(index) =>
-                                      setLightbox({
-                                        images:
-                                          Array.isArray(u.images) && u.images.length > 0
-                                            ? u.images
-                                            : u.image?.url
-                                              ? [u.image]
-                                              : [],
-                                        initialIndex: index,
-                                      })
-                                    }
-                                  />
-                                </div>
-
-                                {/* Unit Details */}
-                                <div className="flex flex-1 flex-col justify-between gap-3 p-3 sm:flex-row sm:items-center">
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                                      {u.unitName}
-                                    </p>
-
-                                    <p className="mt-1 text-xs capitalize text-stone-500">
-                                      {u.unitType || "Residential"}
-                                    </p>
-
-                                    <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-                                      ₹{Number(u.rent || 0).toLocaleString("en-IN")}
-                                      <span className="text-xs font-normal text-stone-500">
-                                        {" "}/ month
-                                      </span>
-                                    </p>
-
-                                    {/* Description */}
-                                    {u.description && (
-                                      <p className="mt-2 line-clamp-3 text-xs text-stone-600 dark:text-stone-300">
-                                        {u.description}
-                                      </p>
-                                    )}
-
-                                    {/* Facilities */}
-                                    {Array.isArray(u.facilities) && u.facilities.length > 0 && (
-                                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                        {u.facilities.slice(0, 4).map((facility, fIdx) => (
-                                          <span
-                                            key={fIdx}
-                                            className="inline-flex items-center rounded-xs border border-stone-200 bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-stone-300"
-                                          >
-                                            {facility}
-                                          </span>
-                                        ))}
-                                        {u.facilities.length > 4 && (
-                                          <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">
-                                            +{u.facilities.length - 4} more
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {(() => {
-                                    const existingApp = myApplications.find(
-                                      (a) =>
-                                        (a.unit?._id === u._id || a.unit === u._id) &&
-                                        ["Pending", "Approved"].includes(a.status)
-                                    );
-
-                                    const isBlockedByCurrentUnit = Boolean(
-                                      currentUnit && moveOutStatus !== "pending"
-                                    );
-                                    const isDisabled = Boolean(existingApp || isBlockedByCurrentUnit);
-
-                                    const buttonLabel =
-                                      existingApp?.status === "Pending"
-                                        ? "Applied"
-                                        : existingApp?.status === "Approved"
-                                          ? "Approved"
-                                          : "Apply to Rent";
-
-                                    return (
-                                      <button
-                                        type="button"
-                                        disabled={isDisabled}
-                                        onClick={() => openApplyModal(prop, u)}
-                                        className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-xs px-3 py-2 text-xs font-semibold transition sm:self-center ${
-                                          isDisabled
-                                            ? "cursor-not-allowed bg-stone-200 text-stone-500 opacity-70 dark:bg-neutral-800 dark:text-neutral-400"
-                                            : "bg-yellow-300 text-black hover:bg-yellow-400"
-                                        }`}
-                                      >
-                                        {buttonLabel}
-                                      </button>
-                                    );
-                                  })()}
-                                </div>
-                              </div>
-                            </div>
-
+                              {facility}
+                            </span>
                           ))}
+                          {u.facilities.length > 4 && (
+                            <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">
+                              +{u.facilities.length - 4} more
+                            </span>
+                          )}
                         </div>
+                      )}
+
+                      {/* Apply button full width at bottom */}
+                      <div className="mt-auto pt-4">
+                        {(() => {
+                          const existingApp = myApplications.find(
+                            (a) =>
+                              (a.unit?._id === u._id || a.unit === u._id) &&
+                              ["Pending", "Approved"].includes(a.status)
+                          );
+
+                          const isBlockedByCurrentUnit = Boolean(
+                            currentUnit && moveOutStatus !== "pending"
+                          );
+                          const isDisabled = Boolean(existingApp || isBlockedByCurrentUnit);
+
+                          const buttonLabel =
+                            existingApp?.status === "Pending"
+                              ? "Applied"
+                              : existingApp?.status === "Approved"
+                                ? "Approved"
+                                : "Apply to Rent";
+
+                          return (
+                            <button
+                              type="button"
+                              disabled={isDisabled}
+                              onClick={() => openApplyModal(prop, u)}
+                              className={`w-full inline-flex items-center justify-center gap-1 rounded-xs px-3 py-2 text-xs font-semibold transition ${
+                                isDisabled
+                                  ? "cursor-not-allowed bg-stone-200 text-stone-500 opacity-70 dark:bg-neutral-800 dark:text-neutral-400"
+                                  : "bg-yellow-300 text-black hover:bg-yellow-400"
+                              }`}
+                            >
+                              {buttonLabel}
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
