@@ -64,18 +64,18 @@ const BrowseRentals = () => {
   };
 
   // Fetch my rental applications
-  const fetchMyApplications = async () => {
+  const fetchMyApplications = async (knownUnit = currentUnit) => {
     try {
       const res = await apiClient.get("/rental-request/my-requests");
       const apps = res.data.data || [];
       setMyApplications(apps);
 
-      // If there is an approved application waiting for confirmation, auto-open the confirmation modal
-      const pendingApproval = apps.find((a) => a.status === "Approved");
-      if (pendingApproval && !confirmModal.open) {
+      const approvedApps = apps.filter((a) => a.status === "Approved");
+      const isLocked = Boolean(knownUnit);
+      if (!isLocked && approvedApps.length === 1 && !confirmModal.open) {
         setConfirmModal({
           open: true,
-          request: pendingApproval,
+          request: approvedApps[0],
         });
       }
     } catch (err) {
@@ -91,22 +91,27 @@ const BrowseRentals = () => {
         apiClient.get("/tenant/me/move-out-request"),
       ]);
 
+      let unitObj = null;
       if (dashRes.status === "fulfilled") {
-        setCurrentUnit(dashRes.value.data.data?.unit || null);
+        unitObj = dashRes.value.data.data?.unit || null;
+        setCurrentUnit(unitObj);
       }
       if (moveOutRes.status === "fulfilled") {
         const raw = moveOutRes.value.data.data;
         const mo = raw?.moveOutRequest || raw;
         setMoveOutStatus(mo?.status || "none");
       }
+      return unitObj;
     } catch (err) {
       console.error("Error fetching tenant tenancy status:", err);
+      return null;
     }
   };
 
   const loadData = async () => {
     setLoading(true);
-    await Promise.all([fetchListings(), fetchMyApplications(), fetchTenantStatus()]);
+    const unitObj = await fetchTenantStatus();
+    await Promise.all([fetchListings(), fetchMyApplications(unitObj)]);
     setLoading(false);
   };
 
@@ -239,7 +244,10 @@ const BrowseRentals = () => {
     }
   };
 
-  const approvedOffer = myApplications.find((a) => a.status === "Approved");
+  const approvedOffers = useMemo(
+    () => myApplications.filter((a) => a.status === "Approved"),
+    [myApplications]
+  );
 
   return (
     <div className="min-h-screen bg-[#f7f5f0] p-4 text-[#171717] sm:p-8 dark:bg-[#101010] dark:text-[#F1F0ED]">
@@ -255,30 +263,60 @@ const BrowseRentals = () => {
         </div>
 
         {/* Approved Offer Banner */}
-        {approvedOffer && (
+        {approvedOffers.length > 0 && (
           <div className="mb-6 rounded-xs border-2 border-yellow-400 bg-yellow-50 p-4 shadow-md dark:border-yellow-500 dark:bg-yellow-950/40">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-3">
                 <FileCheck className="mt-0.5 h-6 w-6 text-yellow-600 dark:text-yellow-400 shrink-0" />
                 <div>
-                  <h3 className="text-base font-bold text-gray-900 dark:text-yellow-300">
-                    Action Required: Your Rental Application is Approved!
-                  </h3>
-                  <p className="text-xs text-gray-700 dark:text-gray-300 sm:text-sm">
-                    The owner approved your request for{" "}
-                    <span className="font-semibold">{approvedOffer.unit?.unitName}</span> at{" "}
-                    <span className="font-semibold">{approvedOffer.property?.propertyName}</span>. Confirm your lease to move in.
-                  </p>
+                  {approvedOffers.length > 1 ? (
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900 dark:text-yellow-300">
+                        You have {approvedOffers.length} lease offers awaiting confirmation
+                      </h3>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 sm:text-sm">
+                        Multiple property owners have approved your applications. Review and manage all offers from your dashboard.
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h3 className="text-base font-bold text-gray-900 dark:text-yellow-300">
+                        Action Required: Your Rental Application is Approved!
+                      </h3>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 sm:text-sm">
+                        The owner approved your request for{" "}
+                        <span className="font-semibold">{approvedOffers[0].unit?.unitName}</span> at{" "}
+                        <span className="font-semibold">{approvedOffers[0].property?.propertyName}</span>. Confirm your lease to move in.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setConfirmModal({ open: true, request: approvedOffer })}
-                  className="rounded-xs bg-yellow-300 px-4 py-2 text-xs font-bold text-black hover:bg-yellow-400 shadow"
-                >
-                  Confirm & Accept Lease
-                </button>
+              <div className="flex flex-col items-start gap-1 sm:items-end">
+                {approvedOffers.length > 1 ? (
+                  <Link
+                    to="/tenant/dashboard"
+                    className="rounded-xs bg-yellow-300 px-4 py-2 text-xs font-bold text-black hover:bg-yellow-400 shadow inline-flex items-center"
+                  >
+                    View Offers on Dashboard &rarr;
+                  </Link>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={Boolean(currentUnit) || processingConfirm}
+                      onClick={() => setConfirmModal({ open: true, request: approvedOffers[0] })}
+                      className="rounded-xs bg-yellow-300 px-4 py-2 text-xs font-bold text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500 disabled:opacity-70 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 shadow"
+                    >
+                      Confirm & Accept Lease
+                    </button>
+                    {currentUnit && (
+                      <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                        Available after your current owner approves your move-out.
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -870,15 +908,22 @@ const BrowseRentals = () => {
                 >
                   Decline Offer
                 </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmAcceptLease}
-                  disabled={processingConfirm}
-                  className="inline-flex items-center justify-center gap-2 rounded-xs bg-yellow-300 px-5 py-2.5 text-xs font-bold text-black hover:bg-yellow-400 disabled:opacity-50 shadow"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  {processingConfirm ? "Activating Tenancy..." : "Confirm & Accept Lease"}
-                </button>
+                <div className="flex flex-col items-end gap-1">
+                  <button
+                    type="button"
+                    onClick={handleConfirmAcceptLease}
+                    disabled={Boolean(currentUnit) || processingConfirm}
+                    className="inline-flex items-center justify-center gap-2 rounded-xs bg-yellow-300 px-5 py-2.5 text-xs font-bold text-black hover:bg-yellow-400 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500 disabled:opacity-70 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 shadow"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    {processingConfirm ? "Activating Tenancy..." : "Confirm & Accept Lease"}
+                  </button>
+                  {currentUnit && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                      Available after your current owner approves your move-out.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

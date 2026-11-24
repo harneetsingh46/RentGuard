@@ -24,9 +24,8 @@ const TenantDashboard = () => {
   const [moveOutModalOpen, setMoveOutModalOpen] = useState(false);
   const [moveOutDate, setMoveOutDate] = useState("");
   const [moveOutModalError, setMoveOutModalError] = useState("");
-  const [approvedOffer, setApprovedOffer] = useState(null);
   const [myApplications, setMyApplications] = useState([]);
-  const [confirmModal, setConfirmModal] = useState({ open: false, request: null });
+  const [confirmModal, setConfirmModal] = useState({ open: false, request: null, error: "" });
   const [processingConfirm, setProcessingConfirm] = useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -36,74 +35,72 @@ const TenantDashboard = () => {
   const [downloadingReceiptId, setDownloadingReceiptId] = useState(null);
 
   // Fetch dashboard information
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        setPaymentError("");
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      setPaymentError("");
 
-        const results = await Promise.allSettled([
-          apiClient.get("/tenant/dashboard"),
-          apiClient.get("/order/unpaid-bills"),
-          apiClient.get("/payment/my-payments"),
-          apiClient.get("/tenant/me/move-out-request"),
-          apiClient.get("/rental-request/my-requests"),
-        ]);
+      const results = await Promise.allSettled([
+        apiClient.get("/tenant/dashboard"),
+        apiClient.get("/order/unpaid-bills"),
+        apiClient.get("/payment/my-payments"),
+        apiClient.get("/tenant/me/move-out-request"),
+        apiClient.get("/rental-request/my-requests"),
+      ]);
 
-        // Dashboard information is required
-        if (results[0].status === "rejected") {
-          throw results[0].reason;
-        }
-
-        setDashboard(results[0].value.data.data);
-
-        // Fetch unpaid bills
-        if (results[1].status === "fulfilled") {
-          setUnpaidBills(results[1].value.data.data || []);
-        } else {
-          setPaymentError("Unable to load your unpaid bills.");
-        }
-
-        // Fetch payment history
-        if (results[2].status === "fulfilled") {
-          setPayments(results[2].value.data.data || []);
-        } else {
-          setPaymentError((previous) =>
-            previous
-              ? `${previous} Payment history is unavailable.`
-              : "Payment history is unavailable."
-          );
-        }
-
-        if (results[3].status === "fulfilled") {
-          const raw = results[3].value.data.data;
-          setMoveOutRequest(raw?.moveOutRequest || raw || null);
-        } else if (results[3].reason?.response?.status !== 404) {
-          setMoveOutRequestError(
-            results[3].reason?.response?.data?.message ||
-            "Unable to load your move-out request status."
-          );
-        }
-
-        if (results[4].status === "fulfilled") {
-          const myApps = results[4].value.data.data || [];
-          setMyApplications(myApps);
-          const approved = myApps.find((a) => a.status === "Approved");
-          setApprovedOffer(approved || null);
-        }
-      } catch (err) {
-        console.error("Tenant dashboard error:", err);
-
-        setError(
-          err.response?.data?.message ||
-          "Unable to load your dashboard."
-        );
-      } finally {
-        setLoading(false);
+      // Dashboard information is required
+      if (results[0].status === "rejected") {
+        throw results[0].reason;
       }
-    };
 
+      setDashboard(results[0].value.data.data);
+
+      // Fetch unpaid bills
+      if (results[1].status === "fulfilled") {
+        setUnpaidBills(results[1].value.data.data || []);
+      } else {
+        setPaymentError("Unable to load your unpaid bills.");
+      }
+
+      // Fetch payment history
+      if (results[2].status === "fulfilled") {
+        setPayments(results[2].value.data.data || []);
+      } else {
+        setPaymentError((previous) =>
+          previous
+            ? `${previous} Payment history is unavailable.`
+            : "Payment history is unavailable."
+        );
+      }
+
+      if (results[3].status === "fulfilled") {
+        const raw = results[3].value.data.data;
+        setMoveOutRequest(raw?.moveOutRequest || raw || null);
+      } else if (results[3].reason?.response?.status !== 404) {
+        setMoveOutRequestError(
+          results[3].reason?.response?.data?.message ||
+          "Unable to load your move-out request status."
+        );
+      }
+
+      if (results[4].status === "fulfilled") {
+        const myApps = results[4].value.data.data || [];
+        setMyApplications(myApps);
+      }
+    } catch (err) {
+      console.error("Tenant dashboard error:", err);
+
+      setError(
+        err.response?.data?.message ||
+        "Unable to load your dashboard."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchDashboardData();
   }, []);
 
@@ -158,15 +155,18 @@ const TenantDashboard = () => {
 
     try {
       setProcessingConfirm(true);
+      setConfirmModal((prev) => ({ ...prev, error: "" }));
       const res = await apiClient.patch(`/rental-request/${target._id}/accept`);
       notify.success(
         res.data.message ||
           "Congratulations! Lease confirmed. Other applications have been cancelled."
       );
-      setConfirmModal({ open: false, request: null });
+      setConfirmModal({ open: false, request: null, error: "" });
       await fetchDashboardData();
     } catch (err) {
-      notify.error(err.response?.data?.message || "Failed to confirm lease.");
+      const msg = err.response?.data?.message || "Failed to confirm lease.";
+      setConfirmModal((prev) => ({ ...prev, error: msg }));
+      notify.error(msg);
     } finally {
       setProcessingConfirm(false);
     }
@@ -179,7 +179,7 @@ const TenantDashboard = () => {
       setProcessingConfirm(true);
       await apiClient.patch(`/rental-request/${requestId}/decline`);
       notify.success("Rental offer declined.");
-      setConfirmModal({ open: false, request: null });
+      setConfirmModal({ open: false, request: null, error: "" });
       await fetchDashboardData();
     } catch (err) {
       notify.error(err.response?.data?.message || "Failed to decline offer.");
@@ -267,6 +267,12 @@ const TenantDashboard = () => {
   const tenant = dashboard?.tenant;
   const property = dashboard?.property;
   const unit = dashboard?.unit;
+  const locked = Boolean(unit);
+
+  const approvedOffers = useMemo(
+    () => myApplications.filter((a) => a.status === "Approved"),
+    [myApplications]
+  );
 
   const propertyName =
     property?.propertyName || property?.name || (unit ? "Property" : "Not assigned");
@@ -409,29 +415,90 @@ const TenantDashboard = () => {
           </div>
         </header>
 
-        {/* Approved Offer Action Banner */}
-        {approvedOffer && (
-          <div className="mb-6 rounded-xs border-2 border-yellow-400 bg-yellow-50 p-5 shadow-md dark:border-yellow-500 dark:bg-yellow-950/40">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-yellow-800 dark:text-yellow-400">
-                  Application Approved!
-                </p>
-                <h2 className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
-                  The owner has approved your rental request for {approvedOffer.unit?.unitName} at {approvedOffer.property?.propertyName}
-                </h2>
-                <p className="mt-1 text-xs text-gray-700 dark:text-gray-300">
-                  Confirm your lease now to activate your tenancy and move in.
-                </p>
-              </div>
-              <Link
-                to="/tenant/rentals"
-                className="inline-flex shrink-0 items-center justify-center rounded-xs bg-yellow-300 px-5 py-2.5 text-xs font-bold text-black hover:bg-yellow-400 shadow"
-              >
-                Review & Confirm Lease &rarr;
-              </Link>
+        {/* Lease offers awaiting your confirmation */}
+        {approvedOffers.length > 0 && (
+          <section className="mb-6 rounded-xs border-2 border-yellow-400 bg-yellow-50/60 p-4 shadow-sm dark:border-yellow-500/70 dark:bg-yellow-950/20 sm:p-5">
+            <div className="flex items-center gap-2 border-b border-yellow-200 pb-3 dark:border-yellow-900/50">
+              <FileCheck className="h-5 w-5 text-yellow-600 dark:text-yellow-400 shrink-0" />
+              <h2 className="text-base font-bold text-gray-900 dark:text-yellow-300 sm:text-lg">
+                Lease offers awaiting your confirmation
+              </h2>
             </div>
-          </div>
+
+            <div className="mt-4 divide-y divide-yellow-200/80 dark:divide-yellow-900/40">
+              {approvedOffers.map((offer) => {
+                const ownerName =
+                  offer.owner?.fullName ||
+                  offer.owner?.username ||
+                  offer.owner?.name ||
+                  "Property Owner";
+
+                const approvedDate = offer.updatedAt || offer.reviewedAt || offer.createdAt;
+
+                return (
+                  <div
+                    key={offer._id}
+                    className="flex flex-col gap-4 py-4 first:pt-1 last:pb-1 lg:flex-row lg:items-center lg:justify-between"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="text-base font-semibold text-gray-900 dark:text-white">
+                          {offer.unit?.unitName || "Unit"}
+                        </span>
+                        <span className="text-xs text-stone-500 dark:text-neutral-400">at</span>
+                        <span className="text-sm font-medium text-stone-700 dark:text-neutral-300">
+                          {offer.property?.propertyName || "Property"}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-600 dark:text-neutral-400">
+                        <span>
+                          <strong className="font-semibold text-gray-900 dark:text-neutral-200">Rent:</strong>{" "}
+                          {formatCurrency(offer.unit?.rent)}/mo
+                        </span>
+                        <span>·</span>
+                        <span>
+                          <strong className="font-semibold text-gray-900 dark:text-neutral-200">Owner:</strong>{" "}
+                          {ownerName}
+                        </span>
+                        <span>·</span>
+                        <span>
+                          <strong className="font-semibold text-gray-900 dark:text-neutral-200">Approved:</strong>{" "}
+                          {formatDateTime(approvedDate)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-start gap-1 sm:items-end">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDeclineOffer(offer._id)}
+                          disabled={processingConfirm}
+                          className="rounded-xs border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-100 disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                        >
+                          Decline
+                        </button>
+                        <button
+                          type="button"
+                          disabled={locked || processingConfirm}
+                          onClick={() => setConfirmModal({ open: true, request: offer, error: "" })}
+                          className="inline-flex items-center justify-center rounded-xs bg-[#f9c83d] px-4 py-2 text-xs font-bold text-[#171717] hover:bg-[#edbb2f] disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500 disabled:opacity-70 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400 shadow-sm"
+                        >
+                          Confirm & Accept Lease
+                        </button>
+                      </div>
+                      {locked && (
+                        <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                          Available after your current owner approves your move-out.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {/* No active unit / self-registered tenant banner */}
@@ -998,6 +1065,111 @@ const TenantDashboard = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Confirm Lease Modal */}
+        {confirmModal.open && confirmModal.request && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Outside click must NOT close the modal */}
+            <div
+              className="w-full max-w-md border border-stone-200 bg-white p-6 shadow-xl dark:border-neutral-800 dark:bg-[#171717]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-stone-200 pb-3 dark:border-neutral-800">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-yellow-500" />
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                    Confirm Lease Acceptance
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setConfirmModal({ open: false, request: null, error: "" })}
+                  disabled={processingConfirm}
+                  className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mt-4 space-y-4">
+                <p className="text-xs text-stone-600 dark:text-[#A5A5A5]">
+                  Please review the tenancy details before confirming. Accepting this lease will activate your tenancy and cancel all other open applications.
+                </p>
+
+                <div className="rounded border border-stone-200 bg-stone-50 p-3.5 text-xs dark:border-neutral-800 dark:bg-neutral-900">
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-stone-500 dark:text-neutral-400">Unit:</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {confirmModal.request.unit?.unitName || "—"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-stone-500 dark:text-neutral-400">Property:</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {confirmModal.request.property?.propertyName || "—"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-stone-500 dark:text-neutral-400">Monthly Rent:</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {formatCurrency(confirmModal.request.unit?.rent)}/mo
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-stone-500 dark:text-neutral-400">Move-in Date:</span>
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        {confirmModal.request.moveInDate
+                          ? formatDate(confirmModal.request.moveInDate)
+                          : "Immediate"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {confirmModal.error && (
+                  <div role="alert" className="border border-red-200 bg-red-50 p-2.5 text-xs text-red-600 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+                    {confirmModal.error}
+                  </div>
+                )}
+
+                {locked && (
+                  <div className="border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-300">
+                    Available after your current owner approves your move-out.
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleDeclineOffer(confirmModal.request._id)}
+                  disabled={processingConfirm}
+                  className="border border-stone-300 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                >
+                  Decline Offer
+                </button>
+                <button
+                  type="button"
+                  disabled={locked || processingConfirm}
+                  onClick={() => handleConfirmAcceptLease(confirmModal.request)}
+                  className="bg-[#f9c83d] px-4 py-2 text-xs font-bold text-[#171717] hover:bg-[#edbb2f] disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-500 disabled:opacity-70 dark:disabled:bg-neutral-800 dark:disabled:text-neutral-400"
+                >
+                  {processingConfirm ? "Confirming..." : "Confirm & Accept Lease"}
+                </button>
+              </div>
+              {locked && (
+                <p className="mt-2 text-right text-[11px] text-amber-700 dark:text-amber-400">
+                  Available after your current owner approves your move-out.
+                </p>
+              )}
             </div>
           </div>
         )}
