@@ -1231,7 +1231,7 @@ const Property = () => {
                                                                     type="button"
                                                                     onClick={() => setAddTenantModal({ open: true, propertyId: selectedProperty?._id, unitId: item._id })}
                                                                     disabled={!isApproved}
-                                                                    className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-yellow-500 bg-yellow-400 px-3 text-sm font-medium text-gray-900 transition hover:bg-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-xs border border-yellow-500 bg-yellow-400 px-3 text-sm font-medium text-gray-900 transition hover:bg-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
                                                                 >
                                                                     Add Tenant
                                                                 </button>
@@ -1240,7 +1240,7 @@ const Property = () => {
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => openTenantDetails(item)}
-                                                                    className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-yellow-500 bg-yellow-400 px-3 text-sm font-medium text-gray-900 transition hover:bg-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    className="inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-xs border border-yellow-500 bg-yellow-400 px-3 text-sm font-medium text-gray-900 transition hover:bg-yellow-300 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
                                                                 >
                                                                     <Eye size={16} />
                                                                     View Tenant
@@ -1253,7 +1253,7 @@ const Property = () => {
                                                                         disabled={!isApproved}
                                                                         aria-label={`Edit ${item.unitName}`}
                                                                         title="Edit unit"
-                                                                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-sm text-gray-700 transition hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-transparent dark:text-gray-200 dark:hover:bg-neutral-800"
+                                                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xs border border-gray-300 bg-white text-sm text-gray-700 transition hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-transparent dark:text-gray-200 dark:hover:bg-neutral-800"
                                                                     >
                                                                         <Pencil size={16} />
                                                                     </button>
@@ -1264,7 +1264,7 @@ const Property = () => {
                                                                         disabled={!isApproved}
                                                                         aria-label={`Delete ${item.unitName}`}
                                                                         title="Delete unit"
-                                                                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-300 text-sm text-red-600 transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                                                                        className="inline-flex h-9 w-9 items-center justify-center rounded-xs border border-red-300 text-sm text-red-600 transition hover:bg-red-50 focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                                                                     >
                                                                         <Trash2 size={16} />
                                                                     </button>
