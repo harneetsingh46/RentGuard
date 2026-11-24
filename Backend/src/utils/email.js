@@ -24,7 +24,8 @@ const escapeHtml = (value = "") =>
       })[char],
   );
 
-const getLoginUrl = () => `${(process.env.FRONTEND_URL || "https://rent-guard-1.vercel.app").trim().replace(/\/+$/, "")}/login`;
+const LOGIN_URL = "https://rent-guard-1.vercel.app/login";
+const getLoginUrl = () => LOGIN_URL;
 const loginButtonHtml = () => { const url = getLoginUrl(); return `<div style="text-align:center;margin:24px 0;"><a href="${url}" style="background:#facc15;color:#111827;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;">Log in to RentGuard</a></div><p style="font-size:13px;color:#6b7280;">Or open this link: <a href="${url}">${url}</a></p>`; };
 
 const sendEmail = async ({
@@ -342,6 +343,7 @@ export const sendTenancyNotificationEmails = async ({
               <p>${template.ownerMessage}</p>
               ${details}
               <p>Please log in to your RentGuard dashboard to manage your property.</p>
+              ${event === "requested" ? loginButtonHtml() : ""}
             </div>
           `,
         }),
