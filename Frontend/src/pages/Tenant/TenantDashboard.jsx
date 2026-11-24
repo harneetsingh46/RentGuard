@@ -21,6 +21,9 @@ const TenantDashboard = () => {
   const [moveOutRequest, setMoveOutRequest] = useState(null);
   const [submittingMoveOutRequest, setSubmittingMoveOutRequest] = useState(false);
   const [moveOutRequestError, setMoveOutRequestError] = useState("");
+  const [moveOutModalOpen, setMoveOutModalOpen] = useState(false);
+  const [moveOutDate, setMoveOutDate] = useState("");
+  const [moveOutModalError, setMoveOutModalError] = useState("");
   const [approvedOffer, setApprovedOffer] = useState(null);
   const [myApplications, setMyApplications] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ open: false, request: null });
@@ -74,7 +77,8 @@ const TenantDashboard = () => {
         }
 
         if (results[3].status === "fulfilled") {
-          setMoveOutRequest(results[3].value.data.data || null);
+          const raw = results[3].value.data.data;
+          setMoveOutRequest(raw?.moveOutRequest || raw || null);
         } else if (results[3].reason?.response?.status !== 404) {
           setMoveOutRequestError(
             results[3].reason?.response?.data?.message ||
@@ -103,14 +107,44 @@ const TenantDashboard = () => {
     fetchDashboardData();
   }, []);
 
-  const submitMoveOutRequest = async () => {
+  const todayStr = (() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
+  const maxDateStr = (() => {
+    const max = new Date();
+    max.setFullYear(max.getFullYear() + 1);
+    const y = max.getFullYear();
+    const m = String(max.getMonth() + 1).padStart(2, "0");
+    const d = String(max.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  })();
+
+  const submitMoveOutRequest = async (e) => {
+    if (e) e.preventDefault();
+    if (!moveOutDate) {
+      setMoveOutModalError("Please select your last day at this property.");
+      return;
+    }
+
     try {
       setSubmittingMoveOutRequest(true);
+      setMoveOutModalError("");
+      const response = await apiClient.post("/tenant/me/move-out-request", {
+        moveOutDate,
+      });
+      const raw = response.data.data;
+      setMoveOutRequest(raw?.moveOutRequest || raw || null);
+      notify.success(response.data.message || "Move-out request submitted successfully.");
+      setMoveOutModalOpen(false);
+      setMoveOutDate("");
       setMoveOutRequestError("");
-      const response = await apiClient.post("/tenant/me/move-out-request");
-      setMoveOutRequest(response.data.data || null);
     } catch (err) {
-      setMoveOutRequestError(
+      setMoveOutModalError(
         err.response?.data?.message || "Unable to submit your move-out request."
       );
     } finally {
@@ -750,98 +784,222 @@ const TenantDashboard = () => {
 
         {/* Move-out request (only applicable when tenant has an active assigned unit) */}
         {unit && (
-          <section className="mt-5 w-full min-w-0 border border-stone-200 bg-white p-4 sm:mt-7 sm:p-6 dark:border-neutral-800 dark:bg-[#171717] sm:p-6">
-          <div className="flex min-w-0 flex-col justify-between gap-3 sm:flex-row sm:items-start">
-            <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500 dark:text-[#A5A5A5]">
-                Tenancy
-              </p>
-              <h2 className="mt-2 text-xl font-normal tracking-tight">
-                Move-out request
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
-                If you plan to leave this property, submit a request to your owner.
-                The request remains valid for 48 hours. Your tenancy only ends after
-                the owner approves it and confirms that all bills are paid.
-              </p>
+          <section className="mt-5 w-full min-w-0 border border-stone-200 bg-white p-4 sm:mt-7 sm:p-6 dark:border-neutral-800 dark:bg-[#171717]">
+            <div className="flex min-w-0 flex-col justify-between gap-3 sm:flex-row sm:items-start">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-stone-500 dark:text-[#A5A5A5]">
+                  Tenancy
+                </p>
+                <h2 className="mt-2 text-xl font-normal tracking-tight">
+                  Move-out request
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500 dark:text-[#A5A5A5]">
+                  If you plan to leave this property, submit a request to your owner.
+                  The request remains valid for 48 hours. Your tenancy only ends after
+                  the owner approves it and confirms that all bills are paid.
+                </p>
+              </div>
             </div>
-            {moveOutRequest?.status && (
-              <span className={`inline-flex w-fit shrink-0 px-3 py-1.5 text-xs font-medium capitalize ${moveOutRequest.status === "pending"
-                ? "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400"
-                : moveOutRequest.status === "approved"
-                  ? "bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400"
-                  : moveOutRequest.status === "rejected"
-                    ? "bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400"
-                    : "bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-neutral-300"
-                }`}>
-                {moveOutRequest.status}
-              </span>
+
+            {moveOutRequestError && (
+              <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">
+                {moveOutRequestError}
+              </p>
             )}
-          </div>
 
-          {moveOutRequestError && (
-            <p role="alert" className="mt-4 text-sm text-red-600 dark:text-red-400">
-              {moveOutRequestError}
-            </p>
-          )}
-
-          {moveOutRequest?.status === "pending" ? (
             <div className="mt-5 border-t border-stone-200 pt-4 dark:border-neutral-800">
-              <p className="text-sm text-stone-700 dark:text-neutral-300">
-                Your request has been sent to the property owner.
-              </p>
-
-              <p className="mt-2 text-xs text-stone-500 dark:text-[#A5A5A5]">
-                Valid until: {formatDateTime(moveOutRequest.expiresAt)}
-              </p>
-
-              <p className="mt-1 text-xs text-stone-500 dark:text-[#A5A5A5]">
-                You remain an active tenant until the owner approves the request.
-              </p>
-            </div>
-          ) : moveOutRequest?.status === "approved" ? (
-            <p className="mt-4 border-t border-stone-200 pt-4 text-sm text-green-700 dark:border-neutral-800 dark:text-green-400">
-              Your move-out request was approved on{" "}
-              {formatDateTime(moveOutRequest.reviewedAt)}.
-            </p>
-          ) : (
-            <div className="mt-5 border-t border-stone-200 pt-4 dark:border-neutral-800">
-
-              {moveOutRequest?.status === "rejected" && (
-                <div className="mb-4 border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
-                  <p className="text-sm font-medium text-red-700 dark:text-red-400">
-                    Your previous move-out request was rejected.
+              {moveOutRequest?.status === "pending" && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex w-fit shrink-0 px-3 py-1 text-xs font-medium capitalize bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
+                      Pending
+                    </span>
+                    <span className="text-sm font-medium text-stone-800 dark:text-neutral-200">
+                      Last day: {formatDate(moveOutRequest.requestedMoveOutDate)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-500 dark:text-[#A5A5A5]">
+                    Valid until {formatDateTime(moveOutRequest.expiresAt)}
                   </p>
-
-                  <p className="mt-2 text-sm leading-6 text-red-600 dark:text-red-300">
-                    Your bills were not fully paid. You can submit a new move-out
-                    request immediately after rejection. There is no need to wait
-                    for the previous 48-hour period to end.
+                  <p className="text-xs text-stone-500 dark:text-[#A5A5A5]">
+                    You remain an active tenant until the owner approves the request.
                   </p>
                 </div>
               )}
 
-              {moveOutRequest?.status === "expired" && (
-                <p className="mb-3 text-sm text-stone-500 dark:text-[#A5A5A5]">
-                  Your previous request expired. You can submit a new request.
-                </p>
+              {moveOutRequest?.status === "approved" && (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex w-fit shrink-0 px-3 py-1 text-xs font-medium capitalize bg-green-50 text-green-700 dark:bg-green-400/10 dark:text-green-400 border border-green-200 dark:border-green-800/60">
+                      Approved
+                    </span>
+                    <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                      Approved on {formatDateTime(moveOutRequest.reviewedAt)}
+                    </span>
+                  </div>
+                </div>
               )}
 
-              <button
-                type="button"
-                onClick={submitMoveOutRequest}
-                disabled={submittingMoveOutRequest}
-                className="inline-flex w-full items-center justify-center bg-[#f9c83d] px-5 py-3 text-sm font-medium sm:w-auto text-[#171717] transition hover:bg-[#edbb2f] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submittingMoveOutRequest
-                  ? "Submitting..."
-                  : moveOutRequest?.status === "rejected"
-                    ? "Submit new move-out request"
-                    : "Submit move-out request"}
-              </button>
+              {moveOutRequest?.status === "rejected" && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex w-fit shrink-0 px-3 py-1 text-xs font-medium capitalize bg-red-50 text-red-700 dark:bg-red-400/10 dark:text-red-400 border border-red-200 dark:border-red-800/60">
+                      Rejected
+                    </span>
+                  </div>
+                  <div className="border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
+                    <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                      Your move-out request was rejected.
+                    </p>
+                    {moveOutRequest.rejectionReason && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-300">
+                        Reason: {moveOutRequest.rejectionReason}
+                      </p>
+                    )}
+                    <p className="mt-2 text-xs text-red-600 dark:text-red-300">
+                      Your pending rental applications were cancelled.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoveOutDate("");
+                      setMoveOutModalError("");
+                      setMoveOutModalOpen(true);
+                    }}
+                    className="inline-flex items-center justify-center bg-[#f9c83d] px-5 py-2.5 text-sm font-medium text-[#171717] transition hover:bg-[#edbb2f]"
+                  >
+                    Submit new request
+                  </button>
+                </div>
+              )}
+
+              {moveOutRequest?.status === "expired" && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex w-fit shrink-0 px-3 py-1 text-xs font-medium capitalize bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-neutral-300 border border-stone-200 dark:border-neutral-700">
+                      Expired
+                    </span>
+                  </div>
+                  <div className="border border-stone-200 bg-stone-50 p-4 dark:border-neutral-800 dark:bg-neutral-900/50">
+                    <p className="text-sm font-medium text-stone-700 dark:text-stone-300">
+                      This request expired.
+                    </p>
+                    <p className="mt-1 text-xs text-stone-500 dark:text-[#A5A5A5]">
+                      Your pending rental applications were cancelled.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMoveOutDate("");
+                      setMoveOutModalError("");
+                      setMoveOutModalOpen(true);
+                    }}
+                    className="inline-flex items-center justify-center bg-[#f9c83d] px-5 py-2.5 text-sm font-medium text-[#171717] transition hover:bg-[#edbb2f]"
+                  >
+                    Submit new request
+                  </button>
+                </div>
+              )}
+
+              {(!moveOutRequest || !moveOutRequest.status || moveOutRequest.status === "none") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMoveOutDate("");
+                    setMoveOutModalError("");
+                    setMoveOutModalOpen(true);
+                  }}
+                  className="inline-flex w-full items-center justify-center bg-[#f9c83d] px-5 py-3 text-sm font-medium text-[#171717] transition hover:bg-[#edbb2f] sm:w-auto"
+                >
+                  Submit move-out request
+                </button>
+              )}
             </div>
-          )}
-        </section>
+          </section>
+        )}
+
+        {/* Move-out Request Confirmation Modal */}
+        {moveOutModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Outside click must NOT close the modal */}
+            <div
+              className="w-full max-w-md border border-stone-200 bg-white p-6 shadow-xl dark:border-neutral-800 dark:bg-[#171717]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-stone-200 pb-3 dark:border-neutral-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Request Move-out
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMoveOutModalOpen(false);
+                    setMoveOutModalError("");
+                  }}
+                  className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <form onSubmit={submitMoveOutRequest} className="mt-4 space-y-4">
+                <p className="text-xs leading-5 text-stone-600 dark:text-[#A5A5A5]">
+                  This request is valid for 48 hours. Your tenancy ends only after your owner approves it and all bills are paid.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-medium uppercase tracking-wider text-stone-700 dark:text-neutral-300">
+                    Last day at this property <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    min={todayStr}
+                    max={maxDateStr}
+                    value={moveOutDate}
+                    onChange={(e) => {
+                      setMoveOutDate(e.target.value);
+                      if (moveOutModalError) setMoveOutModalError("");
+                    }}
+                    className="mt-1.5 block w-full border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-yellow-400 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-900 dark:text-white"
+                  />
+                </div>
+
+                {moveOutModalError && (
+                  <div role="alert" className="border border-red-200 bg-red-50 p-2.5 text-xs text-red-600 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+                    {moveOutModalError}
+                  </div>
+                )}
+
+                <div className="mt-5 flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    disabled={submittingMoveOutRequest}
+                    onClick={() => {
+                      setMoveOutModalOpen(false);
+                      setMoveOutModalError("");
+                    }}
+                    className="border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 hover:bg-stone-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingMoveOutRequest || !moveOutDate}
+                    className="bg-[#f9c83d] px-4 py-2 text-xs font-semibold text-[#171717] hover:bg-[#edbb2f] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {submittingMoveOutRequest ? "Submitting..." : "Confirm"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         )}
 
         {/* Footer */}

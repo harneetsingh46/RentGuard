@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import apiClient from "../../ApiClient/interceptor";
 import { notify } from "../../utils/notify";
 import ImageSlider from "../../common/ImageSlider.jsx";
@@ -23,6 +24,8 @@ const BrowseRentals = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [lightbox, setLightbox] = useState(null);
+  const [currentUnit, setCurrentUnit] = useState(null);
+  const [moveOutStatus, setMoveOutStatus] = useState("none");
 
   // Apply Modal state
   const [applyModal, setApplyModal] = useState({
@@ -80,9 +83,30 @@ const BrowseRentals = () => {
     }
   };
 
+  // Fetch tenant current tenancy and move-out status
+  const fetchTenantStatus = async () => {
+    try {
+      const [dashRes, moveOutRes] = await Promise.allSettled([
+        apiClient.get("/tenant/dashboard"),
+        apiClient.get("/tenant/me/move-out-request"),
+      ]);
+
+      if (dashRes.status === "fulfilled") {
+        setCurrentUnit(dashRes.value.data.data?.unit || null);
+      }
+      if (moveOutRes.status === "fulfilled") {
+        const raw = moveOutRes.value.data.data;
+        const mo = raw?.moveOutRequest || raw;
+        setMoveOutStatus(mo?.status || "none");
+      }
+    } catch (err) {
+      console.error("Error fetching tenant tenancy status:", err);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
-    await Promise.all([fetchListings(), fetchMyApplications()]);
+    await Promise.all([fetchListings(), fetchMyApplications(), fetchTenantStatus()]);
     setLoading(false);
   };
 
@@ -103,6 +127,13 @@ const BrowseRentals = () => {
 
   // Open apply modal for a unit
   const openApplyModal = (property, unit) => {
+    if (currentUnit && moveOutStatus !== "pending") {
+      notify.error(
+        `You currently rent ${currentUnit.unitName || "a unit"}. Submit a move-out request from your dashboard to apply for another property.`
+      );
+      return;
+    }
+
     // Check if tenant already has an active application for this unit
     const existing = myApplications.find(
       (a) =>
@@ -249,6 +280,37 @@ const BrowseRentals = () => {
                   Confirm & Accept Lease
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active Tenancy / Move-out Banner */}
+        {currentUnit && moveOutStatus !== "pending" && (
+          <div className="mb-6 rounded-xs border border-amber-300 bg-amber-50 p-4 shadow-sm dark:border-amber-600/40 dark:bg-amber-950/20">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                <p className="text-sm text-amber-900 dark:text-amber-200">
+                  You currently rent <span className="font-semibold">{currentUnit.unitName || "a unit"}</span>. Submit a move-out request from your dashboard to apply for another property.
+                </p>
+              </div>
+              <Link
+                to="/tenant/dashboard"
+                className="inline-flex shrink-0 items-center justify-center rounded-xs bg-amber-400 px-3.5 py-1.5 text-xs font-semibold text-black hover:bg-amber-500 shadow-sm"
+              >
+                Go to Dashboard &rarr;
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {currentUnit && moveOutStatus === "pending" && (
+          <div className="mb-6 rounded-xs border border-blue-300 bg-blue-50 p-4 shadow-sm dark:border-blue-600/40 dark:bg-blue-950/20">
+            <div className="flex items-start gap-3">
+              <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+              <p className="text-sm text-blue-900 dark:text-blue-200">
+                Your move-out request is pending. You can apply now, but you can confirm a new lease only after your owner approves your move-out.
+              </p>
             </div>
           </div>
         )}
@@ -418,13 +480,40 @@ const BrowseRentals = () => {
                                     )}
                                   </div>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => openApplyModal(prop, u)}
-                                    className="inline-flex shrink-0 items-center justify-center gap-1 rounded-xs bg-yellow-300 px-3 py-2 text-xs font-semibold text-black transition hover:bg-yellow-400 sm:self-center"
-                                  >
-                                    Apply to Rent
-                                  </button>
+                                  {(() => {
+                                    const existingApp = myApplications.find(
+                                      (a) =>
+                                        (a.unit?._id === u._id || a.unit === u._id) &&
+                                        ["Pending", "Approved"].includes(a.status)
+                                    );
+
+                                    const isBlockedByCurrentUnit = Boolean(
+                                      currentUnit && moveOutStatus !== "pending"
+                                    );
+                                    const isDisabled = Boolean(existingApp || isBlockedByCurrentUnit);
+
+                                    const buttonLabel =
+                                      existingApp?.status === "Pending"
+                                        ? "Applied"
+                                        : existingApp?.status === "Approved"
+                                          ? "Approved"
+                                          : "Apply to Rent";
+
+                                    return (
+                                      <button
+                                        type="button"
+                                        disabled={isDisabled}
+                                        onClick={() => openApplyModal(prop, u)}
+                                        className={`inline-flex shrink-0 items-center justify-center gap-1 rounded-xs px-3 py-2 text-xs font-semibold transition sm:self-center ${
+                                          isDisabled
+                                            ? "cursor-not-allowed bg-stone-200 text-stone-500 opacity-70 dark:bg-neutral-800 dark:text-neutral-400"
+                                            : "bg-yellow-300 text-black hover:bg-yellow-400"
+                                        }`}
+                                      >
+                                        {buttonLabel}
+                                      </button>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             </div>
