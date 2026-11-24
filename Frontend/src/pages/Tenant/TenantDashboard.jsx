@@ -608,7 +608,7 @@ const TenantDashboard = () => {
               )}
 
               {/* Compact payment cards for phones */}
-              <div className="mt-5 max-h-[420px] space-y-3 overflow-y-auto overscroll-contain pr-1 sm:hidden">
+              <div className="mt-5 max-h-[320px] space-y-3 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-300 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-700 [scrollbar-color:#d6d3d1_transparent] dark:[scrollbar-color:#404040_transparent] sm:hidden">
                 {recentPayments.length > 0 ? (
                   recentPayments.map((payment) => (
                     <article
@@ -621,7 +621,9 @@ const TenantDashboard = () => {
                             {payment.order?.items?.length || 0} bill(s)
                           </p>
                           <p className="mt-1 break-all text-xs text-stone-500 dark:text-[#A5A5A5]">
-                            {payment.razorpayPaymentId || "Payment record"}
+                            {payment.method === "cash"
+                              ? "Cash payment"
+                              : payment.razorpayPaymentId || "Payment record"}
                           </p>
                         </div>
                         <span
@@ -668,23 +670,23 @@ const TenantDashboard = () => {
               </div>
 
               {/* Full table from small tablets upward */}
-              <div className="mt-5 hidden max-h-[420px] overflow-auto overscroll-contain border-y border-stone-200 dark:border-neutral-700 sm:block">
+              <div className="mt-5 hidden max-h-[320px] overflow-auto overscroll-contain border-y border-stone-200 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-300 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-700 [scrollbar-color:#d6d3d1_transparent] dark:[scrollbar-color:#404040_transparent] dark:border-neutral-700 sm:block">
                 <table className="w-full text-left text-sm">
-                  <thead className="sticky top-0 z-10">
+                  <thead className="sticky top-0 z-10 bg-[#f7f5f0] dark:bg-[#222222]">
                     <tr className="border-b border-stone-200 bg-[#f7f5f0] font-medium text-[10px] uppercase tracking-wider text-stone-600 dark:border-neutral-700 dark:bg-[#222222] dark:text-[#C4C4C4]">
-                      <th className="px-3 py-4 font-normal">
+                      <th className="bg-[#f7f5f0] px-3 py-4 font-normal dark:bg-[#222222]">
                         Transaction
                       </th>
 
-                      <th className="px-3 py-4 font-normal">
+                      <th className="bg-[#f7f5f0] px-3 py-4 font-normal dark:bg-[#222222]">
                         Date
                       </th>
 
-                      <th className="px-3 py-4 font-normal">
+                      <th className="bg-[#f7f5f0] px-3 py-4 font-normal dark:bg-[#222222]">
                         Amount
                       </th>
 
-                      <th className="px-3 py-4 text-right font-normal">
+                      <th className="bg-[#f7f5f0] px-3 py-4 text-right font-normal dark:bg-[#222222]">
                         Status
                       </th>
                     </tr>
@@ -703,7 +705,9 @@ const TenantDashboard = () => {
                             </p>
 
                             <p className="mt-1 text-xs text-stone-500 dark:text-[#A5A5A5]">
-                              {payment.razorpayPaymentId || "Payment record"}
+                              {payment.method === "cash"
+                                ? "Cash payment"
+                                : payment.razorpayPaymentId || "Payment record"}
                             </p>
                           </td>
 

@@ -308,16 +308,16 @@ const TenantBills = () => {
                 No orders yet. When you create an order to pay bills, it will appear here.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="max-h-[420px] overflow-auto overscroll-contain [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-300 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-700 [scrollbar-color:#d6d3d1_transparent] dark:[scrollbar-color:#404040_transparent]">
                 <table className="w-full min-w-[650px] text-left">
-                  <thead className="bg-[#faf9f6] dark:bg-[#1d1d1d]">
-                    <tr className="text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                      <th className="px-6 py-4 font-medium">Order ID</th>
-                      <th className="px-6 py-4 font-medium">Date</th>
-                      <th className="px-6 py-4 font-medium">Bills</th>
-                      <th className="px-6 py-4 font-medium">Amount</th>
-                      <th className="px-6 py-4 font-medium">Status</th>
-                      <th className="px-6 py-4 text-right font-medium">Action</th>
+                  <thead className="sticky top-0 z-10 bg-[#faf9f6] dark:bg-[#1d1d1d]">
+                    <tr className="bg-[#faf9f6] text-xs uppercase tracking-wider text-neutral-500 dark:bg-[#1d1d1d] dark:text-neutral-400">
+                      <th className="bg-[#faf9f6] px-6 py-4 font-medium dark:bg-[#1d1d1d]">Order ID</th>
+                      <th className="bg-[#faf9f6] px-6 py-4 font-medium dark:bg-[#1d1d1d]">Date</th>
+                      <th className="bg-[#faf9f6] px-6 py-4 font-medium dark:bg-[#1d1d1d]">Bills</th>
+                      <th className="bg-[#faf9f6] px-6 py-4 font-medium dark:bg-[#1d1d1d]">Amount</th>
+                      <th className="bg-[#faf9f6] px-6 py-4 font-medium dark:bg-[#1d1d1d]">Status</th>
+                      <th className="bg-[#faf9f6] px-6 py-4 text-right font-medium dark:bg-[#1d1d1d]">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -397,15 +397,15 @@ const TenantBills = () => {
                 No transactions yet. Your completed payments will appear here.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="max-h-[420px] overflow-auto overscroll-contain [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-300 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-700 [scrollbar-color:#d6d3d1_transparent] dark:[scrollbar-color:#404040_transparent]">
                 <table className="w-full min-w-[650px] text-left">
-                  <thead className="bg-[#faf9f6] dark:bg-[#1d1d1d]">
-                    <tr className="text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                      <th className="px-6 py-4 font-medium">Transaction</th>
-                      <th className="px-6 py-4 font-medium">Date</th>
-                      <th className="px-6 py-4 font-medium">Amount</th>
-                      <th className="px-6 py-4 font-medium">Status</th>
-                      <th className="px-6 py-4 text-right font-medium">Receipt</th>
+                  <thead className="sticky top-0 z-10 bg-[#faf9f6] dark:bg-[#1d1d1d]">
+                    <tr className="bg-[#faf9f6] text-xs uppercase tracking-wider text-neutral-500 dark:bg-[#1d1d1d] dark:text-neutral-400">
+                      <th className="bg-[#faf9f6] px-6 py-4 font-medium dark:bg-[#1d1d1d]">Transaction</th>
+                      <th className="bg-[#faf9f6] px-6 py-4 font-medium dark:bg-[#1d1d1d]">Date</th>
+                      <th className="bg-[#faf9f6] px-6 py-4 font-medium dark:bg-[#1d1d1d]">Amount</th>
+                      <th className="bg-[#faf9f6] px-6 py-4 font-medium dark:bg-[#1d1d1d]">Status</th>
+                      <th className="bg-[#faf9f6] px-6 py-4 text-right font-medium dark:bg-[#1d1d1d]">Receipt</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -707,7 +707,7 @@ const TenantBills = () => {
                   </div>
 
                   {/* Mobile Cards */}
-                  <div className="divide-y divide-neutral-100 dark:divide-neutral-800 md:hidden">
+                  <div className="max-h-[420px] divide-y divide-neutral-100 overflow-y-auto overscroll-contain [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-300 dark:[&::-webkit-scrollbar-thumb]:bg-neutral-700 [scrollbar-color:#d6d3d1_transparent] dark:[scrollbar-color:#404040_transparent] dark:divide-neutral-800 md:hidden">
                     {bills.map((bill) => (
                       <label
                         key={bill._id}

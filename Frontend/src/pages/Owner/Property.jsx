@@ -1564,7 +1564,7 @@ const Property = () => {
                                         {existingImages.map((img, idx) => (
                                             <div
                                                 key={img.publicId || idx}
-                                                className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-100 dark:border-stone-700 dark:bg-neutral-800"
+                                                className="group relative aspect-square overflow-hidden rounded-xs  border border-gray-200 bg-gray-100 dark:border-stone-700 dark:bg-neutral-800"
                                             >
                                                 <img
                                                     src={img.url}
@@ -1586,7 +1586,7 @@ const Property = () => {
                                         {newImages.map((item, idx) => (
                                             <div
                                                 key={idx}
-                                                className="group relative aspect-square overflow-hidden rounded-lg border border-yellow-300 bg-gray-100 dark:border-yellow-500 dark:bg-neutral-800"
+                                                className="group relative aspect-square overflow-hidden rounded-xs  border border-yellow-300 bg-gray-100 dark:border-yellow-500 dark:bg-neutral-800"
                                             >
                                                 <img
                                                     src={item.preview}
@@ -1618,7 +1618,7 @@ const Property = () => {
                                         multiple
                                         onChange={handleUnitImagesChange}
                                         disabled={submitting}
-                                        className="w-full rounded-xs border border-gray-300 bg-white p-3 text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-yellow-300 file:px-4 file:py-2 file:font-medium file:text-black dark:border-stone-800 dark:bg-[#262626] dark:text-gray-200"
+                                        className="w-full rounded-xs border border-gray-300 bg-white p-3 text-sm text-gray-700 file:mr-4 file:rounded-xs  file:border-0 file:bg-yellow-300 file:px-4 file:py-2 file:font-medium file:text-black dark:border-stone-800 dark:bg-[#262626] dark:text-gray-200"
                                     />
                                 )}
 

@@ -357,7 +357,7 @@ const BrowseRentals = () => {
               <div className="flex items-start gap-3">
                 <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
                 <p className="text-sm text-amber-900 dark:text-amber-200">
-                  You currently rent <span className="font-semibold">{currentUnit.unitName || "a unit"}</span>. Submit a move-out request from your dashboard to apply for another property.
+                  You currently have Active Tenancy in <span className="font-semibold">{currentUnit.unitName || "a unit"}</span>. Submit a move-out request from your dashboard to apply for another property.
                 </p>
               </div>
               <Link
