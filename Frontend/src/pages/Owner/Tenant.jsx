@@ -1,6 +1,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import apiClient from '../../ApiClient/interceptor.js'
 import notify from "../../utils/notify.js"
 import Pagination from "../../common/Pagination"
@@ -40,7 +40,9 @@ const Tenant = () => {
   const [rejectMoveOutModal, setRejectMoveOutModal] = useState({ open: false, request: null, reason: "" })
   const [rejectingMoveOut, setRejectingMoveOut] = useState(false)
   const [viewTenant, setViewTenant] = useState(null)
-  const [activeSection, setActiveSection] = useState('active')
+  const [searchParams] = useSearchParams()
+  const initialTab = searchParams.get('tab')
+  const [activeSection, setActiveSection] = useState(['active', 'history', 'requests', 'applications'].includes(initialTab) ? initialTab : 'active')
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')

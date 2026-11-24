@@ -4,6 +4,7 @@ import { Tenant } from "../models/tenant.model.js";
 import { Bill } from "../models/bill.model.js";
 import { Payment } from "../models/payment.model.js";
 import { Maintenance } from "../models/maintenance.model.js";
+import { RentalRequest } from "../models/rentalRequest.model.js";
 
 export const getOwnerDashboard = async (req, res) => {
   try {
@@ -73,6 +74,10 @@ export const getOwnerDashboard = async (req, res) => {
       resolvedComplaints,
       rejectedComplaints,
       recentComplaints,
+      pendingApplicationsCount,
+      pendingApplications,
+      pendingMoveOutsCount,
+      pendingMoveOuts,
     ] = await Promise.all([
       Unit.countDocuments({
         property: { $in: propertyIds },
@@ -200,6 +205,44 @@ export const getOwnerDashboard = async (req, res) => {
         .sort({ createdAt: -1 })
         .limit(5)
         .lean(),
+
+      // Action items: Rental applications
+      RentalRequest.countDocuments({
+        owner: req.user._id,
+        status: "Pending",
+      }),
+
+      RentalRequest.find({
+        owner: req.user._id,
+        status: "Pending",
+      })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate("tenant", "fullName")
+        .populate("property", "propertyName")
+        .populate("unit", "unitName")
+        .lean(),
+
+      // Action items: Move-out requests
+      Tenant.countDocuments({
+        owner: req.user._id,
+        isActive: true,
+        "moveOutRequest.status": "pending",
+        "moveOutRequest.expiresAt": { $gt: new Date() },
+      }),
+
+      Tenant.find({
+        owner: req.user._id,
+        isActive: true,
+        "moveOutRequest.status": "pending",
+        "moveOutRequest.expiresAt": { $gt: new Date() },
+      })
+        .sort({ "moveOutRequest.requestedAt": -1 })
+        .limit(5)
+        .populate("property", "propertyName")
+        .populate("unit", "unitName")
+        .select("fullName property unit moveOutRequest")
+        .lean(),
     ]);
 
     // Calculate bill amounts
@@ -254,6 +297,31 @@ export const getOwnerDashboard = async (req, res) => {
     const occupancyRate =
       totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
+    const actionItems = {
+      pendingApplications: {
+        count: pendingApplicationsCount,
+        items: (pendingApplications || []).map((app) => ({
+          _id: app._id,
+          tenantName: app.tenant?.fullName || "Unknown Tenant",
+          propertyName: app.property?.propertyName || "Unknown Property",
+          unitName: app.unit?.unitName || "Unknown Unit",
+          createdAt: app.createdAt,
+        })),
+      },
+      pendingMoveOuts: {
+        count: pendingMoveOutsCount,
+        items: (pendingMoveOuts || []).map((t) => ({
+          _id: t._id,
+          tenantName: t.fullName || "Unknown Tenant",
+          propertyName: t.property?.propertyName || "Unknown Property",
+          unitName: t.unit?.unitName || "Unknown Unit",
+          requestedAt: t.moveOutRequest?.requestedAt,
+          expiresAt: t.moveOutRequest?.expiresAt,
+          requestedMoveOutDate: t.moveOutRequest?.requestedMoveOutDate,
+        })),
+      },
+    };
+
     return res.status(200).json({
       message: "Owner dashboard fetched successfully",
 
@@ -294,6 +362,8 @@ export const getOwnerDashboard = async (req, res) => {
           rejectedComplaints,
           openComplaints: pendingComplaints + inProgressComplaints,
         },
+
+        actionItems,
 
         properties,
         recentTenants,

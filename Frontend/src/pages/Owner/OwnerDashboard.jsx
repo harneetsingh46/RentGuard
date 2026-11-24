@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import apiClient from "../../ApiClient/interceptor";
 
 const OwnerDashboard = () => {
@@ -74,6 +75,16 @@ const OwnerDashboard = () => {
     });
   };
 
+  const formatDateTime = (date) => {
+    if (!date) return "—";
+    return new Date(date).toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const statusClass = (status) => {
     const normalized = String(status || "").toLowerCase();
     if (normalized === "paid" || normalized === "resolved") {
@@ -118,6 +129,9 @@ const OwnerDashboard = () => {
 
   const overview = dashboard?.overview || {};
   const billOverview = dashboard?.billOverview || {};
+  const actionItems = dashboard?.actionItems || {};
+  const apps = actionItems.pendingApplications || { count: 0, items: [] };
+  const moveOuts = actionItems.pendingMoveOuts || { count: 0, items: [] };
   const recentPayments = dashboard?.recentPayments || [];
   const recentTenants = dashboard?.recentTenants || [];
   const recentBills = dashboard?.recentBills || [];
@@ -237,6 +251,132 @@ const OwnerDashboard = () => {
 
           {!error && dashboard && (
             <>
+              {/* Needs your attention */}
+              <div className="mt-8">
+                <h2 className="text-lg font-medium tracking-tight sm:text-xl">
+                  Needs your attention
+                </h2>
+
+                {apps.count === 0 && moveOuts.count === 0 ? (
+                  <div className="mt-4 rounded-xs border border-stone-200 bg-white p-4 text-sm text-gray-600 dark:border-neutral-800 dark:bg-neutral-950 dark:text-[#A5A5A5]">
+                    All caught up. No pending requests.
+                  </div>
+                ) : (
+                  <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    {/* Rental applications */}
+                    <div className="rounded-xs border border-stone-200 bg-white p-4 sm:p-5 dark:border-neutral-800 dark:bg-neutral-950">
+                      <div className="flex items-center justify-between border-b border-stone-100 pb-3 dark:border-neutral-800">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-gray-900 dark:text-white">
+                            Rental applications
+                          </h3>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              apps.count > 0
+                                ? "bg-yellow-400 text-black"
+                                : "bg-stone-100 text-stone-600 dark:bg-neutral-800 dark:text-neutral-400"
+                            }`}
+                          >
+                            {apps.count}
+                          </span>
+                        </div>
+                        <Link
+                          to="/owner/tenants?tab=applications"
+                          className="text-xs font-medium text-yellow-600 hover:underline dark:text-yellow-400"
+                        >
+                          View all
+                        </Link>
+                      </div>
+
+                      <div className="mt-3 divide-y divide-stone-100 dark:divide-neutral-800">
+                        {apps.items.length === 0 ? (
+                          <p className="py-4 text-xs text-stone-500 dark:text-[#A5A5A5]">
+                            No pending rental applications.
+                          </p>
+                        ) : (
+                          apps.items.slice(0, 5).map((item) => (
+                            <div
+                              key={item._id}
+                              className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                                  {item.tenantName}
+                                </p>
+                                <p className="truncate text-xs text-stone-500 dark:text-[#A5A5A5]">
+                                  {item.propertyName} · {item.unitName}
+                                </p>
+                              </div>
+                              <span className="shrink-0 text-xs text-stone-400 dark:text-neutral-500">
+                                {formatDate(item.createdAt)}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Move-out requests */}
+                    <div className="rounded-xs border border-stone-200 bg-white p-4 sm:p-5 dark:border-neutral-800 dark:bg-neutral-950">
+                      <div className="flex items-center justify-between border-b border-stone-100 pb-3 dark:border-neutral-800">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-gray-900 dark:text-white">
+                            Move-out requests
+                          </h3>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                              moveOuts.count > 0
+                                ? "bg-yellow-400 text-black"
+                                : "bg-stone-100 text-stone-600 dark:bg-neutral-800 dark:text-neutral-400"
+                            }`}
+                          >
+                            {moveOuts.count}
+                          </span>
+                        </div>
+                        <Link
+                          to="/owner/tenants?tab=requests"
+                          className="text-xs font-medium text-yellow-600 hover:underline dark:text-yellow-400"
+                        >
+                          View all
+                        </Link>
+                      </div>
+
+                      <div className="mt-3 divide-y divide-stone-100 dark:divide-neutral-800">
+                        {moveOuts.items.length === 0 ? (
+                          <p className="py-4 text-xs text-stone-500 dark:text-[#A5A5A5]">
+                            No pending move-out requests.
+                          </p>
+                        ) : (
+                          moveOuts.items.slice(0, 5).map((item) => (
+                            <div
+                              key={item._id}
+                              className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                                  {item.tenantName}
+                                </p>
+                                <p className="truncate text-xs text-stone-500 dark:text-[#A5A5A5]">
+                                  {item.propertyName} · {item.unitName}
+                                </p>
+                                {item.requestedMoveOutDate && (
+                                  <p className="mt-0.5 text-xs text-stone-600 dark:text-stone-300">
+                                    Last day: {formatDate(item.requestedMoveOutDate)}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="shrink-0 text-xs text-stone-400 dark:text-neutral-500">
+                                Expires {formatDateTime(item.expiresAt)}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Financial Overview */}
               <div className="mt-8">
                 <h2 className="text-lg font-medium tracking-tight sm:text-xl">
