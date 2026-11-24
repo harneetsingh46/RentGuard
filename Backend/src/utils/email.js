@@ -325,6 +325,7 @@ export const sendTenancyNotificationEmails = async ({
               <p>${template.tenantMessage}</p>
               ${details}
               <p>Thank you for using RentGuard.</p>
+              ${event === "rejected" ? loginButtonHtml() : ""}
             </div>
           `,
         }),
@@ -343,7 +344,7 @@ export const sendTenancyNotificationEmails = async ({
               <p>${template.ownerMessage}</p>
               ${details}
               <p>Please log in to your RentGuard dashboard to manage your property.</p>
-              ${event === "requested" ? loginButtonHtml() : ""}
+              ${["requested", "rejected"].includes(event) ? loginButtonHtml() : ""}
             </div>
           `,
         }),
