@@ -464,6 +464,7 @@ export const sendPaymentConfirmationEmails = async ({
               <p>Your bill payment has been successfully received and verified.</p>
               ${details}
               <p>Thank you for using RentGuard.</p>
+              ${loginButtonHtml()}
             </div>
           `,
         }),
@@ -486,6 +487,7 @@ export const sendPaymentConfirmationEmails = async ({
               </p>
               ${details}
               <p>This payment has been recorded in your RentGuard account.</p>
+              ${loginButtonHtml()}
             </div>
           `,
         }),
