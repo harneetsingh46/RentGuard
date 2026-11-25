@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import apiClient from "../../ApiClient/interceptor";
+import { notify } from "../../utils/notify";
 
 const TenantProfile = () => {
   const [profile, setProfile] = useState(null);
@@ -16,7 +17,6 @@ const TenantProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -40,10 +40,10 @@ const TenantProfile = () => {
       setPicturePreview(tenant.profilePicture || "");
     } catch (err) {
       console.error("Tenant profile error:", err);
-      setError(
-        err.response?.data?.message ||
-          "Unable to load your profile.",
-      );
+      const errorMessage =
+        err.response?.data?.message || "Unable to load your profile.";
+      setError(errorMessage);
+      notify.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -61,7 +61,6 @@ const TenantProfile = () => {
       address: profile.address || "",
     });
     setError("");
-    setMessage("");
     setIsModalOpen(true);
   };
 
@@ -99,14 +98,12 @@ const TenantProfile = () => {
     setProfilePicture(file);
     setPicturePreview(URL.createObjectURL(file));
     setError("");
-    setMessage("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     setError("");
-    setMessage("");
 
     if (!formData.fullName.trim() || !formData.address.trim()) {
       setError("Full name and address are required.");
@@ -134,13 +131,13 @@ const TenantProfile = () => {
       });
 
       setIsModalOpen(false);
-      setMessage("Profile updated successfully.");
+      notify.success("Profile updated successfully.");
     } catch (err) {
       console.error("Profile update error:", err);
-      setError(
-        err.response?.data?.message ||
-          "Unable to update your profile.",
-      );
+      const errorMessage =
+        err.response?.data?.message || "Unable to update your profile.";
+      setError(errorMessage);
+      notify.error(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -155,7 +152,6 @@ const TenantProfile = () => {
     try {
       setUploading(true);
       setError("");
-      setMessage("");
 
       const formDataToSend = new FormData();
       formDataToSend.append("image", profilePicture);
@@ -174,13 +170,13 @@ const TenantProfile = () => {
 
       setPicturePreview(imageUrl);
       setProfilePicture(null);
-      setMessage("Profile picture updated successfully.");
+      notify.success("Profile picture updated successfully.");
     } catch (err) {
       console.error("Profile picture upload error:", err);
-      setError(
-        err.response?.data?.message ||
-          "Unable to upload profile picture.",
-      );
+      const errorMessage =
+        err.response?.data?.message || "Unable to upload profile picture.";
+      setError(errorMessage);
+      notify.error(errorMessage);
     } finally {
       setUploading(false);
     }
@@ -333,15 +329,6 @@ const TenantProfile = () => {
             </p>
           </div>
         </section>
-
-        {message && (
-          <p
-            role="status"
-            className="mt-4 rounded-sm border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-300"
-          >
-            {message}
-          </p>
-        )}
 
         {error && profile && (
           <p

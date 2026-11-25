@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import apiClient from "../../ApiClient/interceptor";
+import { notify } from "../../utils/notify";
 
 const OwnerProfile = () => {
   const { user, setUser } = useAuth();
@@ -13,7 +14,6 @@ const OwnerProfile = () => {
   });
 
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
   // Sync form data with authenticated user
@@ -60,7 +60,6 @@ const OwnerProfile = () => {
     });
 
     setError("");
-    setMessage("");
     setIsModalOpen(true);
   };
 
@@ -82,7 +81,6 @@ const OwnerProfile = () => {
     }));
 
     setError("");
-    setMessage("");
   };
 
   // Update profile
@@ -90,7 +88,6 @@ const OwnerProfile = () => {
     e.preventDefault();
 
     setError("");
-    setMessage("");
 
     const updatedUsername = formData.username.trim().toLowerCase();
 
@@ -127,15 +124,16 @@ const OwnerProfile = () => {
         ...updatedUser,
       }));
 
-      setMessage("Profile updated successfully.");
+      notify.success("Profile updated successfully.");
       setIsModalOpen(false);
     } catch (error) {
       console.error("Profile update error:", error);
 
-      setError(
+      const errorMessage =
         error.response?.data?.message ||
-          "Unable to update your profile. Please try again."
-      );
+        "Unable to update your profile. Please try again.";
+      setError(errorMessage);
+      notify.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -258,16 +256,6 @@ const OwnerProfile = () => {
             </p>
           </div>
         </section>
-
-        {/* Success Message */}
-        {message && (
-          <p
-            role="status"
-            className="mt-4 rounded-sm border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-400/20 dark:bg-green-400/10 dark:text-green-300"
-          >
-            {message}
-          </p>
-        )}
 
         {/* Page Footer */}
         <footer className="py-8 text-center text-xs text-neutral-400 dark:text-neutral-500">
