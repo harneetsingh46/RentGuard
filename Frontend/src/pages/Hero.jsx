@@ -1,33 +1,5 @@
 
 import { Link } from "react-router-dom";
-import { ShieldCheck, CreditCard, Receipt, KeyRound } from "lucide-react";
-
-const trustItems = [
-  {
-    icon: ShieldCheck,
-    title: "Admin-verified property owners",
-    description:
-      "Every owner account is reviewed and approved by an administrator before listing properties.",
-  },
-  {
-    icon: CreditCard,
-    title: "Secure online payments",
-    description:
-      "Rent and bills are paid through Razorpay and every payment is verified on our server.",
-  },
-  {
-    icon: Receipt,
-    title: "A receipt for every payment",
-    description:
-      "Download PDF receipts, and both tenant and owner get a confirmation email.",
-  },
-  {
-    icon: KeyRound,
-    title: "Protected sign-in",
-    description:
-      "Email OTP login with rate limits, role-based access and secure session cookies.",
-  },
-];
 
 const features = [
   {
@@ -99,123 +71,91 @@ const Home = () => {
   return (
     <div className="overflow-hidden w-full bg-[#F8F7F2] text-[#171717] transition-colors duration-300 dark:bg-[#101010] dark:text-[#F1F0ED]">
       {/* Hero */}
-      <section className="relative isolate overflow-hidden px-5 pb-16 pt-14 sm:px-8 sm:pb-20 sm:pt-16 lg:px-16 lg:pb-28 lg:pt-24">
+      <section className="relative isolate flex min-h-[calc(100svh-64px)] items-center justify-center overflow-hidden px-5 py-16 sm:px-8 sm:py-20 lg:px-16">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-28 top-12 -z-10 h-72 w-72 rounded-full bg-yellow-300/15 blur-3xl sm:h-96 sm:w-96 dark:bg-yellow-400/[0.07]"
+          className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-yellow-300/15 blur-3xl sm:h-[28rem] sm:w-[28rem] dark:bg-yellow-400/[0.07]"
         />
 
-        <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-2 lg:gap-14">
-          <div className="hero-enter min-w-0">
-            <p className="mb-5 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-600 sm:mb-6 sm:text-sm dark:text-neutral-400">
+        <div className="hero-enter mx-auto w-full max-w-5xl text-center">
+          <p className="mb-6 flex items-center justify-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-600 sm:mb-8 sm:text-sm dark:text-neutral-400">
+            <span
+              className="h-px w-10 bg-yellow-500"
+              aria-hidden="true"
+            />
+            <span>Rental management, made clearer</span>
+            <span
+              className="h-px w-10 bg-yellow-500"
+              aria-hidden="true"
+            />
+          </p>
+
+          <h1 className="text-[2.6rem] font-semibold leading-[1.06] tracking-[-0.045em] text-balance sm:text-6xl md:text-7xl lg:text-[5.5rem] xl:text-[6.5rem]">
+            Manage rentals{" "}
+            <br className="hidden sm:block" />
+            without the{" "}
+            <span className="hero-highlight relative inline-block text-[#D99D00] dark:text-[#F7C744]">
+              chaos.
               <span
-                className="h-px w-20 bg-yellow-500"
                 aria-hidden="true"
+                className="absolute bottom-1 left-0 -z-10 h-2.5 w-full -rotate-1 rounded-sm bg-yellow-300/45 sm:bottom-1.5 sm:h-3.5"
               />
-              Rental management, made clearer
-            </p>
+            </span>
+          </h1>
 
-            <h1 className="max-w-2xl text-[2.65rem] font-semibold leading-[1.08] tracking-[-0.045em] sm:text-5xl md:text-6xl lg:text-7xl">
-              Manage rentals
-              <br />
-              without the{" "}
-              <span className="hero-highlight relative inline-block text-[#D99D00] dark:text-[#F7C744]">
-                chaos.
-                <span
-                  aria-hidden="true"
-                  className="absolute bottom-1 left-0 -z-10 h-2.5 w-full -rotate-1 rounded-sm bg-yellow-300/45 sm:bottom-1.5 sm:h-3.5"
-                />
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-7 text-neutral-600 sm:mt-8 sm:text-lg sm:leading-8 lg:max-w-3xl lg:text-xl dark:text-neutral-400">
+            Manage properties, rental applications, bills, online payments,
+            maintenance requests, and important documents in one organized
+            workspace.
+          </p>
+
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row sm:gap-4">
+            <Link
+              to="/signup"
+              className="group inline-flex w-full items-center justify-center gap-3 rounded-xl bg-yellow-300 px-7 py-4 text-base font-semibold text-black shadow-sm transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-yellow-400 hover:shadow-lg hover:shadow-yellow-500/15 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 sm:w-auto sm:px-9 sm:text-lg dark:focus-visible:ring-offset-black"
+            >
+              Get started
+              <span
+                aria-hidden="true"
+                className="inline-block transition-transform duration-300 group-hover:translate-x-1"
+              >
+                →
               </span>
-            </h1>
+            </Link>
 
-            <p className="mt-6 max-w-xl text-base leading-7 text-neutral-600 sm:text-lg sm:leading-8 dark:text-neutral-400">
-              Manage properties, rental applications, bills, online payments,
-              maintenance requests, and important documents in one organized
-              workspace.
-            </p>
-
-            <div className="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-              <Link
-                to="/signup"
-                className="group inline-flex w-full items-center justify-center gap-3 rounded-xl bg-yellow-300 px-6 py-3.5 font-semibold text-black shadow-sm transition duration-300 ease-out hover:-translate-y-0.5 hover:bg-yellow-400 hover:shadow-lg hover:shadow-yellow-500/15 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2 sm:w-auto sm:px-7 sm:py-4 dark:focus-visible:ring-offset-black"
+            <a
+              href="#features"
+              className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-black/10 bg-white/50 px-7 py-4 text-base font-medium transition duration-300 hover:-translate-y-0.5 hover:border-yellow-400/60 hover:bg-white hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:w-auto sm:px-9 sm:text-lg dark:border-white/15 dark:bg-white/[0.03] dark:hover:border-yellow-300/40 dark:hover:bg-white/[0.06]"
+            >
+              Explore features
+              <span
+                aria-hidden="true"
+                className="text-neutral-500 transition-transform duration-300 group-hover:translate-y-0.5 group-hover:text-yellow-600 dark:group-hover:text-yellow-300"
               >
-                Get started
-                <span
-                  aria-hidden="true"
-                  className="inline-block transition-transform duration-300 group-hover:translate-x-1"
-                >
-                  →
-                </span>
-              </Link>
-
-              <a
-                href="#features"
-                className="group inline-flex w-full items-center justify-center gap-2 rounded-xl border border-black/10 bg-white/50 px-6 py-3.5 font-medium transition duration-300 hover:-translate-y-0.5 hover:border-yellow-400/60 hover:bg-white hover:shadow-md active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 sm:w-auto sm:px-7 sm:py-4 dark:border-white/15 dark:bg-white/[0.03] dark:hover:border-yellow-300/40 dark:hover:bg-white/[0.06]"
-              >
-                Explore features
-                <span
-                  aria-hidden="true"
-                  className="text-neutral-500 transition-transform duration-300 group-hover:translate-y-0.5 group-hover:text-yellow-600 dark:group-hover:text-yellow-300"
-                >
-                  ↓
-                </span>
-              </a>
-            </div>
-
-            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-neutral-600 sm:mt-10 sm:gap-x-6 dark:text-neutral-400">
-              {[
-                "Admin-verified owners",
-                "Secure online payments",
-                "PDF receipts",
-              ].map((item) => (
-                <span
-                  key={item}
-                  className="group inline-flex items-center gap-2 transition-colors duration-200 hover:text-neutral-950 dark:hover:text-white"
-                >
-                  <span
-                    className="text-sm text-yellow-600 transition-transform duration-200 group-hover:scale-110 dark:text-yellow-300"
-                    aria-hidden="true"
-                  >
-                    ✓
-                  </span>
-                  {item}
-                </span>
-              ))}
-            </div>
+                ↓
+              </span>
+            </a>
           </div>
 
-          <div className="hero-preview w-full rounded-2xl border border-black/10 bg-white/70 p-5 shadow-sm sm:p-8 dark:border-white/10 dark:bg-[#171717]">
-            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-600 dark:text-neutral-400">
-              <span className="h-px w-8 bg-yellow-500" aria-hidden="true" />
-              <span className="text-[#D99D00] dark:text-[#F7C744]">
-                Trust, built into every step
-              </span>
-            </p>
-
-            <div className="mt-5 divide-y divide-black/5 dark:divide-white/10 sm:mt-6">
-              {trustItems.map((item) => (
-                <div
-                  key={item.title}
-                  className="flex items-start gap-3.5 py-3.5 first:pt-0 last:pb-0 sm:gap-4 sm:py-4"
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-neutral-600 sm:mt-12 sm:gap-x-10 sm:text-base dark:text-neutral-400">
+            {[
+              "Admin-verified owners",
+              "Secure online payments",
+              "PDF receipts",
+            ].map((item) => (
+              <span
+                key={item}
+                className="group inline-flex items-center gap-2 transition-colors duration-200 hover:text-neutral-950 dark:hover:text-white"
+              >
+                <span
+                  className="text-sm text-yellow-600 transition-transform duration-200 group-hover:scale-110 sm:text-base dark:text-yellow-300"
+                  aria-hidden="true"
                 >
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-yellow-300/20 text-yellow-700 dark:text-yellow-300">
-                    <item.icon className="h-5 w-5" aria-hidden="true" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-semibold text-neutral-900 sm:text-base dark:text-white">
-                      {item.title}
-                    </h3>
-                    <p className="mt-0.5 text-xs text-neutral-600 sm:text-sm dark:text-neutral-400">
-                      {item.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <p className="mt-5 border-t border-black/5 pt-4 text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400 sm:mt-6">
-              Online payments by Razorpay · Files stored securely on Cloudinary
-            </p>
+                  ✓
+                </span>
+                {item}
+              </span>
+            ))}
           </div>
         </div>
       </section>
@@ -475,13 +415,8 @@ const Home = () => {
           animation: heroEnter 650ms cubic-bezier(.2,.7,.2,1) both;
         }
 
-        .hero-preview {
-          animation: heroEnter 750ms cubic-bezier(.2,.7,.2,1) 100ms both;
-        }
-
         @media (prefers-reduced-motion: reduce) {
-          .hero-enter,
-          .hero-preview { animation: none !important; }
+          .hero-enter { animation: none !important; }
           *, *::before, *::after {
             scroll-behavior: auto !important;
             transition-duration: 0.01ms !important;
