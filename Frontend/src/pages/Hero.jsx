@@ -1,5 +1,33 @@
 
 import { Link } from "react-router-dom";
+import { ShieldCheck, CreditCard, Receipt, KeyRound } from "lucide-react";
+
+const trustItems = [
+  {
+    icon: ShieldCheck,
+    title: "Admin-verified property owners",
+    description:
+      "Every owner account is reviewed and approved by an administrator before listing properties.",
+  },
+  {
+    icon: CreditCard,
+    title: "Secure online payments",
+    description:
+      "Rent and bills are paid through Razorpay and every payment is verified on our server.",
+  },
+  {
+    icon: Receipt,
+    title: "A receipt for every payment",
+    description:
+      "Download PDF receipts, and both tenant and owner get a confirmation email.",
+  },
+  {
+    icon: KeyRound,
+    title: "Protected sign-in",
+    description:
+      "Email OTP login with rate limits, role-based access and secure session cookies.",
+  },
+];
 
 const features = [
   {
@@ -135,49 +163,59 @@ const Home = () => {
             </div>
 
             <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-sm text-neutral-600 sm:mt-10 sm:gap-x-6 dark:text-neutral-400">
-              {["Owner workspace", "Tenant access", "Organized records"].map(
-                (item) => (
+              {[
+                "Admin-verified owners",
+                "Secure online payments",
+                "PDF receipts",
+              ].map((item) => (
+                <span
+                  key={item}
+                  className="group inline-flex items-center gap-2 transition-colors duration-200 hover:text-neutral-950 dark:hover:text-white"
+                >
                   <span
-                    key={item}
-                    className="group inline-flex items-center gap-2 transition-colors duration-200 hover:text-neutral-950 dark:hover:text-white"
+                    className="text-sm text-yellow-600 transition-transform duration-200 group-hover:scale-110 dark:text-yellow-300"
+                    aria-hidden="true"
                   >
-                    <span
-                      className="text-sm text-yellow-600 transition-transform duration-200 group-hover:scale-110 dark:text-yellow-300"
-                      aria-hidden="true"
-                    >
-                      ✓
-                    </span>
-                    {item}
+                    ✓
                   </span>
-                )
-              )}
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
 
-          <div className="hero-preview-wrap group relative mx-auto w-full min-w-0 max-w-2xl lg:max-w-none">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -inset-3 rounded-2xl bg-yellow-400/[0.07] opacity-0 blur-2xl transition-opacity duration-500 dark:bg-yellow-400/[0.09]"
-            />
-
-            <div className="hero-preview group relative overflow-hidden rounded-2xl border border-white/[0.09] bg-white p-1.5 shadow-[0_18px_55px_-38px_rgba(0,0,0,0.35)] transition-all duration-500 ease-out hover:-translate-y-1 hover:border-yellow-400/30 hover:shadow-[0_24px_65px_-35px_rgba(65,45,100,0.28)] sm:rounded-3xl sm:p-2 dark:border-white/10 dark:bg-neutral-900 dark:hover:border-yellow-300/20">
-              <img
-                src="/RentGuard-Hero.png"
-                alt="RentGuard property management dashboard displayed on a laptop"
-                className="h-auto w-full rounded-xl object-cover transition-transform duration-700 ease-out group-hover:scale-[1.008] sm:rounded-2xl"
-              />
-            </div>
-
-            <div className="mt-4 flex items-center justify-between gap-4 px-1 text-xs text-neutral-500 sm:text-sm dark:text-neutral-400">
-              <span className="flex items-center gap-2">
-                <span
-                  className="h-1.5 w-1.5 rounded-full bg-yellow-500"
-                  aria-hidden="true"
-                />
-                One clear view of your rentals
+          <div className="hero-preview w-full rounded-2xl border border-black/10 bg-white/70 p-5 shadow-sm sm:p-8 dark:border-white/10 dark:bg-[#171717]">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-neutral-600 dark:text-neutral-400">
+              <span className="h-px w-8 bg-yellow-500" aria-hidden="true" />
+              <span className="text-[#D99D00] dark:text-[#F7C744]">
+                Trust, built into every step
               </span>
-              <span className="hidden sm:inline">RentGuard workspace</span>
+            </p>
+
+            <div className="mt-5 divide-y divide-black/5 dark:divide-white/10 sm:mt-6">
+              {trustItems.map((item) => (
+                <div
+                  key={item.title}
+                  className="flex items-start gap-3.5 py-3.5 first:pt-0 last:pb-0 sm:gap-4 sm:py-4"
+                >
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-yellow-300/20 text-yellow-700 dark:text-yellow-300">
+                    <item.icon className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-neutral-900 sm:text-base dark:text-white">
+                      {item.title}
+                    </h3>
+                    <p className="mt-0.5 text-xs text-neutral-600 sm:text-sm dark:text-neutral-400">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
+
+            <p className="mt-5 border-t border-black/5 pt-4 text-xs text-neutral-500 dark:border-white/10 dark:text-neutral-400 sm:mt-6">
+              Online payments by Razorpay · Files stored securely on Cloudinary
+            </p>
           </div>
         </div>
       </section>
