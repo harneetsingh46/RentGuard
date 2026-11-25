@@ -1,24 +1,116 @@
 import { Link } from "react-router-dom";
-import { ArrowDownRight, ArrowUpRight, Building2, CheckCircle2, ShieldCheck, Wallet } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Building2,
+  CheckCircle2,
+  ClipboardCheck,
+  DoorOpen,
+  FileText,
+  ShieldCheck,
+  UserCog,
+  Users,
+  Wallet,
+  Wrench,
+  KeyRound,
+} from "lucide-react";
+
+const capabilities = [
+  {
+    icon: Building2,
+    title: "Properties & units",
+    text: "Keep properties and units together, with photos, descriptions, facilities and live availability.",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Rental applications",
+    text: "Tenants apply for a unit, owners review, and approved offers are confirmed in a few clicks.",
+  },
+  {
+    icon: Wallet,
+    title: "Bills & payments",
+    text: "Create bills, collect online payments through Razorpay or record cash, and issue a receipt every time.",
+  },
+  {
+    icon: FileText,
+    title: "Documents",
+    text: "Upload, share and download agreements and other rental files, for owners and tenants alike.",
+  },
+  {
+    icon: Wrench,
+    title: "Maintenance",
+    text: "Tenants report issues with a photo and priority, and owners update the status as work progresses.",
+  },
+  {
+    icon: DoorOpen,
+    title: "Move-outs",
+    text: "Move-out requests follow clear steps, with owner approval and every bill settled before a tenancy ends.",
+  },
+];
+
+const roles = [
+  {
+    icon: Building2,
+    title: "For property owners",
+    points: [
+      "Verified account, approved by an administrator",
+      "Properties and units with photos and facilities",
+      "Review applications or add a tenant directly",
+      "Bills, online and cash payments, receipts",
+      "Documents, maintenance and move-out requests",
+    ],
+  },
+  {
+    icon: Users,
+    title: "For tenants",
+    points: [
+      "Browse available units with photo sliders",
+      "Apply, then confirm your lease offers",
+      "Pay bills online and download receipts",
+      "Upload documents and raise maintenance requests",
+      "Request a move-out and track its status",
+    ],
+  },
+  {
+    icon: UserCog,
+    title: "For administrators",
+    points: [
+      "Review and approve property owners",
+      "Record a reason when an owner is rejected",
+      "Overview of owners and tenants",
+      "Search, filter and page through records",
+    ],
+  },
+];
 
 const principles = [
   {
     number: "1",
     title: "Clarity over complexity",
-    description: "Rental details, documents, and payment records should be easy to understand—not buried in spreadsheets or messages.",
+    description:
+      "Every bill, document, request and payment has a clear status in one place, instead of being scattered across spreadsheets and chat messages.",
     icon: CheckCircle2,
   },
   {
     number: "2",
     title: "Trust by design",
-    description: "Keep important rental information organized so owners and tenants can make decisions with confidence.",
+    description:
+      "Owners are verified by an administrator, payments are checked on the server, and every payment produces a receipt for both sides.",
     icon: ShieldCheck,
   },
   {
     number: "3",
     title: "One connected place",
-    description: "Bring property, tenant, and rent workflows together in one considered, practical workspace.",
+    description:
+      "Properties, applications, tenancies, bills and maintenance share one workspace, so nothing falls through the cracks.",
     icon: Building2,
+  },
+  {
+    number: "4",
+    title: "Clear rules for both sides",
+    description:
+      "Lease confirmations, payments and move-outs follow defined steps, so owners and tenants always know what happens next.",
+    icon: KeyRound,
   },
 ];
 
@@ -31,7 +123,7 @@ const About = () => {
           <div className="animate-[fadeUp_.6s_ease-out_both]">
             <p className="mb-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">
               <span className="h-2 w-2 rounded-full bg-yellow-400" />
-              A better way to rent
+              About RentGuard
             </p>
             <h1 className="max-w-4xl font-serif text-5xl leading-[0.96] tracking-[-0.055em] sm:text-6xl md:text-7xl xl:text-8xl">
               Rental living,
@@ -45,67 +137,143 @@ const About = () => {
           </div>
           <div className="animate-[fadeUp_.7s_ease-out_both] lg:pb-2">
             <p className="max-w-xl text-base leading-7 text-neutral-600 dark:text-neutral-300 sm:text-lg sm:leading-8">
-              RentGuard brings the everyday essentials of rental management into one organized space—so property owners can stay on top of the details and tenants know where things stand.
+              RentGuard is a rental management platform for property owners,
+              tenants and administrators. Properties, applications, bills,
+              online and cash payments, documents and maintenance requests all
+              live in one organized workspace, so everyone knows where things
+              stand.
             </p>
             <Link
               to="/contact"
               className="group mt-6 inline-flex min-h-12 items-center gap-3 rounded-xl bg-yellow-300 px-5 py-3 text-sm font-semibold text-black transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:bg-yellow-200 hover:shadow-[5px_5px_0_0_#111] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-950"
             >
               Talk to our team
-              <ArrowUpRight size={17} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+              <ArrowUpRight
+                size={17}
+                className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1"
+              />
             </Link>
           </div>
         </section>
 
-        {/* Feature band */}
-        <section className="grid overflow-hidden rounded-xl border border-black/10 bg-neutral-50 dark:border-white/10 dark:bg-neutral-900 sm:grid-cols-3">
-          {[
-            { icon: Building2, title: "Property", text: "Keep property and unit details together." },
-            { icon: Wallet, title: "Rent", text: "See rent records and payment status at a glance." },
-            { icon: ShieldCheck, title: "Documents", text: "Keep essential rental files organized." },
-          ].map(({ icon: Icon, title, text }, index) => (
-            <article
-              key={title}
-              className={`group flex gap-4 rounded-xl p-5 transition-all duration-300 hover:-translate-y-1 hover:bg-yellow-300/20 hover:shadow-[0_12px_30px_rgba(0,0,0,0.06)] sm:p-6 lg:p-8 ${
-                index < 2 ? "border-b border-black/10 dark:border-white/10 sm:border-b-0 sm:border-r" : ""
-              }`}
-            >
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-yellow-300 text-black transition duration-300 group-hover:-translate-y-1 group-hover:rotate-[-6deg] group-hover:scale-110 group-hover:shadow-md">
-                <Icon size={21} strokeWidth={1.8} />
+        {/* What you can do */}
+        <section className="pt-10 sm:pt-14">
+          <p className="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">
+            What you can do
+          </p>
+          <div className="grid gap-px overflow-hidden rounded-xl border border-black/10 bg-black/10 dark:border-white/10 dark:bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
+            {capabilities.map(({ icon: Icon, title, text }) => (
+              <article
+                key={title}
+                className="group flex gap-4 bg-neutral-50 p-5 transition-all duration-300 hover:bg-yellow-300/20 dark:bg-neutral-900 dark:hover:bg-yellow-300/10 sm:p-6 lg:p-8"
+              >
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-yellow-300 text-black transition duration-300 group-hover:-translate-y-1 group-hover:rotate-[-6deg] group-hover:scale-110 group-hover:shadow-md">
+                  <Icon size={21} strokeWidth={1.8} />
+                </span>
+                <div>
+                  <h2 className="text-base font-semibold">{title}</h2>
+                  <p className="mt-1.5 max-w-xs text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+                    {text}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* Roles */}
+        <section className="pt-12 sm:pt-16">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">
+              Built for everyone in the rental
+            </p>
+            <h2 className="mt-4 font-serif text-3xl leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+              One platform, three{" "}
+              <span className="underline decoration-yellow-300 decoration-4 underline-offset-4">
+                dashboards.
               </span>
-              <div>
-                <h2 className="text-base font-semibold">{title}</h2>
-                <p className="mt-1.5 max-w-xs text-sm leading-6 text-neutral-600 dark:text-neutral-300">{text}</p>
-              </div>
-            </article>
-          ))}
+            </h2>
+          </div>
+
+          <div className="mt-8 grid gap-4 lg:grid-cols-3">
+            {roles.map(({ icon: Icon, title, points }) => (
+              <article
+                key={title}
+                className="group rounded-xl border border-black/10 bg-white p-6 transition-all duration-300 hover:-translate-y-1 hover:border-yellow-400/60 hover:shadow-[0_12px_30px_rgba(0,0,0,0.06)] dark:border-white/10 dark:bg-neutral-900 sm:p-7"
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-yellow-300 text-black transition duration-300 group-hover:rotate-[-6deg] group-hover:scale-110">
+                  <Icon size={21} strokeWidth={1.8} />
+                </span>
+                <h3 className="mt-5 text-lg font-semibold tracking-tight">
+                  {title}
+                </h3>
+                <ul className="mt-4 space-y-3">
+                  {points.map((point) => (
+                    <li
+                      key={point}
+                      className="flex items-start gap-3 text-sm leading-6 text-neutral-600 dark:text-neutral-300"
+                    >
+                      <CheckCircle2
+                        size={16}
+                        className="mt-1 shrink-0 text-yellow-500"
+                        aria-hidden="true"
+                      />
+                      <span>{point}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
         </section>
 
         {/* Mission and principles */}
         <section className="grid gap-10 py-12 sm:py-16 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20 lg:py-20">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">Our point of view</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-400">
+              Our point of view
+            </p>
             <h2 className="mt-4 max-w-md font-serif text-4xl leading-tight tracking-tight sm:text-5xl">
-              Good management starts with the <span className="underline decoration-yellow-300 decoration-4 underline-offset-4">small details.</span>
+              Good management starts with the{" "}
+              <span className="underline decoration-yellow-300 decoration-4 underline-offset-4">
+                small details.
+              </span>
             </h2>
             <p className="mt-5 max-w-md text-sm leading-7 text-neutral-600 dark:text-neutral-300 sm:text-base">
-              A lease, a due date, a maintenance note, a payment record: each detail matters. RentGuard is built around making those details easier to find and simpler to manage.
+              A lease, a due date, a maintenance note, a payment record: each
+              detail matters. RentGuard is built around making those details
+              easier to find and simpler to manage.
             </p>
           </div>
 
           <div className="border-t border-black/15 dark:border-white/15">
             {principles.map(({ number, title, description, icon: Icon }) => (
-              <article key={number} className="group grid gap-3 rounded-xl border-b border-black/15 px-3 py-6 transition-all duration-300 hover:translate-x-1 hover:bg-yellow-300/10 hover:px-5 dark:border-white/15 sm:grid-cols-[56px_1fr] sm:gap-5 sm:py-7">
+              <article
+                key={number}
+                className="group grid gap-3 rounded-xl border-b border-black/15 px-3 py-6 transition-all duration-300 hover:translate-x-1 hover:bg-yellow-300/10 hover:px-5 dark:border-white/15 sm:grid-cols-[56px_1fr] sm:gap-5 sm:py-7"
+              >
                 <div className="flex items-center justify-between sm:block">
-                  <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">{number}</span>
-                  <Icon size={20} className="text-neutral-500 transition-colors duration-300 group-hover:text-yellow-300 sm:hidden" />
+                  <span className="font-mono text-xs text-neutral-500 dark:text-neutral-400">
+                    {number}
+                  </span>
+                  <Icon
+                    size={20}
+                    className="text-neutral-500 transition-colors duration-300 group-hover:text-yellow-300 sm:hidden"
+                  />
                 </div>
                 <div>
                   <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-lg font-semibold tracking-tight sm:text-xl">{title}</h3>
-                    <Icon size={20} className="hidden text-neutral-500 transition-all duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-yellow-500 sm:block" />
+                    <h3 className="text-lg font-semibold tracking-tight sm:text-xl">
+                      {title}
+                    </h3>
+                    <Icon
+                      size={20}
+                      className="hidden text-neutral-500 transition-all duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-yellow-500 sm:block"
+                    />
                   </div>
-                  <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300 sm:text-base sm:leading-7">{description}</p>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-neutral-600 dark:text-neutral-300 sm:text-base sm:leading-7">
+                    {description}
+                  </p>
                 </div>
               </article>
             ))}
@@ -117,10 +285,13 @@ const About = () => {
           <div className="pointer-events-none absolute -right-8 -top-12 h-40 w-40 rounded-full border-[24px] border-black/[0.06] transition-transform duration-700 group-hover:scale-125 sm:h-56 sm:w-56" />
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em]">Make room for clarity</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em]">
+                Make room for clarity
+              </p>
               <h2 className="mt-3 max-w-2xl font-serif text-3xl leading-tight tracking-tight sm:text-4xl lg:text-5xl">
                 Less chasing details.
-                <br />More confidence in every rental.
+                <br />
+                More confidence in every rental.
               </h2>
             </div>
             <Link
@@ -128,7 +299,10 @@ const About = () => {
               className="group/link inline-flex min-h-12 shrink-0 items-center justify-center gap-3 self-start rounded-xl bg-black px-5 py-3 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:bg-neutral-800 hover:shadow-[5px_5px_0_0_rgba(0,0,0,0.18)] active:translate-y-0 sm:self-auto"
             >
               Get started
-              <ArrowDownRight size={17} className="transition-transform duration-300 group-hover/link:translate-x-1 group-hover/link:translate-y-1" />
+              <ArrowDownRight
+                size={17}
+                className="transition-transform duration-300 group-hover/link:translate-x-1 group-hover/link:translate-y-1"
+              />
             </Link>
           </div>
         </section>
