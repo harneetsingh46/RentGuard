@@ -2,12 +2,55 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import apiClient from "../../ApiClient/interceptor";
 import { notify } from "../../utils/notify";
+import {
+  FileText,
+  FileImage,
+  LoaderCircle,
+  X,
+  Download,
+  File,
+  Eye,
+} from "lucide-react";
+
+const getDocumentFormat = (document) => {
+  const format = (
+    document?.fileFormat ||
+    document?.originalFileName?.split(".").pop() ||
+    ""
+  ).toLowerCase();
+
+  return format === "jpeg" ? "jpg" : format;
+};
+
+const isImageDocument = (document) =>
+  ["jpg", "png", "webp"].includes(getDocumentFormat(document));
+
+const isPdfDocument = (document) =>
+  getDocumentFormat(document) === "pdf";
+
+const parseErrorMessage = async (err, fallback = "An unexpected error occurred.") => {
+  if (err.response?.data instanceof Blob) {
+    try {
+      const text = await err.response.data.text();
+      const parsed = JSON.parse(text);
+      if (parsed.message) return parsed.message;
+    } catch {
+      // ignore parse error
+    }
+  }
+  return err.response?.data?.message || err.message || fallback;
+};
 
 const TenantDocument = () => {
   const [documents, setDocuments] = useState([]);
   const [activeFilter, setActiveFilter] = useState("All");
   const [loading, setLoading] = useState(true);
   const [openingDocumentId, setOpeningDocumentId] = useState(null);
+  const [previewDocument, setPreviewDocument] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const previewBlobUrlRef = useRef(null);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [uploadForm, setUploadForm] = useState({
@@ -17,6 +60,42 @@ const TenantDocument = () => {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+
+  const revokePreviewBlob = useCallback(() => {
+    if (previewBlobUrlRef.current) {
+      URL.revokeObjectURL(previewBlobUrlRef.current);
+      previewBlobUrlRef.current = null;
+    }
+  }, []);
+
+  const closePreview = useCallback(() => {
+    revokePreviewBlob();
+    setPreviewDocument(null);
+    setPreviewUrl("");
+    setLoadingPreview(false);
+  }, [revokePreviewBlob]);
+
+  useEffect(() => {
+    return () => {
+      revokePreviewBlob();
+    };
+  }, [revokePreviewBlob]);
+
+  useEffect(() => {
+    if (!previewDocument) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") closePreview();
+    };
+
+    window.document.addEventListener("keydown", handleKeyDown);
+    window.document.body.style.overflow = "hidden";
+
+    return () => {
+      window.document.removeEventListener("keydown", handleKeyDown);
+      window.document.body.style.overflow = "";
+    };
+  }, [previewDocument, closePreview]);
 
   // Fetch documents uploaded/shared by the owner
   const loadDocuments = useCallback(async () => {
@@ -79,8 +158,64 @@ const TenantDocument = () => {
     );
   }, [documents, activeFilter]);
 
-  // View or download a document shared by the owner
-  const handleDocumentAction = async (document, mode) => {
+  // Open the document preview modal
+  const handleView = async (document) => {
+    const documentId = document._id;
+    if (!documentId) {
+      notify.error("Invalid document.");
+      return;
+    }
+
+    revokePreviewBlob();
+    setPreviewDocument(document);
+    setPreviewUrl("");
+    setLoadingPreview(true);
+    setError("");
+
+    try {
+      if (isPdfDocument(document)) {
+        const response = await apiClient.get(
+          `/document/documents/${documentId}/download`,
+          {
+            params: { mode: "view", stream: "1" },
+            responseType: "blob",
+          }
+        );
+
+        const blobUrl = URL.createObjectURL(
+          new Blob([response.data], { type: "application/pdf" })
+        );
+        previewBlobUrlRef.current = blobUrl;
+        setPreviewUrl(blobUrl);
+      } else {
+        const response = await apiClient.get(
+          `/document/documents/${documentId}/download`,
+          {
+            params: { mode: "view" },
+          }
+        );
+
+        const downloadUrl = response.data?.data?.downloadUrl;
+        if (!downloadUrl) {
+          throw new Error("The server did not return a document URL.");
+        }
+        setPreviewUrl(downloadUrl);
+      }
+    } catch (err) {
+      setPreviewDocument(null);
+      const message = await parseErrorMessage(
+        err,
+        "Failed to open the document preview."
+      );
+      setError(message);
+      notify.error(message);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  // Download a document shared by the owner
+  const handleDocumentAction = async (document, mode = "download") => {
     const documentId = document._id;
 
     if (!documentId) {
@@ -92,98 +227,45 @@ const TenantDocument = () => {
     setSuccess("");
     setOpeningDocumentId(documentId);
 
-    // Open a tab immediately to avoid popup blockers
-    const newTab =
-      mode === "view"
-        ? window.open("about:blank", "_blank")
-        : null;
-
     try {
-      if (mode === "view") {
-        const response = await apiClient.get(
-          `/document/documents/${documentId}/download`,
-          {
-            params: { mode: "view", stream: "1" },
-            responseType: "blob",
-          }
-        );
-
-        const isPdf =
-          document.fileFormat === "pdf" ||
-          (document.originalFileName &&
-            document.originalFileName.toLowerCase().endsWith(".pdf"));
-
-        const blob = new Blob([response.data], {
-          type: isPdf
-            ? "application/pdf"
-            : response.data?.type || "application/octet-stream",
-        });
-        const blobUrl = URL.createObjectURL(blob);
-
-        if (newTab) {
-          newTab.opener = null;
-          newTab.location.href = blobUrl;
-        } else {
-          window.location.href = blobUrl;
+      const response = await apiClient.get(
+        `/document/documents/${documentId}/download`,
+        {
+          params: {},
         }
+      );
 
-        setTimeout(() => {
-          URL.revokeObjectURL(blobUrl);
-        }, 60000);
-      } else {
-        const response = await apiClient.get(
-          `/document/documents/${documentId}/download`,
-          {
-            params: {},
-          }
+      const downloadUrl = response.data?.data?.downloadUrl;
+
+      if (!downloadUrl) {
+        throw new Error(
+          "The server did not return a document URL."
         );
-
-        const downloadUrl = response.data?.data?.downloadUrl;
-
-        if (!downloadUrl) {
-          throw new Error(
-            "The server did not return a document URL."
-          );
-        }
-
-        const link = window.document.createElement("a");
-
-        link.href = downloadUrl;
-        link.download =
-          document.originalFileName ||
-          document.documentName ||
-          "tenant-document";
-
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-
-        window.document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        setSuccess("Your document download has started.");
       }
+
+      const link = window.document.createElement("a");
+
+      link.href = downloadUrl;
+      link.download =
+        document.originalFileName ||
+        document.documentName ||
+        "tenant-document";
+
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+
+      window.document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setSuccess("Your document download has started.");
     } catch (err) {
-      if (newTab) newTab.close();
-
-      let errorMessage = "Unable to open this document.";
-      if (err.response?.data instanceof Blob) {
-        try {
-          const text = await err.response.data.text();
-          const parsed = JSON.parse(text);
-          errorMessage = parsed.message || errorMessage;
-        } catch {
-          // ignore parse error
-        }
-      } else {
-        errorMessage =
-          err.response?.data?.message ||
-          err.message ||
-          errorMessage;
-      }
-
-      setError(errorMessage);
-      notify.error(errorMessage);
+      const message = await parseErrorMessage(
+        err,
+        "Unable to download this document."
+      );
+      setError(message);
+      notify.error(message);
     } finally {
       setOpeningDocumentId(null);
     }
@@ -531,13 +613,11 @@ const TenantDocument = () => {
                           <div className="flex items-center gap-4">
                             <button
                               type="button"
-                              disabled={!id || isOpening}
-                              onClick={() =>
-                                handleDocumentAction(document, "view")
-                              }
+                              disabled={!id}
+                              onClick={() => handleView(document)}
                               className="text-sm font-medium text-neutral-800 underline underline-offset-4 hover:text-yellow-600 disabled:opacity-50 dark:text-yellow-300"
                             >
-                              {isOpening ? "Opening..." : "View"}
+                              View
                             </button>
 
                             <button
@@ -548,7 +628,7 @@ const TenantDocument = () => {
                               }
                               className="text-sm font-medium text-neutral-800 underline underline-offset-4 hover:text-yellow-600 disabled:opacity-50 dark:text-yellow-300"
                             >
-                              Download
+                              {isOpening ? "Downloading..." : "Download"}
                             </button>
                           </div>
                         </td>
@@ -605,6 +685,158 @@ const TenantDocument = () => {
         <footer className="py-8 text-center text-xs text-neutral-400 dark:text-neutral-500">
           RentGuard Tenant Portal · Documents
         </footer>
+      </div>
+
+      {/* Document preview modal */}
+      {previewDocument && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-2 backdrop-blur-sm sm:p-5"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closePreview();
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="document-preview-title"
+            className="flex max-h-[96dvh] w-full max-w-5xl flex-col overflow-hidden rounded-xs border border-stone-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900 sm:max-h-[92dvh]"
+          >
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-stone-200 px-4 py-3 dark:border-neutral-800 sm:px-5">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xs bg-stone-100 text-stone-700 dark:bg-neutral-800 dark:text-stone-200">
+                  {isPdfDocument(previewDocument) ? (
+                    <FileText size={19} />
+                  ) : (
+                    <FileImage size={19} />
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <h2
+                    id="document-preview-title"
+                    className="break-words font-semibold"
+                  >
+                    {previewDocument.documentName}
+                  </h2>
+
+                  <p className="mt-1 break-all text-xs text-stone-500 dark:text-stone-400">
+                    {previewDocument.originalFileName}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closePreview}
+                aria-label="Close document preview"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xs text-stone-500 hover:bg-stone-100 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-neutral-800 dark:hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </header>
+
+            <div className="relative flex min-h-[280px] flex-1 items-center justify-center overflow-auto bg-stone-100 p-2 dark:bg-neutral-950 sm:min-h-[400px] sm:p-4">
+              {loadingPreview ? (
+                <div className="py-16 text-center">
+                  <LoaderCircle
+                    size={30}
+                    className="mx-auto animate-spin text-yellow-500"
+                  />
+
+                  <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">
+                    Preparing document preview...
+                  </p>
+                </div>
+              ) : previewUrl && isImageDocument(previewDocument) ? (
+                <img
+                  src={previewUrl}
+                  alt={previewDocument.documentName}
+                  className="block max-h-[65dvh] max-w-full rounded-xs object-contain sm:max-h-[68dvh]"
+                />
+              ) : previewUrl && isPdfDocument(previewDocument) ? (
+                navigator.pdfViewerEnabled === false ? (
+                  <div className="flex flex-col items-center justify-center p-6 text-center sm:p-10">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                      <FileText size={32} />
+                    </div>
+                    <h3 className="mt-4 text-base font-semibold text-stone-900 dark:text-stone-100">
+                      {previewDocument.documentName}
+                    </h3>
+                    <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                      In-app PDF preview is not supported on this device.
+                    </p>
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => window.open(previewUrl, "_blank")}
+                        className="inline-flex items-center justify-center gap-2 rounded-xs bg-yellow-300 px-4 py-2.5 text-xs font-semibold tracking-wide text-black transition hover:bg-yellow-400"
+                      >
+                        <Eye size={16} />
+                        Open PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDocumentAction(previewDocument, "download")}
+                        className="inline-flex items-center justify-center gap-2 rounded-xs border border-stone-300 bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-stone-800 transition hover:bg-stone-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-stone-200 dark:hover:bg-neutral-800"
+                      >
+                        <Download size={16} />
+                        Download
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <iframe
+                    src={previewUrl}
+                    title={`Preview: ${previewDocument.documentName}`}
+                    className="h-[65dvh] min-h-[350px] w-full border-0 bg-white sm:h-[68dvh]"
+                  />
+                )
+              ) : (
+                <div className="px-5 py-12 text-center">
+                  <File
+                    size={30}
+                    className="mx-auto text-stone-400 dark:text-stone-500"
+                  />
+
+                  <p className="mt-3 font-medium">
+                    Preview is not available for this file type.
+                  </p>
+
+                  <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                    Download the file to open it.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-stone-200 px-4 py-3 dark:border-neutral-800 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+              <p className="text-xs capitalize text-stone-500 dark:text-stone-400">
+                {previewDocument.documentType || "other"} ·{" "}
+                {formatDate(previewDocument.createdAt)}
+              </p>
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={closePreview}
+                  className="inline-flex items-center justify-center gap-2 rounded-xs border border-stone-300 bg-white px-4 py-2.5 text-xs font-semibold tracking-wide text-stone-800 transition hover:bg-stone-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-stone-200 dark:hover:bg-neutral-800"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDocumentAction(previewDocument, "download")}
+                  className="inline-flex items-center justify-center gap-2 rounded-xs bg-yellow-300 px-4 py-2.5 text-xs font-semibold tracking-wide text-black transition hover:bg-yellow-400"
+                >
+                  <Download size={16} />
+                  Download document
+                </button>
+              </div>
+            </footer>
+          </section>
+        </div>
+      )}
       </div>
     </div>
   );
