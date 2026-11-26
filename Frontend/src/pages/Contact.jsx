@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import apiClient from "../ApiClient/interceptor";
+import { notify } from "../utils/notify";
 import { ArrowUpRight, CheckCircle2, Mail, MessageSquare, Send } from "lucide-react";
 
 const initialForm = { name: "", email: "", topic: "General enquiry", message: "" };
@@ -21,6 +22,8 @@ const Contact = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (sending) return;
 
     const nextErrors = {};
 
@@ -49,7 +52,7 @@ const Contact = () => {
     try {
       setSending(true);
 
-      await apiClient.post("/contact", {
+      const response = await apiClient.post("/contact", {
         name: form.name.trim(),
         email: form.email.trim(),
         topic: form.topic,
@@ -58,11 +61,16 @@ const Contact = () => {
 
       setSubmitted(true);
       setForm(initialForm);
-    } catch (error) {
-      setServerError(
-        error.response?.data?.message ||
-        "Unable to send your message. Please try again."
+      notify.success(
+        response.data?.message ||
+        "Your message has been sent successfully!"
       );
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        "Unable to send your message. Please try again.";
+      setServerError(message);
+      notify.error(message);
     } finally {
       setSending(false);
     }
@@ -92,7 +100,7 @@ const Contact = () => {
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
               <a
-                href="mailto:singh2harneet@gmail.com"
+                href="mailto:rentguard26@gmail.com"
                 className="group flex min-w-0 items-start gap-3 rounded-xl border border-black/10 p-4 transition-all duration-300 hover:-translate-y-1.5 hover:scale-[1.01] hover:border-yellow-400 hover:bg-yellow-300/10 hover:shadow-[0_12px_28px_rgba(0,0,0,0.09)] dark:border-white/15 dark:hover:border-yellow-300"
               >
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-yellow-300 text-black transition-all duration-300 group-hover:rotate-[-6deg] group-hover:scale-110 group-hover:shadow-md">

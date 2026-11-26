@@ -53,7 +53,14 @@ const sendEmail = async ({
   if (text) payload.textContent = text;
 
   if (replyTo) {
-    payload.replyTo = { email: replyTo };
+    if (typeof replyTo === "object" && replyTo?.email) {
+      payload.replyTo = {
+        email: replyTo.email,
+        ...(replyTo.name ? { name: replyTo.name } : {}),
+      };
+    } else if (typeof replyTo === "string") {
+      payload.replyTo = { email: replyTo };
+    }
   }
 
   const response = await fetch(BREVO_API_URL, {
@@ -634,34 +641,217 @@ export const sendRentalApplicationNotification = async ({
 
 // 6. CONTACT FORM EMAIL
 
-export const sendContactEmail = async ({ name, email, topic, message }) => {
+const formatSubmissionDate = (date = new Date()) => {
   try {
-    const { fromEmail } = getBrevoConfig();
-
-    await sendEmail({
-      to: email,
-      subject: `We received your enquiry: ${topic}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-          <h2>Thank you for contacting RentGuard!</h2>
-          <p>Hello ${escapeHtml(name)},</p>
-          <p>We have received your enquiry successfully.</p>
-          <h3>Your enquiry details:</h3>
-          <p><strong>Topic:</strong> ${escapeHtml(topic)}</p>
-          <p><strong>Message:</strong></p>
-          <p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
-          <p>Thank you for reaching out to us.</p>
-          <p>Regards,<br><strong>RentGuard Support Team</strong></p>
-        </div>
-      `,
-      replyTo: fromEmail,
-    });
-
-    return true;
-  } catch (error) {
-    console.error("Contact email error:", error);
-    throw error;
+    return (
+      new Intl.DateTimeFormat("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Asia/Kolkata",
+      }).format(date) + " IST"
+    );
+  } catch {
+    return date.toUTCString();
   }
+};
+
+/**
+ * 1. Email to RentGuard Admin with full enquiry details
+ */
+export const sendContactAdminEmail = async ({
+  name,
+  email,
+  phone,
+  topic,
+  message,
+  submittedAt = formatSubmissionDate(),
+}) => {
+  const adminEmail =
+    process.env.CONTACT_TO_EMAIL?.trim() || "rentguard26@gmail.com";
+
+  const cleanPhone = phone && String(phone).trim() ? String(phone).trim() : null;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; color: #1f2937;">
+      <div style="border-bottom: 2px solid #facc15; padding-bottom: 12px; margin-bottom: 20px;">
+        <h2 style="margin: 0; color: #111827;">RentGuard — New Contact Enquiry</h2>
+        <p style="margin: 4px 0 0; font-size: 14px; color: #6b7280;">You have received a new enquiry through the website contact form.</p>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+        <tr>
+          <td style="padding: 9px 12px; background: #f9fafb; font-weight: bold; width: 140px; border-bottom: 1px solid #e5e7eb;">Name:</td>
+          <td style="padding: 9px 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(name)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 9px 12px; background: #f9fafb; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Email:</td>
+          <td style="padding: 9px 12px; border-bottom: 1px solid #e5e7eb;">
+            <a href="mailto:${escapeHtml(email)}" style="color: #2563eb; text-decoration: none;">${escapeHtml(email)}</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 9px 12px; background: #f9fafb; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Phone:</td>
+          <td style="padding: 9px 12px; border-bottom: 1px solid #e5e7eb;">${cleanPhone ? escapeHtml(cleanPhone) : "Not provided"}</td>
+        </tr>
+        <tr>
+          <td style="padding: 9px 12px; background: #f9fafb; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Topic:</td>
+          <td style="padding: 9px 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(topic)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 9px 12px; background: #f9fafb; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Submitted At:</td>
+          <td style="padding: 9px 12px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(submittedAt)}</td>
+        </tr>
+      </table>
+
+      <div style="margin-bottom: 24px;">
+        <h3 style="margin: 0 0 8px; font-size: 15px; color: #111827;">Message:</h3>
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(message)}</div>
+      </div>
+
+      <div style="font-size: 12px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 14px;">
+        <p style="margin: 0;">Reply directly to this email to respond to <strong>${escapeHtml(name)}</strong> (${escapeHtml(email)}).</p>
+      </div>
+    </div>
+  `;
+
+  const text = `
+[RentGuard Contact Enquiry]
+
+A new enquiry has been submitted through the RentGuard Contact Us form.
+
+Name: ${name}
+Email: ${email}
+Phone: ${cleanPhone || "Not provided"}
+Topic: ${topic}
+Submitted At: ${submittedAt}
+
+Message:
+${message}
+
+You can reply directly to this email to contact ${name} (${email}).
+  `.trim();
+
+  return await sendEmail({
+    to: adminEmail,
+    subject: `[RentGuard Contact] ${topic}`,
+    replyTo: { email, name },
+    html,
+    text,
+  });
+};
+
+/**
+ * 2. Confirmation Email to the Sender
+ */
+export const sendContactConfirmationEmail = async ({
+  name,
+  email,
+  topic,
+  message,
+}) => {
+  const { fromEmail } = getBrevoConfig();
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; color: #1f2937;">
+      <div style="border-bottom: 2px solid #facc15; padding-bottom: 12px; margin-bottom: 20px;">
+        <h2 style="margin: 0; color: #111827;">Thank you for contacting RentGuard!</h2>
+        <p style="margin: 4px 0 0; font-size: 14px; color: #6b7280;">We have received your enquiry.</p>
+      </div>
+
+      <p style="font-size: 14px; line-height: 1.6;">Hello ${escapeHtml(name)},</p>
+      <p style="font-size: 14px; line-height: 1.6;">
+        Thank you for reaching out to us. We confirm that your message has been successfully received by our support team.
+        We are reviewing your enquiry and will get back to you as soon as possible.
+      </p>
+
+      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px; margin: 20px 0; font-size: 14px; line-height: 1.6;">
+        <p style="margin: 0 0 8px;"><strong>Topic:</strong> ${escapeHtml(topic)}</p>
+        <p style="margin: 0 0 4px;"><strong>Your message:</strong></p>
+        <div style="white-space: pre-wrap; color: #374151;">${escapeHtml(message)}</div>
+      </div>
+
+      <p style="font-size: 14px; line-height: 1.6;">
+        If you have any additional details to share in the meantime, feel free to reply to this email.
+      </p>
+
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 24px; font-size: 13px; color: #6b7280;">
+        <p style="margin: 0;">Warm regards,<br><strong style="color: #111827;">RentGuard Support Team</strong></p>
+      </div>
+    </div>
+  `;
+
+  const text = `
+Hello ${name},
+
+Thank you for contacting RentGuard! We have received your message regarding "${topic}".
+
+Our support team is reviewing your enquiry and will get back to you as soon as possible.
+
+Your Submitted Details:
+Topic: ${topic}
+Message:
+${message}
+
+If you have any additional details to share, feel free to reply to this email.
+
+Warm regards,
+RentGuard Support Team
+  `.trim();
+
+  return await sendEmail({
+    to: email,
+    subject: `We received your enquiry: ${topic}`,
+    replyTo: fromEmail,
+    html,
+    text,
+  });
+};
+
+/**
+ * 6. CONTACT FORM EMAIL (orchestrates sending to admin and sender)
+ * - Admin notification is mandatory: throws on failure so the error is reported.
+ * - Sender confirmation is best-effort: failure is logged without rejecting the enquiry.
+ */
+export const sendContactEmail = async ({
+  name,
+  email,
+  phone,
+  topic,
+  message,
+}) => {
+  const submittedAt = formatSubmissionDate();
+
+  // 1. Send admin notification email (fails if this fails)
+  const adminResult = await sendContactAdminEmail({
+    name,
+    email,
+    phone,
+    topic,
+    message,
+    submittedAt,
+  });
+
+  // 2. Send sender confirmation email (logged on error without failing the enquiry)
+  let confirmationSent = false;
+  try {
+    await sendContactConfirmationEmail({
+      name,
+      email,
+      topic,
+      message,
+    });
+    confirmationSent = true;
+  } catch (confirmError) {
+    console.error(
+      "Confirmation email to sender failed:",
+      confirmError.message || confirmError,
+    );
+  }
+
+  return {
+    adminResult,
+    confirmationSent,
+  };
 };
 
 // OWNER AND TENANT SIGNUP EMAILS

@@ -4,9 +4,11 @@ import { submitContactForm } from "../controllers/contact.controller.js";
 const router = express.Router();
 
 // Basic per-IP limit: 5 submissions every 15 minutes.
+// Plus a 2-second rapid resubmission cooldown to prevent duplicate clicks.
 const submissions = new Map();
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_SUBMISSIONS = 5;
+const COOLDOWN_MS = 2000;
 
 const contactRateLimit = (req, res, next) => {
   const now = Date.now();
@@ -22,8 +24,15 @@ const contactRateLimit = (req, res, next) => {
   const record = submissions.get(ip);
 
   if (!record || now - record.start >= WINDOW_MS) {
-    submissions.set(ip, { start: now, count: 1 });
+    submissions.set(ip, { start: now, lastRequest: now, count: 1 });
     return next();
+  }
+
+  // Prevent duplicate submissions caused by rapid double-clicks
+  if (record.lastRequest && now - record.lastRequest < COOLDOWN_MS) {
+    return res.status(429).json({
+      message: "Please wait a moment before sending another message.",
+    });
   }
 
   if (record.count >= MAX_SUBMISSIONS) {
@@ -33,6 +42,7 @@ const contactRateLimit = (req, res, next) => {
   }
 
   record.count += 1;
+  record.lastRequest = now;
   return next();
 };
 
