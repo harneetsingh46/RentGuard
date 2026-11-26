@@ -100,7 +100,7 @@ const Contact = () => {
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold">Email us</span>
-                  <span className="mt-1 block break-all text-sm text-neutral-600 dark:text-neutral-300">singh2harneet@gmail.com</span>
+                  <span className="mt-1 block break-all text-sm text-neutral-600 dark:text-neutral-300">rentguard26@gmail.com</span>
                 </span>
                 <ArrowUpRight size={16} className="ml-auto shrink-0 text-neutral-500 transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
               </a>
