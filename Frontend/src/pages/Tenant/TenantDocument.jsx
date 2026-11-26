@@ -837,7 +837,6 @@ const TenantDocument = () => {
           </section>
         </div>
       )}
-      </div>
     </div>
   );
 };
