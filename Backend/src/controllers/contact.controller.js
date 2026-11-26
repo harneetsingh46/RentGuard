@@ -11,7 +11,7 @@ const allowedTopics = [
 
 export const submitContactForm = async (req, res) => {
   try {
-    const { name, email, topic, message, phone } = req.body;
+    const { name, email, topic, message } = req.body;
 
     if (
       typeof name !== "string" ||
@@ -27,8 +27,6 @@ export const submitContactForm = async (req, res) => {
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
     const cleanMessage = message.trim();
-    const cleanPhone =
-      typeof phone === "string" && phone.trim() ? phone.trim() : null;
 
     if (cleanName.length < 2 || cleanName.length > 100) {
       return res.status(400).json({
@@ -42,12 +40,6 @@ export const submitContactForm = async (req, res) => {
     ) {
       return res.status(400).json({
         message: "Please enter a valid email address.",
-      });
-    }
-
-    if (cleanPhone && cleanPhone.length > 30) {
-      return res.status(400).json({
-        message: "Phone number must not exceed 30 characters.",
       });
     }
 
@@ -66,7 +58,6 @@ export const submitContactForm = async (req, res) => {
     await sendContactEmail({
       name: cleanName,
       email: cleanEmail,
-      phone: cleanPhone,
       topic,
       message: cleanMessage,
     });

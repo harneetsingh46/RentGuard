@@ -661,15 +661,12 @@ const formatSubmissionDate = (date = new Date()) => {
 export const sendContactAdminEmail = async ({
   name,
   email,
-  phone,
   topic,
   message,
   submittedAt = formatSubmissionDate(),
 }) => {
   const adminEmail =
     process.env.CONTACT_TO_EMAIL?.trim() || "rentguard26@gmail.com";
-
-  const cleanPhone = phone && String(phone).trim() ? String(phone).trim() : null;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px; color: #1f2937;">
@@ -688,10 +685,6 @@ export const sendContactAdminEmail = async ({
           <td style="padding: 9px 12px; border-bottom: 1px solid #e5e7eb;">
             <a href="mailto:${escapeHtml(email)}" style="color: #2563eb; text-decoration: none;">${escapeHtml(email)}</a>
           </td>
-        </tr>
-        <tr>
-          <td style="padding: 9px 12px; background: #f9fafb; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Phone:</td>
-          <td style="padding: 9px 12px; border-bottom: 1px solid #e5e7eb;">${cleanPhone ? escapeHtml(cleanPhone) : "Not provided"}</td>
         </tr>
         <tr>
           <td style="padding: 9px 12px; background: #f9fafb; font-weight: bold; border-bottom: 1px solid #e5e7eb;">Topic:</td>
@@ -721,7 +714,6 @@ A new enquiry has been submitted through the RentGuard Contact Us form.
 
 Name: ${name}
 Email: ${email}
-Phone: ${cleanPhone || "Not provided"}
 Topic: ${topic}
 Submitted At: ${submittedAt}
 
@@ -815,7 +807,6 @@ RentGuard Support Team
 export const sendContactEmail = async ({
   name,
   email,
-  phone,
   topic,
   message,
 }) => {
@@ -825,7 +816,6 @@ export const sendContactEmail = async ({
   const adminResult = await sendContactAdminEmail({
     name,
     email,
-    phone,
     topic,
     message,
     submittedAt,
