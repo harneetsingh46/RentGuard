@@ -38,13 +38,13 @@ export const Login = () => {
             setLoading(true);
             setErrorMessage("");
 
-            await requestOtp(contact.trim());
+            const response = await requestOtp(contact.trim());
 
             setOtpSent(true);
             setOtp("");
             setResendSeconds(10);
 
-            notify.success("OTP sent successfully!");
+            notify.success(response?.message || "OTP sent successfully!");
         } catch (error) {
             const message =
                 error.response?.data?.message ||

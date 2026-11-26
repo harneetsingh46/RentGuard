@@ -33,7 +33,7 @@ export const otpContactHourlyLimiter = rateLimit({
   },
 });
 
-// One request per contact every 60 seconds
+// One request per contact per cooldown window
 export const otpContactCooldownLimiter = rateLimit({
   windowMs: OTP_CONFIG.RESEND_WAIT_SECONDS * 1000,
   limit: 1,
@@ -49,7 +49,7 @@ export const otpContactCooldownLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: {
-    message: "Please wait 10 seconds before requesting another OTP.",
+    message: `Please wait ${OTP_CONFIG.RESEND_WAIT_SECONDS} seconds before requesting another OTP.`,
   },
 });
 

@@ -5,7 +5,15 @@ const getBrevoConfig = () => {
   const fromEmail = process.env.BREVO_FROM_EMAIL?.trim();
 
   if (!apiKey || !fromEmail) {
-    throw new Error("BREVO_API_KEY or BREVO_FROM_EMAIL is missing.");
+    console.error(
+      "Brevo configuration missing: Ensure BREVO_API_KEY and BREVO_FROM_EMAIL are set.",
+    );
+    const err = new Error(
+      "Email service is not configured. Please contact support.",
+    );
+    err.statusCode = 503;
+    err.code = "BREVO_CONFIG_MISSING";
+    throw err;
   }
 
   return { apiKey, fromEmail };
@@ -63,24 +71,61 @@ const sendEmail = async ({
     }
   }
 
-  const response = await fetch(BREVO_API_URL, {
-    method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      "api-key": apiKey,
-    },
-    body: JSON.stringify(payload),
-    signal: AbortSignal.timeout(15000),
-  });
+  let response;
+  try {
+    response = await fetch(BREVO_API_URL, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        "api-key": apiKey,
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (networkError) {
+    console.error("Brevo network/timeout error:", networkError.message);
+    const err = new Error(
+      "Email service is temporarily unreachable. Please try again later.",
+    );
+    err.statusCode = 503;
+    err.code = "EMAIL_NETWORK_ERROR";
+    throw err;
+  }
 
   const result = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    console.error("Brevo email API error:", result);
-    throw new Error(
-      result.message || `Brevo email failed with status ${response.status}`,
-    );
+    console.error("Brevo email API error:", {
+      status: response.status,
+      error: result,
+      recipient: to,
+    });
+
+    let message = "Unable to send email. Please try again later.";
+    let statusCode = 503;
+
+    if (response.status === 401) {
+      message = "Email service authentication failed. Please contact support.";
+      statusCode = 503;
+    } else if (response.status === 400) {
+      const errDetail = (result.message || "").toLowerCase();
+      if (
+        errDetail.includes("unauthorized sender") ||
+        errDetail.includes("sender")
+      ) {
+        message = "Email sender configuration error. Please contact support.";
+      } else if (errDetail.includes("invalid") || errDetail.includes("email")) {
+        message = "Invalid recipient email address.";
+        statusCode = 400;
+      }
+    }
+
+    const err = new Error(message);
+    err.statusCode = statusCode;
+    err.code = "BREVO_API_ERROR";
+    err.details = result.message;
+    throw err;
   }
 
   console.log("Email sent through Brevo:", result.messageId);
@@ -98,20 +143,23 @@ export const sendOtpEmail = async (email, otp) => {
     return await sendEmail({
       to: email,
       subject: "Your RentGuard Login OTP",
+      text: `Your RentGuard verification code is: ${otp}\n\nThis OTP expires in 5 minutes.\nDo not share this code with anyone.`,
       html: `
-        <div style="font-family:Arial;max-width:500px;margin:auto;padding:25px;">
-          <h2 style="color:#d4a017;">RentGuard</h2>
-          <h3>Your Login OTP</h3>
-          <p>Your verification code is:</p>
-          <h1 style="letter-spacing:8px;">${escapeHtml(otp)}</h1>
-          <p>This OTP expires in 5 minutes.</p>
-          <p>Do not share this code with anyone.</p>
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:auto;padding:25px;border:1px solid #e5e5e5;border-radius:8px;">
+          <h2 style="color:#d4a017;margin-top:0;">RentGuard</h2>
+          <h3 style="color:#111827;">Your Login OTP</h3>
+          <p style="color:#4b5563;font-size:15px;">Your verification code is:</p>
+          <div style="background:#fef08a;border-radius:6px;padding:16px;text-align:center;margin:20px 0;">
+            <span style="font-size:32px;font-weight:bold;letter-spacing:8px;color:#854d0e;">${escapeHtml(otp)}</span>
+          </div>
+          <p style="color:#4b5563;font-size:14px;">This OTP expires in <strong>5 minutes</strong>.</p>
+          <p style="color:#ef4444;font-size:13px;margin-bottom:0;">Do not share this code with anyone.</p>
         </div>
       `,
     });
   } catch (error) {
-    console.error("OTP email sending failed:", error.message);
-    throw new Error("Unable to send OTP email.");
+    console.error("OTP email delivery error:", error.message);
+    throw error;
   }
 };
 

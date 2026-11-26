@@ -28,7 +28,14 @@ const getContactType = (contact) => {
 
 const hashOtp = (otp) => {
   if (!process.env.OTP_SECRET_KEY) {
-    throw new Error("OTP_SECRET_KEY is not configured");
+    console.error(
+      "OTP configuration error: OTP_SECRET_KEY is not configured.",
+    );
+    const err = new Error(
+      "Server security configuration error. Please contact support.",
+    );
+    err.statusCode = 500;
+    throw err;
   }
 
   return createHmac("sha256", process.env.OTP_SECRET_KEY)
@@ -296,7 +303,11 @@ export const requestOtp = async (req, res) => {
     try {
       await sendOtpEmail(normalizedContact, otp);
     } catch (emailError) {
-      console.error("OTP delivery failed:", emailError);
+      console.error(
+        "OTP delivery failed for contact:",
+        normalizedContact,
+        emailError.message,
+      );
 
       // Remove the undelivered OTP
       await Otp.deleteOne({
@@ -304,8 +315,10 @@ export const requestOtp = async (req, res) => {
         hash: hashedOtp,
       });
 
-      return res.status(503).json({
-        message: "Unable to send OTP email. Please try again later.",
+      return res.status(emailError.statusCode || 503).json({
+        message:
+          emailError.message ||
+          "Unable to send OTP email. Please try again later.",
       });
     }
 
