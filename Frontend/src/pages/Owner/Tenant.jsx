@@ -532,7 +532,7 @@ const Tenant = () => {
         formData
       )
 
-      showToast('Document uploaded successfully.', 'success')
+      notify.success('Document uploaded successfully.')
 
       const uploadedTenantId = uploadTenant._id
       closeUploadModalAfterSuccess()
@@ -543,7 +543,7 @@ const Tenant = () => {
         'Failed to upload the document.'
 
       setUploadError(message)
-      showToast(message, 'error')
+      notify.error(message)
     } finally {
       setUploadingDocument(false)
     }
