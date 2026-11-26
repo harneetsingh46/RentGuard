@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { Readable } from "node:stream";
 
 import { Property } from "../models/property.model.js";
 import { PropertyDocument } from "../models/propertyDocument.model.js";
@@ -132,6 +133,53 @@ const makeDownloadUrl = (document, { attachment = true } = {}) => {
   );
 
   return { downloadUrl, expiresAt };
+};
+
+const FORMAT_TO_MIME = {
+  pdf: "application/pdf",
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
+
+const streamDocument = async (res, document) => {
+  try {
+    const { downloadUrl } = makeDownloadUrl(document, { attachment: true });
+    const upstream = await fetch(downloadUrl);
+
+    if (!upstream.ok) {
+      console.error(
+        "Document stream failed:",
+        upstream.status,
+        await upstream.text(),
+      );
+      return res.status(502).json({
+        message: "The document could not be loaded from storage.",
+      });
+    }
+
+    const contentType =
+      FORMAT_TO_MIME[document.fileFormat] || "application/octet-stream";
+    const rawFileName =
+      document.originalFileName || document.documentName || "document";
+    const safeFileName = rawFileName.replace(/["\r\n]/g, "");
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${safeFileName}"`,
+    );
+    res.setHeader("Cache-Control", "private, no-store");
+
+    return Readable.fromWeb(upstream.body).pipe(res);
+  } catch (error) {
+    console.error("Document stream error:", error);
+    if (!res.headersSent) {
+      return res.status(500).json({
+        message: "Failed to stream document.",
+      });
+    }
+  }
 };
 
 /**
@@ -459,6 +507,8 @@ export const getPropertyDocumentDownloadUrl = async (req, res) => {
       });
     }
 
+    if (req.query.stream === "1") return streamDocument(res, document);
+
     const { downloadUrl, expiresAt } = makeDownloadUrl(document, {
       attachment: req.query.mode !== "view",
     });
@@ -519,6 +569,8 @@ export const getMyTenantDocumentDownloadUrl = async (req, res) => {
         message: "Document not found.",
       });
     }
+
+    if (req.query.stream === "1") return streamDocument(res, document);
 
     const { downloadUrl, expiresAt } = makeDownloadUrl(document, {
       attachment: req.query.mode !== "view",
@@ -655,6 +707,8 @@ export const getDocumentDownloadUrlForOwner = async (req, res) => {
     if (!document) {
       return res.status(404).json({ message: "Document not found." });
     }
+
+    if (req.query.stream === "1") return streamDocument(res, document);
 
     const { downloadUrl, expiresAt } = makeDownloadUrl(document, {
       attachment: req.query.mode !== "view",

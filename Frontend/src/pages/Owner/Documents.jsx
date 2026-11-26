@@ -43,6 +43,19 @@ const getDocumentFormat = (document) => {
   return format === "jpeg" ? "jpg" : format;
 };
 
+const parseErrorMessage = async (err, fallback = "An unexpected error occurred.") => {
+  if (err.response?.data instanceof Blob) {
+    try {
+      const text = await err.response.data.text();
+      const parsed = JSON.parse(text);
+      if (parsed.message) return parsed.message;
+    } catch {
+      // ignore parse error
+    }
+  }
+  return err.response?.data?.message || err.message || fallback;
+};
+
 const isImageDocument = (document) =>
   ["jpg", "png", "webp"].includes(getDocumentFormat(document));
 
@@ -72,7 +85,15 @@ const Documents = () => {
 
   const [previewDocument, setPreviewDocument] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
+  const previewBlobUrlRef = useRef(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+
+  const revokePreviewBlob = useCallback(() => {
+    if (previewBlobUrlRef.current) {
+      URL.revokeObjectURL(previewBlobUrlRef.current);
+      previewBlobUrlRef.current = null;
+    }
+  }, []);
 
   // Delete confirmation modal state
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
@@ -199,10 +220,17 @@ const Documents = () => {
   }, [selectedTenantId, fetchDocuments]);
 
   const closePreview = useCallback(() => {
+    revokePreviewBlob();
     setPreviewDocument(null);
     setPreviewUrl("");
     setLoadingPreview(false);
-  }, []);
+  }, [revokePreviewBlob]);
+
+  useEffect(() => {
+    return () => {
+      revokePreviewBlob();
+    };
+  }, [revokePreviewBlob]);
 
   useEffect(() => {
     if (!previewDocument) return undefined;
@@ -317,21 +345,38 @@ const Documents = () => {
 
   // Open the document preview modal
   const handleView = async (document) => {
+    revokePreviewBlob();
     setPreviewDocument(document);
     setPreviewUrl("");
     setLoadingPreview(true);
     setError("");
 
     try {
-      const url = await getDocumentUrl(document, "view");
-      setPreviewUrl(url);
+      if (isPdfDocument(document)) {
+        const response = await apiClient.get(
+          `/document/tenants/${selectedTenantId}/${document._id}/download`,
+          {
+            params: { mode: "view", stream: "1" },
+            responseType: "blob",
+          }
+        );
+
+        const blobUrl = URL.createObjectURL(
+          new Blob([response.data], { type: "application/pdf" })
+        );
+        previewBlobUrlRef.current = blobUrl;
+        setPreviewUrl(blobUrl);
+      } else {
+        const url = await getDocumentUrl(document, "view");
+        setPreviewUrl(url);
+      }
     } catch (err) {
       setPreviewDocument(null);
-      setError(
-        err.response?.data?.message ||
-        err.message ||
+      const message = await parseErrorMessage(
+        err,
         "Failed to open the document preview."
       );
+      setError(message);
     } finally {
       setLoadingPreview(false);
     }
@@ -355,11 +400,11 @@ const Documents = () => {
       link.click();
       link.remove();
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        err.message ||
+      const message = await parseErrorMessage(
+        err,
         "Failed to download the document."
       );
+      setError(message);
     }
   };
 
@@ -1090,11 +1135,43 @@ const Documents = () => {
                   className="block max-h-[65dvh] max-w-full rounded-xs object-contain sm:max-h-[68dvh]"
                 />
               ) : previewUrl && isPdfDocument(previewDocument) ? (
-                <iframe
-                  src={previewUrl}
-                  title={`Preview: ${previewDocument.documentName}`}
-                  className="h-[65dvh] min-h-[350px] w-full border-0 bg-white sm:h-[68dvh]"
-                />
+                navigator.pdfViewerEnabled === false ? (
+                  <div className="flex flex-col items-center justify-center p-6 text-center sm:p-10">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                      <FileText size={32} />
+                    </div>
+                    <h3 className="mt-4 text-base font-semibold text-stone-900 dark:text-stone-100">
+                      {previewDocument.documentName}
+                    </h3>
+                    <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+                      In-app PDF preview is not supported on this device.
+                    </p>
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => window.open(previewUrl, "_blank")}
+                        className={`${buttonClass} bg-yellow-300 text-black hover:bg-yellow-400`}
+                      >
+                        <Eye size={16} />
+                        Open PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDownload(previewDocument)}
+                        className={`${buttonClass} border border-stone-300 bg-white text-stone-800 hover:bg-stone-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-stone-200 dark:hover:bg-neutral-800`}
+                      >
+                        <Download size={16} />
+                        Download
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <iframe
+                    src={previewUrl}
+                    title={`Preview: ${previewDocument.documentName}`}
+                    className="h-[65dvh] min-h-[350px] w-full border-0 bg-white sm:h-[68dvh]"
+                  />
+                )
               ) : (
                 <div className="px-5 py-12 text-center">
                   <File

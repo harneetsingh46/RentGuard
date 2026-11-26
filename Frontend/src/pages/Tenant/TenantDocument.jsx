@@ -99,29 +99,53 @@ const TenantDocument = () => {
         : null;
 
     try {
-      const response = await apiClient.get(
-        `/document/documents/${documentId}/download`,
-        {
-          params: mode === "view" ? { mode: "view" } : {},
-        }
-      );
-
-      const downloadUrl = response.data?.data?.downloadUrl;
-
-      if (!downloadUrl) {
-        throw new Error(
-          "The server did not return a document URL."
-        );
-      }
-
       if (mode === "view") {
+        const response = await apiClient.get(
+          `/document/documents/${documentId}/download`,
+          {
+            params: { mode: "view", stream: "1" },
+            responseType: "blob",
+          }
+        );
+
+        const isPdf =
+          document.fileFormat === "pdf" ||
+          (document.originalFileName &&
+            document.originalFileName.toLowerCase().endsWith(".pdf"));
+
+        const blob = new Blob([response.data], {
+          type: isPdf
+            ? "application/pdf"
+            : response.data?.type || "application/octet-stream",
+        });
+        const blobUrl = URL.createObjectURL(blob);
+
         if (newTab) {
           newTab.opener = null;
-          newTab.location.href = downloadUrl;
+          newTab.location.href = blobUrl;
         } else {
-          window.location.href = downloadUrl;
+          window.location.href = blobUrl;
         }
+
+        setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+        }, 60000);
       } else {
+        const response = await apiClient.get(
+          `/document/documents/${documentId}/download`,
+          {
+            params: {},
+          }
+        );
+
+        const downloadUrl = response.data?.data?.downloadUrl;
+
+        if (!downloadUrl) {
+          throw new Error(
+            "The server did not return a document URL."
+          );
+        }
+
         const link = window.document.createElement("a");
 
         link.href = downloadUrl;
@@ -142,11 +166,24 @@ const TenantDocument = () => {
     } catch (err) {
       if (newTab) newTab.close();
 
-      setError(
-        err.response?.data?.message ||
-        err.message ||
-        "Unable to open this document."
-      );
+      let errorMessage = "Unable to open this document.";
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const parsed = JSON.parse(text);
+          errorMessage = parsed.message || errorMessage;
+        } catch {
+          // ignore parse error
+        }
+      } else {
+        errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          errorMessage;
+      }
+
+      setError(errorMessage);
+      notify.error(errorMessage);
     } finally {
       setOpeningDocumentId(null);
     }
