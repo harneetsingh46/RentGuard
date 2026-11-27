@@ -17,20 +17,20 @@ The platform also includes an administrative panel for managing users and verify
 
 ## Table of Contents
 
-1. [Features](#features)
-2. [User Roles](#user-roles)
-3. [Technology Stack](#technology-stack)
-4. [Application Architecture](#application-architecture)
-5. [Project Structure](#project-structure)
-6. [Getting Started](#getting-started)
-7. [Environment Variables](#environment-variables)
-8. [Running the Application](#running-the-application)
-9. [Application Workflows](#application-workflows)
-10. [API Documentation](#api-documentation)
-11. [Security](#security)
-12. [Deployment](#deployment)
-13. [Future Improvements](#future-improvements)
-14. [Author](#author)
+1. [Features](#1-features)
+2. [User Roles](#2-user-roles)
+3. [Technology Stack](#3-technology-stack)
+4. [Application Architecture](#4-application-architecture)
+5. [Project Structure](#5-project-structure)
+6. [Getting Started](#6-getting-started)
+7. [Environment Variables](#7-environment-variables)
+8. [Running the Application](#8-running-the-application)
+9. [Application Workflows](#9-application-workflows)
+10. [API Documentation](#10-api-documentation)
+11. [Security](#11-security)
+12. [Deployment](#12-deployment)
+13. [Future Improvements](#13-future-improvements)
+14. [Author](#14-author)
 
 ---
 
@@ -41,7 +41,7 @@ The platform also includes an administrative panel for managing users and verify
 - Separate registration experiences for property owners and tenants.
 - Email-based OTP authentication.
 - Six-digit OTP verification with a 5-minute expiry.
-- OTP attempt limits and resend wait time.
+- Up to 5 verification attempts per OTP and a 10-second wait before an OTP can be resent.
 - Authentication, registration and contact-form rate limiting.
 - JWT-based authentication (owner sessions last 1 day, tenant sessions 7 days).
 - Secure HTTP-only authentication cookies.
@@ -397,6 +397,7 @@ RentGuard/
 │   │
 │   ├── scripts/
 │   │   ├── seedAdmin.js
+│   │   ├── createAdmin.js
 │   │   ├── approveExistingOwners.js
 │   │   └── fixPaymentIndexes.js
 │   │
@@ -444,6 +445,8 @@ RentGuard/
 │   ├── public/
 │   ├── package.json
 │   ├── vite.config.js
+│   ├── vercel.json             (SPA fallback and /api rewrite to the backend)
+│   ├── eslint.config.js
 │   ├── index.html
 │   │
 │   └── src/
@@ -517,7 +520,7 @@ Follow these instructions to run RentGuard locally.
 
 Install the following:
 
-- Node.js 18 or later.
+- Node.js 20.19 or later (required by Mongoose 9 and Vite 8).
 - npm.
 - MongoDB Atlas account or a compatible MongoDB database.
 - Razorpay account (test mode is enough).
@@ -558,11 +561,37 @@ See the [Environment Variables](#7-environment-variables) section.
 
 ## Step 5: Create the First Admin
 
+Set `ADMIN_NAME`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `Backend/.env`, then run:
+
 ```bash
 cd Backend
 
 node scripts/seedAdmin.js
 ```
+
+`seedAdmin.js` creates the admin, or updates the existing admin with the same email. `createAdmin.js` also reads these variables but does nothing if that admin already exists.
+
+## Step 6: Point the Frontend at the Backend (local development)
+
+The frontend calls the API through the relative path `/api`. In production, `Frontend/vercel.json` rewrites `/api/*` to the Render backend. `vite.config.js` has no proxy, so for local development add one:
+
+```js
+// Frontend/vite.config.js
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
+  },
+});
+```
+
+Use the same port as `PORT` in `Backend/.env`. The backend only allows the origins `https://rent-guard-1.vercel.app` and `http://localhost:5173` (set in `Backend/app.js`).
 
 ---
 
@@ -586,6 +615,14 @@ OTP_SECRET_KEY=your_otp_secret
 BREVO_API_KEY=your_brevo_api_key
 BREVO_FROM_EMAIL=your_verified_sender_email
 
+# Used by scripts/seedAdmin.js and scripts/createAdmin.js
+ADMIN_NAME=RentGuard Admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your_secure_admin_password
+
+# Recipient of messages sent from the Contact page
+CONTACT_TO_EMAIL=support@example.com
+
 RAZORPAY_KEY_ID=your_razorpay_key_id
 RAZORPAY_KEY_SECRET=your_razorpay_key_secret
 RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
@@ -593,8 +630,6 @@ RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
 CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-
-FRONTEND_URL=https://rent-guard-1.vercel.app
 ```
 
 ## Frontend Environment Variables
@@ -611,7 +646,9 @@ VITE_RAZORPAY_KEY_ID=your_razorpay_key_id
 - Use the same Razorpay Key ID in the frontend and backend.
 - Configure a verified sender email for the email service.
 - Configure production environment variables separately on the hosting platforms.
-- Login buttons and links inside emails always point to `https://rent-guard-1.vercel.app/login`.
+- `TRUST_PROXY` sets Express's `trust proxy` value (a hop count, `true`, or a proxy address). Keep it at `0` locally.
+- Login buttons and links inside emails are hardcoded to `https://rent-guard-1.vercel.app/login` (`LOGIN_URL` in `Backend/src/utils/email.js`).
+- CORS origins are hardcoded in `Backend/app.js` and the `/api` rewrite target in `Frontend/vercel.json`. Change all three if you host your own copy.
 - Never commit `.env` files to GitHub.
 - Never expose private API keys or database credentials in frontend code.
 
@@ -673,7 +710,8 @@ Run these from the `Backend` directory.
 
 | Script | Purpose |
 |---|---|
-| `node scripts/seedAdmin.js` | Create the first admin account |
+| `node scripts/seedAdmin.js` | Create the first admin account from `ADMIN_*` variables |
+| `node scripts/createAdmin.js` | Create an admin from `ADMIN_*` variables (skipped if it already exists) |
 | `node scripts/approveExistingOwners.js` | Approve owners created before verification existed |
 | `node scripts/fixPaymentIndexes.js` | Drop the old unique Razorpay index on payments so cash payments can be saved. Run it once on any database created before cash payments were added. |
 
@@ -817,6 +855,8 @@ After starting the backend, visit:
 http://localhost:5000/api-docs
 ```
 
+> The Swagger server URL is currently set to `http://localhost:2000` in `Backend/src/utils/swagger.js`. Use port 2000 or update that value if "Try it out" requests fail.
+
 ## Main API Modules
 
 | Module | Base Path | Functionality |
@@ -887,9 +927,10 @@ RentGuard uses the following deployment services:
 
 1. Connect the GitHub repository to Vercel.
 2. Set the frontend project root to `Frontend`.
-3. Configure the frontend environment variables.
-4. Configure the build command.
-5. Deploy the application.
+3. Add the frontend environment variable (`VITE_RAZORPAY_KEY_ID`).
+4. Use the build command `npm run build` and the output directory `dist`.
+5. Make sure `Frontend/vercel.json` points the `/api/*` rewrite at your backend URL.
+6. Deploy the application.
 
 ## Backend Deployment
 
